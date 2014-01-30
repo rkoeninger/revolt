@@ -31,12 +31,18 @@
 (defn total-inf [board loc]
   (reduce + (vals (get-in board [:player-inf loc]))))
 
-(defn compare-bids [[c1 b1 f1] [c2 b2 f2]]
-  (cond
-    (> f1 f2) 1 (< f1 f2) -1
-    (> b1 b2) 1 (< b1 b2) -1
-    (> c1 c2) 1 (< c1 c2) -1
-    :else 0))
+(defn zero-bid? [x] (or (nil? x) (= x [0 0 0])))
+
+(defn compare-bids [x y]
+  (let [[c1 b1 f1] x [c2 b2 f2] y]
+    (cond
+      (and (zero-bid? x) (zero-bid? y)) nil
+      (zero-bid? y) x (zero-bid? x) y
+      (nil? y) x (nil? x) y
+      (> f1 f2) x (< f1 f2) y
+      (> b1 b2) x (< b1 b2) y
+      (> c1 c2) x (< c1 c2) y
+      :else nil)))
 
 (defn inverted-get [map val] ((clojure.set/map-invert map) val))
 
@@ -47,7 +53,7 @@
 
 (defn get-winner [bid-map]
   (if-not (empty? bid-map)
-    (let [max-bid (max-by compare-bids (vals bid-map))]
+    (let [max-bid (reduce compare-bids nil (vals bid-map))]
       (if (val-unique? bid-map max-bid) (inverted-get bid-map max-bid)))))
 
 (defn get-owner [board loc]
@@ -301,6 +307,27 @@
   }
   :fig-eval-order [:constable :guard :mercenary :spy :merchant]
 })
+
+(deftest bid-comparison
+  (let [x [2 0 1] y [4 2 0] z [0 0 1] w [1 3 1] u [0 2 0] v [1 0 1]]
+    (is (= x (compare-bids x y)))
+    (is (= w (compare-bids z w)))
+    (is (= x (compare-bids u x)))
+    (is (= z (compare-bids z y)))
+    (is (= y (compare-bids y u)))
+    (is (= nil (compare-bids v v)))
+    (is (= x (compare-bids v x)))))
+
+(deftest bid-winner
+  (is (=
+    "rob"
+    (get-winner {
+      "rob" [2 0 1]
+      "joe" [1 3 0]
+      "jack" [1 0 1]
+      "jesse" [4 2 0]})))
+  (is (nil? (get-winner {})))
+  (is (nil? (get-winner {"rob" [0 0 0]}))))
 
 (deftest influence
   (let [board (-> board
