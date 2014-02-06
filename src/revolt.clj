@@ -38,7 +38,6 @@
     (cond
       (and (zero-bid? x) (zero-bid? y)) nil
       (zero-bid? y) x (zero-bid? x) y
-      (nil? y) x (nil? x) y
       (> f1 f2) x (< f1 f2) y
       (> b1 b2) x (< b1 b2) y
       (> c1 c2) x (< c1 c2) y
@@ -54,7 +53,7 @@
 (defn get-winner [bid-map]
   (if-not (empty? bid-map)
     (let [max-bid (reduce compare-bids nil (vals bid-map))]
-      (if (val-unique? bid-map max-bid) (inverted-get bid-map max-bid)))))
+      (if-not (nil? max-bid) (inverted-get bid-map max-bid)))))
 
 (defn get-owner [board loc]
   (let [inf-map (get-in board [:player-inf loc])]
@@ -183,11 +182,12 @@
 (defn add-bank [board player bank]
   (update-in board [:player-bank player] (partial +bank bank)))
 
-(defn run-turn [board fig-bid-map]
+; bid-map :: {(player figure) bid}
+(defn run-turn [board bid-map]
   (fill-banks
     (reduce
       (fn [b fig-sym]
-        (let [winner (get-winner (fig-bid-map fig-sym))]
+        (let [winner (get-winner (filter-figure bid-map fig-sym))]
           (if (nil? winner)
             b
             (let [
