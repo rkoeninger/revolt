@@ -215,3 +215,5 @@ pip-log.txt
 .mr.developer.cfg
 .lein-failures
 target/
+.nrepl-port
+.lein-repl-history

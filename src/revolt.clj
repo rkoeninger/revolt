@@ -121,17 +121,17 @@
 (defn combine-bid-keys [m player]
   (map-conj (map (fn [k] {[player k] (m k)}) (keys m))))
 
-(defn validate-fig-bid [fig bid]
+(defn validate-fig-bid [board fig-sym bid]
   (not
     (or
-      (and (bid-has-blackmail bid) (fig :b-immune))
-      (and (bid-has-force bid) (fig :f-immune)))))
+      (and (bid-has-blackmail bid) (get-in board [:figs fig-sym :b-immune]))
+      (and (bid-has-force bid) (get-in board [:figs fig-sym :f-immune])))))
 
 (defn validate-player-bids [board player bids]
   (and
     (<= (count bids) 6)
     (= (get-in board [:player-bank player]) (reduce +bank (vals bids)))
-    (every? #(validate-fig-bid %1 (bids %1)) (keys bids))))
+    (every? #(validate-fig-bid board %1 (bids %1)) (keys bids))))
 
 (defn read-bid [board player]
   (do
@@ -203,26 +203,35 @@
 (defn set-guard-house [board player]
   (assoc board :guard-house player))
 
+(defn inc-turn [board]
+  (update-in board [:turn] (partial + 1)))
+
 ; bid-map :: {(player figure) bid}
+(defn run-bids [board bid-map]
+  (reduce
+    (fn [b fig-sym]
+      (let [winner (get-winner (filter-figure bid-map fig-sym))]
+        (if (nil? winner)
+          b
+          (let [
+              fig (get-in b [:figs fig-sym])
+              fig-loc (fig :inf-loc)
+              fig-special (fig :special)
+              b (add-sup b winner (fig :sup-val))
+              b (add-bank b winner (fig :bank-val))
+              b (if (nil? fig-loc) b (add-inf b winner fig-loc))
+              b (if (nil? fig-special) b (fig-special b winner))
+            ]
+            b))))
+    board
+    (board :fig-eval-order)))
+
 (defn run-turn [board bid-map]
-  (fill-banks
-    (reduce
-      (fn [b fig-sym]
-        (let [winner (get-winner (filter-figure bid-map fig-sym))]
-          (if (nil? winner)
-            b
-            (let [
-                fig (get-in b [:figs fig-sym])
-                fig-loc (fig :inf-loc)
-                fig-special (fig :special)
-                b (add-sup b winner (fig :sup-val))
-                b (add-bank b winner (fig :bank-val))
-                b (if (nil? fig-loc) b (add-inf b winner fig-loc))
-                b (if (nil? fig-special) b (fig-special b winner))
-              ]
-              b))))
-      (clear-banks board)
-      (board :fig-eval-order))))
+  (-> board
+    inc-turn
+    clear-banks
+    (run-bids bid-map)
+    fill-banks))
 
 (defn get-game-winner [player-sup]
   (let [max-sup (max (vals player-sup))]
@@ -293,6 +302,7 @@
     ]
 
     {
+      :turn 0
       :guard-house nil
       :player-sup players-to-0s
       :player-inf (zipmap (keys locs) (repeat players-to-0s))

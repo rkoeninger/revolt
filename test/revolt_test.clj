@@ -20,10 +20,10 @@
 })
 
 (deftest bid-validation
-  (is (validate-fig-bid (->> board :figs :constable) [3 1 0]))
-  (is (not (validate-fig-bid (->> board :figs :constable) [3 0 1])))
-  (is (validate-fig-bid (->> board :figs :spy) [0 0 1]))
-  (is (not (validate-fig-bid (->> board :figs :spy) [1 1 1]))))
+  (is (validate-fig-bid board :constable [3 1 0]))
+  (is (not (validate-fig-bid board :constable [3 0 1])))
+  (is (validate-fig-bid board :spy [0 0 1]))
+  (is (not (validate-fig-bid board :spy [1 1 1]))))
 
 (deftest player-bids-validation
   (is (validate-player-bids board "rob" {:general [3 1 0] :printer [0 0 1]}))
@@ -58,7 +58,11 @@
     {
       :general [1 0 0]
       :printer [1 0 1]
-    }))))
+    })))
+  (is (not (validate-player-bids
+    (make-board ["rob" "joe"])
+    "rob"
+    { :general [3 1 1] }))))
 
 (deftest bid-comparison
   (let [x [2 0 1] y [4 2 0] z [0 0 1] w [1 3 1] u [0 2 0] v [1 0 1]]
@@ -115,3 +119,15 @@
           (add-bank "rob" [3 2 0]))]
     (is (= (get-in board [:player-bank "rob"]) [5 2 1]))
     (is (= (get-in board [:player-bank "joe"]) [1 2 3]))))
+
+(deftest turn
+  (let [result (run-turn (make-board ["rob" "joe"]) {
+      ["rob" :general] [2 1 0]
+      ["rob" :printer] [0 0 1]
+      ["joe" :priest] [0 1 1]
+      ["joe" :printer] [3 0 0]
+      ["rob" :mercenary] [1 0 0]})]
+    (is (= (get-in result [:player-bank "rob"]) [3 0 2]))
+    (is (= (get-in result [:player-bank "joe"]) [5 0 0]))
+    (is (= (get-in result [:player-sup "rob"]) 11))
+    (is (= (get-in result [:player-sup "joe"]) 6))))
