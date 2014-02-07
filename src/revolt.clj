@@ -1,6 +1,28 @@
 
 (ns revolt)
 
+(defn map-vals [f map] (reduce (fn [m2 [k v]] (assoc m2 k (f v))) {} map))
+
+(defn clear-banks [board] 
+  (update-in board [:player-bank] (partial map-vals (fn [_] [0 0 0]))))
+
+(defn fill-banks [board]
+  (update-in board [:player-bank] (partial map-vals (fn [bank]
+    (let [token-count (reduce + bank) [c b f] bank]
+      (if (< token-count 5)
+        [(+ c (- 5 token-count)) b f]
+        bank))))))
+
+(defn add-sup [board player amount]
+  (update-in board [:player-sup player] (partial + amount)))
+
+(defn +nil [x y] (+ (or x 0) (or y 0)))
+
+(defn +bank [[c1 b1 f1] [c2 b2 f2]] [(+nil c1 c2) (+nil b1 b2) (+nil f1 f2)])
+
+(defn add-bank [board player bank]
+  (update-in board [:player-bank player] (partial +bank bank)))
+
 (defn loc-full? [board loc]
   (>=
     (reduce + (vals (get-in board [:player-inf loc])))
@@ -32,6 +54,10 @@
   (reduce + (vals (get-in board [:player-inf loc]))))
 
 (defn zero-bid? [x] (or (nil? x) (= x [0 0 0])))
+
+(defn bid-has-blackmail [[c b f]] (and (not (nil? b)) (> b 0)))
+
+(defn bid-has-force [[c b f]] (and (not (nil? f)) (> f 0)))
 
 (defn compare-bids [x y]
   (let [[c1 b1 f1] x [c2 b2 f2] y]
@@ -93,11 +119,26 @@
 (defn combine-bid-keys [m player]
   (map-conj (map (fn [k] {[player k] (m k)}) (keys m))))
 
+(defn validate-fig-bid [fig bid]
+  (not
+    (or
+      (and (bid-has-blackmail bid) (fig :b-immune))
+      (and (bid-has-force bid) (fig :f-immune)))))
+
+(defn validate-player-bids [board player bids]
+  (and
+    (<= (count bids) 6)
+    (= (get-in board [:player-bank player]) (reduce +bank (vals bids)))
+    (every? #(validate-fig-bid %1 (bids %1)) (keys bids))))
+
 (defn read-bid [board player]
   (do
     (println player "has bank =" (get-in board [:player-bank player]))
     (flush)
-    (read-string (read-line))))
+    (let [bids (read-string (read-line))]
+      (if (validate-player-bids board player bids)
+        bids
+        (do (println "invalid bid") (flush) (recur board player))))))
 
 (defn prompt-bids [board]
   (do
@@ -160,28 +201,6 @@
 (defn set-guard-house [board player]
   (assoc board :guard-house player))
 
-(defn map-vals [f map] (reduce (fn [m2 [k v]] (assoc m2 k (f v))) {} map))
-
-(defn clear-banks [board] 
-  (update-in board [:player-bank] (partial map-vals (fn [_] [0 0 0]))))
-
-(defn fill-banks [board]
-  (update-in board [:player-bank] (partial map-vals (fn [bank]
-    (let [token-count (reduce + bank) [c b f] bank]
-      (if (< token-count 5)
-        [(+ c (- 5 token-count)) b f]
-        bank))))))
-
-(defn add-sup [board player amount]
-  (update-in board [:player-sup player] (partial + amount)))
-
-(defn +nil [x y] (+ (or x 0) (or y 0)))
-
-(defn +bank [[c1 b1 f1] [c2 b2 f2]] [(+nil c1 c2) (+nil b1 b2) (+nil f1 f2)])
-
-(defn add-bank [board player bank]
-  (update-in board [:player-bank player] (partial +bank bank)))
-
 ; bid-map :: {(player figure) bid}
 (defn run-turn [board bid-map]
   (fill-banks
@@ -218,7 +237,6 @@
       board)
     (do
       (println)
-      (print-board board)
       (run-game (run-turn board (prompt-bids board))))))
 
 (defn make-loc [sup inf] {:sup-val sup, :inf-limit inf})
@@ -308,6 +326,40 @@
   :fig-eval-order [:constable :guard :mercenary :spy :merchant]
 })
 
+(deftest bid-validation
+  (is (validate-fig-bid (->> board :figs :constable) [3 1 0]))
+  (is (not (validate-fig-bid (->> board :figs :constable) [3 0 1])))
+  (is (validate-fig-bid (->> board :figs :spy) [0 0 1]))
+  (is (not (validate-fig-bid (->> board :figs :spy) [1 1 1]))))
+
+(deftest player-bids-validation
+  (is (validate-player-bids board "rob" {:general [3 1 0] :printer [0 0 1]}))
+  (is (not (validate-player-bids board "rob" {:general [3 0 0] :printer [0 0 1]})))
+  (is (not (validate-player-bids board "rob" {:general [3 1 0] :printer [1 0 1]})))
+  (is (validate-player-bids
+    (add-bank board "rob" [3 0 0])
+    "rob"
+    {
+      :general [1 0 0]
+      :printer [1 0 1]
+      :messenger [1 0 0]
+      :priest [1 0 0]
+      :rogue [1 0 0]
+      :apothecary [0 1 0]
+    }))
+  (is (not (validate-player-bids
+    (add-bank board "rob" [4 0 0])
+    "rob"
+    {
+      :general [1 0 0]
+      :printer [1 0 1]
+      :messenger [1 0 0]
+      :mercenary [1 0 0]
+      :priest [1 0 0]
+      :rogue [1 0 0]
+      :apothecary [0 1 0]
+    }))))
+
 (deftest bid-comparison
   (let [x [2 0 1] y [4 2 0] z [0 0 1] w [1 3 1] u [0 2 0] v [1 0 1]]
     (is (= x (compare-bids x y)))
@@ -315,7 +367,7 @@
     (is (= x (compare-bids u x)))
     (is (= z (compare-bids z y)))
     (is (= y (compare-bids y u)))
-    (is (= nil (compare-bids v v)))
+    (is (nil? (compare-bids v v)))
     (is (= x (compare-bids v x)))))
 
 (deftest bid-winner
