@@ -337,7 +337,7 @@
   (is (not (validate-player-bids board "rob" {:general [3 0 0] :printer [0 0 1]})))
   (is (not (validate-player-bids board "rob" {:general [3 1 0] :printer [1 0 1]})))
   (is (validate-player-bids
-    (add-bank board "rob" [3 0 0])
+    (add-bank (make-board ["rob" "joe"]) "rob" [2 0 0])
     "rob"
     {
       :general [1 0 0]
@@ -348,7 +348,7 @@
       :apothecary [0 1 0]
     }))
   (is (not (validate-player-bids
-    (add-bank board "rob" [4 0 0])
+    (add-bank (make-board ["rob" "joe"]) "rob" [3 0 0])
     "rob"
     {
       :general [1 0 0]
@@ -358,6 +358,13 @@
       :priest [1 0 0]
       :rogue [1 0 0]
       :apothecary [0 1 0]
+    })))
+  (is (not (validate-player-bids
+    (make-board ["rob" "joe"])
+    "rob"
+    {
+      :general [1 0 0]
+      :printer [1 0 1]
     }))))
 
 (deftest bid-comparison
