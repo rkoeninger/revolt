@@ -2,8 +2,8 @@
     (:use [clojure.set :only [map-invert]]))
 
 (defn inverted-get [m v] ((map-invert m) v))
-(defn unique-max [x y] (cond (= x y) 0 (> x y) x (> y x) y))
-(defn map-vals [f m] (reduce (fn [acc [k v]] (assoc acc k (f v))) {} m))
+(defn unique-max [x y] (cond (= x y) 0 :else (max x y)))
+(defn hm-map [f hm] (into {} (for [[k v] m] [k (f v)])))
 
 (defrecord Bid [gold blackmail force])
 (def bid0 (->Bid 0 0 0))
@@ -43,17 +43,18 @@
 (defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
 (def min-token-count 5)
 (defn fill-bank [{:keys [gold blackmail force] :as bank}]
-    (let [token-count (reduce + (vals bank))]
-        (if-not (< token-count min-token-count)
+    (let [token-count (reduce + (vals bank))
+          extra-gold (max 0 (- min-token-count token-count))]
+        (if-not (zero? extra-gold)
             bank
             (->Bank
-                (+ gold (- min-token-count token-count))
+                (+ gold extra-gold)
                 blackmail
                 force))))
-(defn fill-banks [board] (update-in board [:banks] (partial map-vals fill-bank)))
+(defn fill-banks [board] (update-in board [:banks] (partial hm-map fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
-    (update-in board [:influence location player] (partial + 1)))
+    (update-in board [:influence location player] inc))
 (defn remove-influence [board location player]
     (assert (has-influence board location player) (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
@@ -95,9 +96,10 @@
     `(do
         (def ~sym (hash-map ~@(mapcat
             (fn [[k-sym sup bank-vec immunities & [loc special]]]
-                (list (keyword k-sym) (list '->Figure (keyword k-sym) sup (apply ->Bid bank-vec) immunities loc special)))
+                (list (keyword k-sym) (list '->Figure (keyword k-sym) sup `(->Bid ~@(list* bank-vec)) immunities loc special)))
             fig-defs)))
-        ~@(map (fn [[k-sym]] `(def ~k-sym (~(keyword k-sym) ~sym))) fig-defs)))
+        ~@(map (fn [[k-sym]] `(def ~k-sym (~(keyword k-sym) ~sym))) fig-defs)
+        (def ~(symbol (str sym "-eval-order")) (vector ~@(map (fn [[k-sym]] (keyword k-sym)) fig-defs)))))
 
 (def -- #{})
 (def b- #{:blackmail})
@@ -105,22 +107,22 @@
 (def bf #{:blackmail :force})
 
 (deffigures figures0
-    (printer    10 [0 0 0] --)
-    (constable  5  [0 1 0] bf)
-    (rogue      0  [0 2 0] bf)
-    (mercenary  0  [0 0 1] bf)
     (general    1  [0 0 1] -f fortress)
     (captain    1  [0 0 1] -f harbor)
     (innkeeper  3  [0 1 0] b- tavern)
     (magistrate 1  [0 1 0] b- town-hall)
+    (viceroy    0  [0 0 0] -- palace set-guard-house)
     (priest     6  [0 0 0] -- cathedral)
     (aristocrat 5  [3 0 0] -- plantation)
     (merchant   3  [5 0 0] -- market)
-    (viceroy    0  [0 0 0] -- palace set-guard-house)
+    (printer    10 [0 0 0] --)
     (spy        0  [0 0 0] b- nil prompt-spy)
     (apothecary 0  [0 0 0] -f nil prompt-apothecary)
     (messenger  3  [0 0 0] -- nil prompt-messenger)
-    (mayor      0  [0 0 0] bf nil prompt-mayor))
+    (mayor      0  [0 0 0] bf nil prompt-mayor)
+    (constable  5  [0 1 0] bf)
+    (rogue      0  [0 2 0] bf)
+    (mercenary  0  [0 0 1] bf))
 
 (def init-bank (->Bank 3 1 1))
 
@@ -128,12 +130,16 @@
 
 
 
+; prompt-bids : board player -> {figure bid}
+; prompt-all-bids : board -> {player {figure bid}}
+; figure-bids : {player {figure bid}} -> {figure bid}
 
 ; {(player figure) bid}
 ; {player (figure bid)}
 ; {figure (player bid)}
 
-
+; <[ player figure bid ]>
+; 
 
 
 
@@ -198,12 +204,6 @@
 
 
 
-      fig-eval-order [
-        :general       :captain       :innkeeper     :magistrate
-        :viceroy       :priest        :aristocrat    :merchant
-        :printer       :spy           :apothecary    :messenger
-        :mayor         :constable     :rogue         :mercenary
-      ]
       players-to-0s (zipmap players (repeat 0))
     ]
 
