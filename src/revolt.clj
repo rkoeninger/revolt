@@ -3,7 +3,15 @@
 
 (defn inverted-get [m v] ((map-invert m) v))
 (defn unique-max [x y] (cond (= x y) 0 :else (max x y)))
-(defn hm-map [f hm] (into {} (for [[k v] m] [k (f v)])))
+(defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
+(defn flip-nested-map
+    ([m] (flip-nested-map (keys m) (distinct (mapcat keys (vals m))) m))
+    ([outer-key-domain inner-key-domain m]
+        (into {} (map (fn [inner-key] [inner-key
+            (into {} (map (fn [outer-key] [outer-key
+                ((m outer-key) inner-key)])
+            outer-key-domain))])
+        inner-key-domain))))
 
 (defrecord Bid [gold blackmail force])
 (def bid0 (->Bid 0 0 0))
@@ -20,7 +28,7 @@
         (> (:gold x) (:gold y)) x
         (> (:gold y) (:gold x)) y
         :else bid0))
-(defn get-winner [bid-map]
+(defn get-best [bid-map]
     (let [winning-bid (reduce compare-bid bid0 (vals bid-map))]
         (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
 
@@ -29,13 +37,26 @@
 (defrecord Figure [id support bank immunities influence-location special])
 (def blackmail-immune? (comp :blackmail :immunities))
 (def force-immune? (comp :force :immunities))
+(defn validate-bid [fig bid]
+    (not (or
+        (and (has-blackmail? bid) (blackmail-immune? fig))
+        (and (has-force? bid) (force-immune? fig)))))
+(defn validate-bids [bank bids]
+    (and
+        (> (count bids) 0)
+        (<= (count bids) 6)
+        (= bank (reduce bid+ (vals bids)))
+        (every? (partial apply validate-bid) bids)))
 
 (defrecord Player [id])
 
-(defrecord Board [locations figures players banks influence support])
+(defrecord Board [locations figures players banks influence support turn])
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
-(defn location-full? [board location] (>= (occupied-influence board location) (:influence-limit influence)))
+(defn location-full? [board location]
+    (let [occupied (occupied-influence board location) limit (:influence-limit location)]
+        (assert (<= occupied limit))
+        (= occupied limit)))
 (defn board-full? [board] (every? (partial location-full? board) (:locations board)))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence [board location player] (not (zero? (get-in board [:influence location player]))))
@@ -47,7 +68,7 @@
           extra-gold (max 0 (- min-token-count token-count))]
         (if-not (zero? extra-gold)
             bank
-            (->Bank
+            (->Bid
                 (+ gold extra-gold)
                 blackmail
                 force))))
@@ -65,8 +86,9 @@
 (defn swap-influence [board location0 location1 player0 player1]
     (-> board (replace-influence player0 player1 location1) (replace-influence player1 player0 location0)))
 (defn get-holder [board location]
-    (let [max-inf (apply unique-max (vals inf-map))]
-        (if-not (zero? max-inf) (inverted-get (get-in board [:influence location]) max-inf))))
+    (let [inf-map (get-in board [:influence location])
+          max-inf (apply unique-max (vals inf-map))]
+        (if-not (zero? max-inf) (inverted-get inf-map max-inf))))
 
 (defn set-guard-house [board player] (assoc board :guard-house player))
 (defn prompt-spy [board player] board)
@@ -124,52 +146,26 @@
     (rogue      0  [0 2 0] bf)
     (mercenary  0  [0 0 1] bf))
 
-(def init-bank (->Bank 3 1 1))
+(def init-bank (->Bid 3 1 1))
+
+(defn board [players]
+    (->Board
+        locations0 ; : Map<Keyword, Location>
+        figures0 ; : Map<Keyword, Figure>
+        players ; : Vector<Player>
+        (zipmap players (repeat init-bank)) ; : Map<Player, Bid>
+        (zipmap locations0 (repeat (zipmap players (repeat 0)))) ; : Map<Location, Map<Player, Nat>>
+        (zipmap players (repeat 0)) ; : Map<Player, Nat>
+        0))
+
+(defn inc-turn [board] (update-in board [:turn] inc))
 
 
 
 
 
-; prompt-bids : board player -> {figure bid}
-; prompt-all-bids : board -> {player {figure bid}}
-; figure-bids : {player {figure bid}} -> {figure bid}
 
-; {(player figure) bid}
-; {player (figure bid)}
-; {figure (player bid)}
-
-; <[ player figure bid ]>
-; 
-
-
-
-(defn filter-map-keys [m key-value select-key map-key]
-  (let [filtered-keys (filter (comp (partial = key-value) select-key) (keys m))]
-    (apply merge (map (fn [k] {(map-key k) (m k)}) filtered-keys))))
-
-; {(player figure) bid} -> {figure bid}
-(defn filter-player [m player] (filter-map-keys m player first second))
-
-; {(player figure) bid} -> {player bid}
-(defn filter-figure [m figure] (filter-map-keys m figure second first))
-
-(defn combine-bid-keys [m player]
-  (apply merge (map (fn [k] {[player k] (m k)}) (keys m))))
-
-(defn validate-fig-bid [board fig-sym bid]
-  (not
-    (or
-      (and (bid-has-blackmail bid) (get-in board [:figs fig-sym :b-immune]))
-      (and (bid-has-force bid) (get-in board [:figs fig-sym :f-immune])))))
-
-(defn validate-player-bids [board player bids]
-  (and
-    (<= (count bids) 6)
-    (= (get-in board [:player-bank player]) (reduce +bank (vals bids)))
-    (every? #(validate-fig-bid board %1 (bids %1)) (keys bids))))
-
-(defn inc-turn [board]
-  (update-in board [:turn] (partial + 1)))
+(comment
 
 ; bid-map :: {(player figure) bid}
 (defn run-bids [board bid-map]
@@ -201,13 +197,4 @@
 (defn get-game-winner [player-sup]
   (let [max-sup (max (vals player-sup))]
     (if (val-unique? player-sup max-sup) (inverted-get player-sup max-sup))))
-
-
-
-      players-to-0s (zipmap players (repeat 0))
-    ]
-
-    {
-      :turn 0
-      :fig-eval-order fig-eval-order
-    }))
+)
