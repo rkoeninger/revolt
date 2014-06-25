@@ -4,6 +4,9 @@
 (defn inverted-get [m v] ((map-invert m) v))
 (defn unique-max [x y] (cond (= x y) 0 :else (max x y)))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
+(defn hm-map-k [f m] (into {} (for [[k v] m] [k (f k v)])))
+
+; flip-nested-map : Map<A, Map<B, C>> -> Map<B, Map<A, C>>
 (defn flip-nested-map
     ([m] (flip-nested-map (keys m) (distinct (mapcat keys (vals m))) m))
     ([outer-key-domain inner-key-domain m]
@@ -31,10 +34,15 @@
 (defn get-winner [bid-map] ; bid-map : Map<Player, Bid>
     (let [winning-bid (reduce compare-bid bid0 (vals bid-map))]
         (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
+(defn get-support-value [{:keys [gold blackmail force]}]
+    (+ gold (* 3 blackmail) (* 5 force)))
 
 (defrecord Location [id support influence-limit])
 
-(defrecord Figure [id support bank immunities influence-location special])
+; immunities : Set<Keyword>
+; location : Option<Location>
+; special : Option<(Board, Player) -> Board>
+(defrecord Figure [id support bank immunities location special])
 (def blackmail-immune? (comp :blackmail :immunities))
 (def force-immune? (comp :force :immunities))
 (defn validate-bid [fig bid]
@@ -50,28 +58,35 @@
 
 (defrecord Player [id])
 
-(defrecord Board [locations figures players banks influence support turn])
+; locations : Map<Keyword, Location>
+; figures : Map<Keyword, Figure>
+; fig-order : Vector<Figure>
+; players : Vector<Player>
+; banks : Map<Player, Bid>
+; influence : Map<Player, Map<Location, Nat>>
+; support : Map<Player, Nat>
+; turn : Nat
+(defrecord Board [locations figures fig-order players banks influence support turn])
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
 (defn location-full? [board location]
-    (let [occupied (occupied-influence board location) limit (:influence-limit location)]
+    (let [occupied (occupied-influence board location)
+          limit (:influence-limit location)]
         (assert (<= occupied limit))
         (= occupied limit)))
 (defn board-full? [board] (every? (partial location-full? board) (:locations board)))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence [board location player] (not (zero? (get-in board [:influence location player]))))
 (defn add-support [board player amount] (update-in board [:support player] (partial + amount)))
+(defn get-support [board player] (get-in board [:support player]))
 (defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
+(defn get-bank [board player] (get-in board [:banks player]))
+(defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (def min-token-count 5)
 (defn fill-bank [{:keys [gold blackmail force] :as bank}]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- min-token-count token-count))]
-        (if-not (zero? extra-gold)
-            bank
-            (->Bid
-                (+ gold extra-gold)
-                blackmail
-                force))))
+        (if (zero? extra-gold) bank (update-in bank [:gold] (partial + extra-gold)))))
 (defn fill-banks [board] (update-in board [:banks] (partial hm-map fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
@@ -87,114 +102,110 @@
     (-> board (replace-influence player0 player1 location1) (replace-influence player1 player0 location0)))
 (defn get-holder [board location]
     (let [inf-map (get-in board [:influence location])
-          max-inf (apply unique-max (vals inf-map))]
+          max-inf (reduce unique-max 0 (vals inf-map))]
         (if-not (zero? max-inf) (inverted-get inf-map max-inf))))
 
 (defn set-guard-house [board player] (assoc board :guard-house player))
-(defn prompt-spy [board player] board)
-(defn prompt-apothecary [board player] board)
-(defn prompt-messenger [board player] board)
-(defn prompt-mayor [board player] board)
 
-(defmacro deflocations [sym & loc-defs]
-    `(do
-        (def ~sym (hash-map ~@(mapcat
-            (fn [[k-sym sup inf-limit]]
-                (list (keyword k-sym) (list '->Location (keyword k-sym) sup inf-limit)))
-            loc-defs)))
-        ~@(map (fn [[k-sym]] `(def ~k-sym (~(keyword k-sym) ~sym))) loc-defs)))
-
-(deflocations locations0
-    (tavern     20 4)
-    (market     25 5)
-    (plantation 30 6)
-    (cathedral  35 7)
-    (harbor     40 6)
-    (town-hall  45 7)
-    (fortress   50 8)
-    (palace     55 8))
-
-(defmacro deffigures [sym & fig-defs]
-    `(do
-        (def ~sym (hash-map ~@(mapcat
-            (fn [[k-sym sup bank-vec immunities & [loc special]]]
-                (list (keyword k-sym) (list '->Figure (keyword k-sym) sup `(->Bid ~@(list* bank-vec)) immunities loc special)))
-            fig-defs)))
-        ~@(map (fn [[k-sym]] `(def ~k-sym (~(keyword k-sym) ~sym))) fig-defs)
-        (def ~(symbol (str sym "-eval-order")) (vector ~@(map (fn [[k-sym]] (keyword k-sym)) fig-defs)))))
+(defn id-map [& things] (into {} (map (fn [x] [(:id x) x]) things)))
 
 (def -- #{})
 (def b- #{:blackmail})
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
-(deffigures figures0
-    (general    1  [0 0 1] -f fortress)
-    (captain    1  [0 0 1] -f harbor)
-    (innkeeper  3  [0 1 0] b- tavern)
-    (magistrate 1  [0 1 0] b- town-hall)
-    (viceroy    0  [0 0 0] -- palace set-guard-house)
-    (priest     6  [0 0 0] -- cathedral)
-    (aristocrat 5  [3 0 0] -- plantation)
-    (merchant   3  [5 0 0] -- market)
-    (printer    10 [0 0 0] --)
-    (spy        0  [0 0 0] b- nil prompt-spy)
-    (apothecary 0  [0 0 0] -f nil prompt-apothecary)
-    (messenger  3  [0 0 0] -- nil prompt-messenger)
-    (mayor      0  [0 0 0] bf nil prompt-mayor)
-    (constable  5  [0 1 0] bf)
-    (rogue      0  [0 2 0] bf)
-    (mercenary  0  [0 0 1] bf))
+(defn make-locations [] (id-map
+    (->Location :tavern     20 4)
+    (->Location :market     25 5)
+    (->Location :plantation 30 6)
+    (->Location :cathedral  35 7)
+    (->Location :harbor     40 6)
+    (->Location :town-hall  45 7)
+    (->Location :fortress   50 8)
+    (->Location :palace     55 8)
+))
+
+; locations-map : Map<Keyword, Location>
+(defn make-figures [locations-map prompt-spy prompt-apothecary prompt-messenger prompt-mayor]
+    (let [figs [(->Figure :general    1  (->Bid 0 0 1) -f (:fortress locations-map))
+                (->Figure :captain    1  (->Bid 0 0 1) -f (:harbor locations-map))
+                (->Figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern locations-map))
+                (->Figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall locations-map))
+                (->Figure :viceroy    0  (->Bid 0 0 0) -- (:palace locations-map) set-guard-house)
+                (->Figure :priest     6  (->Bid 0 0 0) -- (:cathedral locations-map))
+                (->Figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations-map))
+                (->Figure :merchant   3  (->Bid 5 0 0) -- (:market locations-map))
+                (->Figure :printer    10 (->Bid 0 0 0) --)
+                (->Figure :spy        0  (->Bid 0 0 0) b- nil prompt-spy)
+                (->Figure :apothecary 0  (->Bid 0 0 0) -f nil prompt-apothecary)
+                (->Figure :messenger  3  (->Bid 0 0 0) -- nil prompt-messenger)
+                (->Figure :mayor      0  (->Bid 0 0 0) bf nil prompt-mayor)
+                (->Figure :constable  5  (->Bid 0 1 0) bf)
+                (->Figure :rogue      0  (->Bid 0 2 0) bf)
+                (->Figure :mercenary  0  (->Bid 0 0 1) bf)]]
+        [(id-map figs) figs]))
+; => (Map<Keyword, Figure>, Vector<Figure>)
 
 (def init-bank (->Bid 3 1 1))
 
-(defn board [players]
-    (->Board
-        locations0 ; : Map<Keyword, Location>
-        figures0 ; : Map<Keyword, Figure>
-        players ; : Vector<Player>
-        (zipmap players (repeat init-bank)) ; : Map<Player, Bid>
-        (zipmap locations0 (repeat (zipmap players (repeat 0)))) ; : Map<Location, Map<Player, Nat>>
-        (zipmap players (repeat 0)) ; : Map<Player, Nat>
-        0))
+(defn make-board [players prompt-spy prompt-apothecary prompt-messenger prompt-mayor]
+    (let [locations (make-locations)
+          [figures figure-order] (make-figures locations prompt-spy prompt-apothecary prompt-messenger prompt-mayor)]
+        (->Board
+            locations ; : Map<Keyword, Location>
+            figures ; : Map<Keyword, Figure>
+            figure-order ; : Vector<Figure>
+            players ; : Vector<Player>
+            (zipmap players (repeat init-bank)) ; : Map<Player, Bid>
+            (zipmap (vals locations) (repeat (zipmap players (repeat 0)))) ; : Map<Location, Map<Player, Nat>>
+            (zipmap players (repeat 0)) ; : Map<Player, Nat>
+            1)))
 
 (defn inc-turn [board] (update-in board [:turn] inc))
 
+(defn reward-winner [board figure winner]
+    (let [location (:location figure)
+          special (:special figure)
+          board (add-support board winner (:support figure))
+          board (add-bank board winner (:bank figure))
+          board (if-not (or (nil? location) (location-full? board location)) (add-influence board location winner) board)
+          board (if-not (nil? special) (special board winner) board)]
+        board))
 
+(defn run-figure-bids [board figure player-bids] ; player-bids : Map<Player, Bid>
+    (let [winner (get-winner player-bids)] (if (nil? winner) board (reward-winner board figure winner))))
 
+(defn run-all-bids [board figure-player-bids] ; player-figure-bids : Map<Figure, Map<Player, Bid>>
+    (reduce
+        (fn [b figure] (run-figure-bids b figure (figure-player-bids figure)))
+        board
+        (:figure-order board)))
 
+; figure-players-bids : Map<Figure, Map<Player, Bid>>
+(defn run-turn [board figure-player-bids]
+    (let [board (-> board
+                    clear-banks
+                    (run-all-bids figure-player-bids)
+                    inc-turn)]
+        (if (board-full? board) board (fill-banks board))))
 
+(defn get-holdings [board player]
+    (filter (fn [loc] (= player (get-holder board loc))) (:locations board)))
+; => Seq<Location>
 
-(comment
+(defn get-score [board player]
+    (+
+        (get-in board [:support player])
+        (reduce + (map :support (get-holdings board player)))
+        (get-support-value (get-in board [:banks player]))))
 
-; bid-map :: {(player figure) bid}
-(defn run-bids [board bid-map]
-  (reduce
-    (fn [b fig-sym]
-      (let [winner (get-winner (filter-figure bid-map fig-sym))]
-        (if (nil? winner)
-          b
-          (let [
-              fig (get-in b [:figs fig-sym])
-              fig-loc (fig :inf-loc)
-              fig-special (fig :special)
-              b (add-sup b winner (fig :sup-val))
-              b (add-bank b winner (fig :bank-val))
-              b (if (nil? fig-loc) b (add-inf b winner fig-loc))
-              b (if (nil? fig-special) b (fig-special b winner))
-            ]
-            b))))
-    board
-    (board :fig-eval-order)))
+(defn get-scores [board]
+    (into {} (map (fn [player] (get-score board player)) (:players board))))
+; => Map<Player, Nat>
 
-(defn run-turn [board bid-map]
-  (-> board
-    inc-turn
-    clear-banks
-    (run-bids bid-map)
-    fill-banks))
+(def game-over? board-full?)
 
-(defn get-game-winner [player-sup]
-  (let [max-sup (max (vals player-sup))]
-    (if (val-unique? player-sup max-sup) (inverted-get player-sup max-sup))))
-)
+(defn get-game-winner [board]
+    (let [scores (get-scores board)
+          max-score (reduce unique-max 0 (vals scores))]
+        (if-not (zero? max-score) (inverted-get scores max-score))))
