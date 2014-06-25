@@ -28,7 +28,7 @@
         (> (:gold x) (:gold y)) x
         (> (:gold y) (:gold x)) y
         :else bid0))
-(defn get-best [bid-map]
+(defn get-winner [bid-map] ; bid-map : Map<Player, Bid>
     (let [winning-bid (reduce compare-bid bid0 (vals bid-map))]
         (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
 
