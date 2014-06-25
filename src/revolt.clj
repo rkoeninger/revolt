@@ -4,7 +4,6 @@
 (defn inverted-get [m v] ((map-invert m) v))
 (defn unique-max [x y] (cond (= x y) 0 :else (max x y)))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
-(defn hm-map-k [f m] (into {} (for [[k v] m] [k (f k v)])))
 
 ; flip-nested-map : Map<A, Map<B, C>> -> Map<B, Map<A, C>>
 (defn flip-nested-map
@@ -126,15 +125,15 @@
 ))
 
 ; locations-map : Map<Keyword, Location>
-(defn make-figures [locations-map prompt-spy prompt-apothecary prompt-messenger prompt-mayor]
-    (let [figs [(->Figure :general    1  (->Bid 0 0 1) -f (:fortress locations-map))
-                (->Figure :captain    1  (->Bid 0 0 1) -f (:harbor locations-map))
-                (->Figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern locations-map))
-                (->Figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall locations-map))
-                (->Figure :viceroy    0  (->Bid 0 0 0) -- (:palace locations-map) set-guard-house)
-                (->Figure :priest     6  (->Bid 0 0 0) -- (:cathedral locations-map))
-                (->Figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations-map))
-                (->Figure :merchant   3  (->Bid 5 0 0) -- (:market locations-map))
+(defn make-figures [locations prompt-spy prompt-apothecary prompt-messenger prompt-mayor]
+    (let [figs [(->Figure :general    1  (->Bid 0 0 1) -f (:fortress   locations))
+                (->Figure :captain    1  (->Bid 0 0 1) -f (:harbor     locations))
+                (->Figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern     locations))
+                (->Figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall  locations))
+                (->Figure :viceroy    0  (->Bid 0 0 0) -- (:palace     locations) set-guard-house)
+                (->Figure :priest     6  (->Bid 0 0 0) -- (:cathedral  locations))
+                (->Figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations))
+                (->Figure :merchant   3  (->Bid 5 0 0) -- (:market     locations))
                 (->Figure :printer    10 (->Bid 0 0 0) --)
                 (->Figure :spy        0  (->Bid 0 0 0) b- nil prompt-spy)
                 (->Figure :apothecary 0  (->Bid 0 0 0) -f nil prompt-apothecary)

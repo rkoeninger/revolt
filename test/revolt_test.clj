@@ -1,29 +1,50 @@
+(ns revolt-test
+    (:use [clojure.test revolt]))
 
-(ns revolt-test)
-(use 'revolt)
-(use 'clojure.test)
+(def rob (->Player "Rob"))
+(def joe (->Player "Joe"))
+(def players [rob joe])
 
-(def board {
-  :guard-house nil
-  :player-sup {"rob" 0 "joe" 0}
-  :player-inf {:tavern {"rob" 0 "joe" 0} :market {"rob" 0 "joe" 0}}
-  :player-bank {"rob" [3 1 1] "joe" [3 1 1]}
-  :locs {:tavern (make-loc 20 4) :market (make-loc 25 5)}
-  :figs {
-    :constable  (make-fig 5  [0 1 0] false true :tavern)
-    :mercenary  (make-fig 0  [0 0 1] true  true)
-    :merchant   (make-fig 3  [5 0 0] false false :market)
-    :guard      (make-fig 0  [0 0 0] false false nil set-guard-house)
-    :spy        (make-fig 0  [0 0 0] true  false nil prompt-spy)
-  }
-  :fig-eval-order [:constable :guard :mercenary :spy :merchant]
-})
+(def hovel  (->Location :hovel  10 2))
+(def estate (->Location :estate 30 4))
+(def farm   (->Location :farm   40 6))
+(def palace (->Location :palace 90 8))
+
+(def locs (id-map [hovel estate farm palace]))
+
+(def nil-fn (fn [b p] b))
+
+(def fig1 (->Figure ))
+(def fig2 (->Figure ))
+(def fig3 (->Figure ))
+(def fig4 (->Figure ))
+(def fig5 (->Figure ))
+(def fig6 (->Figure ))
+
+(def fig-order [fig1 fig2 fig3 fig4 fig5 fig6])
+(def figs (id-map figs-order))
+
+(def board (->Board
+    locs
+    figs
+    fig-order
+    players
+    (zipmap players (repeat (->Bank 3 1 1)))
+    (zipmap (vals locs) (repeat (zipmap players (repeat 0))))
+    (zipmap players (repeat 0))
+    1))
+
+
+
+
+
+; TODO   VVVVV   re-write all this    VVVVV
 
 (deftest bid-validation
-  (is (validate-fig-bid board :constable [3 1 0]))
-  (is (not (validate-fig-bid board :constable [3 0 1])))
-  (is (validate-fig-bid board :spy [0 0 1]))
-  (is (not (validate-fig-bid board :spy [1 1 1]))))
+    (is (validate-bid board :constable [3 1 0]))
+    (is (not (validate-fig-bid board :constable [3 0 1])))
+    (is (validate-fig-bid board :spy [0 0 1]))
+    (is (not (validate-fig-bid board :spy [1 1 1]))))
 
 (deftest player-bids-validation
   (is (validate-player-bids board "rob" {:general [3 1 0] :printer [0 0 1]}))
