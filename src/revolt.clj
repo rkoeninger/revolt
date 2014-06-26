@@ -21,20 +21,16 @@
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
 (defn zero-bid? [bid] (every? zero? (map (partial get bid) [:gold :blackmail :force])))
-(defn compare-bid [x y]
+(defn compare-bid [{:keys [gx bx fx] :as x} {:keys [gy by fy] :as y}]
     (cond
-        (> (:force x) (:force y)) x
-        (> (:force y) (:force x)) y
-        (> (:blackmail x) (:blackmail y)) x
-        (> (:blackmail y) (:blackmail x)) y
-        (> (:gold x) (:gold y)) x
-        (> (:gold y) (:gold x)) y
+        (> fx fy) x (> fy fx) y
+        (> bx by) x (> by bx) y
+        (> gx gy) x (> gy gx) y
         :else bid0))
+(defn get-support-value [{:keys [g b f]}] (+ g (* 3 b) (* 5 f)))
 (defn get-winner [bid-map] ; bid-map : Map<Player, Bid>
     (let [winning-bid (reduce compare-bid bid0 (vals bid-map))]
         (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
-(defn get-support-value [{:keys [gold blackmail force]}]
-    (+ gold (* 3 blackmail) (* 5 force)))
 
 (defrecord Location [id support influence-limit])
 
@@ -199,7 +195,7 @@
         (get-support-value (get-in board [:banks player]))))
 
 (defn get-scores [board]
-    (into {} (map (fn [player] (get-score board player)) (:players board))))
+    (into {} (map (partial get-score board) (:players board))))
 ; => Map<Player, Nat>
 
 (def game-over? board-full?)
