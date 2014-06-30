@@ -120,24 +120,27 @@
     (->Location :palace     55 8)
 ))
 
+(defn figure [id support bank immunities & [location special]]
+    (->Figure id support bank immunities location special))
+
 ; locations-map : Map<Keyword, Location>
 (defn make-figures [locations prompt-spy prompt-apothecary prompt-messenger prompt-mayor]
-    (let [figs [(->Figure :general    1  (->Bid 0 0 1) -f (:fortress   locations))
-                (->Figure :captain    1  (->Bid 0 0 1) -f (:harbor     locations))
-                (->Figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern     locations))
-                (->Figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall  locations))
-                (->Figure :viceroy    0  (->Bid 0 0 0) -- (:palace     locations) set-guard-house)
-                (->Figure :priest     6  (->Bid 0 0 0) -- (:cathedral  locations))
-                (->Figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations))
-                (->Figure :merchant   3  (->Bid 5 0 0) -- (:market     locations))
-                (->Figure :printer    10 (->Bid 0 0 0) --)
-                (->Figure :spy        0  (->Bid 0 0 0) b- nil prompt-spy)
-                (->Figure :apothecary 0  (->Bid 0 0 0) -f nil prompt-apothecary)
-                (->Figure :messenger  3  (->Bid 0 0 0) -- nil prompt-messenger)
-                (->Figure :mayor      0  (->Bid 0 0 0) bf nil prompt-mayor)
-                (->Figure :constable  5  (->Bid 0 1 0) bf)
-                (->Figure :rogue      0  (->Bid 0 2 0) bf)
-                (->Figure :mercenary  0  (->Bid 0 0 1) bf)]]
+    (let [figs [(figure :general    1  (->Bid 0 0 1) -f (:fortress   locations))
+                (figure :captain    1  (->Bid 0 0 1) -f (:harbor     locations))
+                (figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern     locations))
+                (figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall  locations))
+                (figure :viceroy    0  (->Bid 0 0 0) -- (:palace     locations) set-guard-house)
+                (figure :priest     6  (->Bid 0 0 0) -- (:cathedral  locations))
+                (figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations))
+                (figure :merchant   3  (->Bid 5 0 0) -- (:market     locations))
+                (figure :printer    10 (->Bid 0 0 0) --)
+                (figure :spy        0  (->Bid 0 0 0) b- nil prompt-spy)
+                (figure :apothecary 0  (->Bid 0 0 0) -f nil prompt-apothecary)
+                (figure :messenger  3  (->Bid 0 0 0) -- nil prompt-messenger)
+                (figure :mayor      0  (->Bid 0 0 0) bf nil prompt-mayor)
+                (figure :constable  5  (->Bid 0 1 0) bf)
+                (figure :rogue      0  (->Bid 0 2 0) bf)
+                (figure :mercenary  0  (->Bid 0 0 1) bf)]]
         [(id-map figs) figs]))
 ; => (Map<Keyword, Figure>, Vector<Figure>)
 

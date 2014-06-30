@@ -14,12 +14,12 @@
 
 (def nil-fn (fn [b p] b))
 
-(def fig1 (->Figure ))
-(def fig2 (->Figure ))
-(def fig3 (->Figure ))
-(def fig4 (->Figure ))
-(def fig5 (->Figure ))
-(def fig6 (->Figure ))
+(def fig1 (figure :id 0 (->Bank 0 0 0) #{}))
+(def fig2 (figure ))
+(def fig3 (figure ))
+(def fig4 (figure ))
+(def fig5 (figure ))
+(def fig6 (figure ))
 
 (def fig-order [fig1 fig2 fig3 fig4 fig5 fig6])
 (def figs (id-map figs-order))
