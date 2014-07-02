@@ -1,4 +1,4 @@
-
+(comment
 (ns revolt)
 (require '[clojure.java.io :as io])
 (import '[java.net ServerSocket SocketTimeoutException])
@@ -75,3 +75,4 @@
 (defn create-server [port]
   (let [stuff (ref {:players {} :board nil :pending-bids {} :state :registering })]
     (create-listener stuff port)))
+)

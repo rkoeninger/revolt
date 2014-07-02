@@ -1,5 +1,7 @@
-(ns revolt-test
-    (:use [clojure.test revolt]))
+(ns revolt-test)
+
+(use 'revolt)
+(use 'clojure.test)
 
 (def rob (->Player "Rob"))
 (def joe (->Player "Joe"))
@@ -10,36 +12,41 @@
 (def farm   (->Location :farm   40 6))
 (def castle (->Location :castle 90 8))
 
-(def locs (id-map [hovel estate farm palace]))
+(def locs (id-map [hovel saloon farm castle]))
 
 (def nil-fn (fn [b w p] b))
 
-(def fig1 (figure :prince 0 (->Bank 5 0 0) -f castle))
-(def fig2 (figure :beggar 1 (->Bank 0 0 0) b- hovel))
-(def fig3 (figure :barber 8 (->Bank 0 0 0) -- saloon))
-(def fig4 (figure :farmer 1 (->Bank 2 0 0) -- farmer))
-(def fig5 (figure :axeman 3 (->Bank 0 0 1) bf))
-(def fig6 (figure :doctor 0 (->Bank 0 2 0) --))
+(def prince (figure :prince 0 (->Bid 5 0 0) -f castle))
+(def beggar (figure :beggar 1 (->Bid 0 0 0) b- hovel))
+(def barber (figure :barber 8 (->Bid 0 0 0) -- saloon))
+(def farmer (figure :farmer 1 (->Bid 2 0 0) -- farmer))
+(def axeman (figure :axeman 3 (->Bid 0 0 1) bf))
+(def doctor (figure :doctor 0 (->Bid 0 2 0) --))
 
-(def fig-order [fig1 fig2 fig3 fig4 fig5 fig6])
+(def figs-order [prince beggar barber farmer axeman doctor])
 (def figs (id-map figs-order))
 
 (def board (->Board
     locs
     figs
-    fig-order
+    figs-order
     players
-    (zipmap players (repeat (->Bank 3 1 1)))
+    (zipmap players (repeat (->Bid 3 1 1)))
     (zipmap (vals locs) (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))
     1))
 
 
 
+(deftest basic-stuff
+    (is (= (->Bid 2 0 1) (compare-bids (->Bid 1 1 0) (->Bid 2 0 1))))
+    (is (zero-bid? (compare-bids (->Bid 3 1 0) (->Bid 3 1 0))))
+    (is (= (->Bid 1 4 2) (bid+ (->Bid 0 2 1) (->Bid 1 2 1)))))
+
 
 
 ; TODO   VVVVV   re-write all this    VVVVV
-
+(comment
 (deftest bid-validation
     (is (validate-bid board :constable [3 1 0]))
     (is (not (validate-fig-bid board :constable [3 0 1])))
@@ -152,3 +159,4 @@
     (is (= (get-in result [:player-bank "joe"]) [5 0 0]))
     (is (= (get-in result [:player-sup "rob"]) 11))
     (is (= (get-in result [:player-sup "joe"]) 6))))
+)
