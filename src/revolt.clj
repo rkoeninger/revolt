@@ -26,6 +26,7 @@
             :else 0))
     java.lang.Object
     (toString [this] (str "{" gold " " blackmail " " force "}")))
+(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
 (def bid0 (->Bid 0 0 0))
 (def bid+ (partial merge-with +))
 (def has-blackmail? (comp pos? :blackmail))
