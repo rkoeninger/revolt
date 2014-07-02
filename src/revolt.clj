@@ -15,23 +15,32 @@
             outer-key-domain))])
         inner-key-domain))))
 
-(defrecord Bid [gold blackmail force])
+(defrecord Bid [gold blackmail force]
+    java.lang.Comparable
+    (compareTo [{gx :gold bx :blackmail fx :force}
+                {gy :gold by :blackmail fy :force}]
+        (cond
+            (> fx fy) 1 (> fy fx) -1
+            (> bx by) 1 (> by bx) -1
+            (> gx gy) 1 (> gy gx) -1
+            :else 0))
+    java.lang.Object
+    (toString [this] (str "{" gold " " blackmail " " force "}")))
 (def bid0 (->Bid 0 0 0))
 (def bid+ (partial merge-with +))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
 (def zero-bid? (partial = bid0))
-(defn compare-bids [{gx :gold bx :blackmail fx :force :as x}
-                    {gy :gold by :blackmail fy :force :as y}]
-    (cond
-        (> fx fy) x (> fy fx) y
-        (> bx by) x (> by bx) y
-        (> gx gy) x (> gy gx) y
-        :else bid0))
+(defn max-bid [& bids]
+    (case (count bids)
+        0 nil
+        1 (first bids)
+        (let [[bid1 bid2] (take 2 (reverse (sort bids)))]
+            (if (not= bid1 bid2) bid1))))
 (defn get-support-value [{:keys [g b f]}] (+ g (* 3 b) (* 5 f)))
 (defn get-winner [bid-map] ; bid-map : Map Player Bid
-    (let [winning-bid (reduce compare-bids bid0 (vals bid-map))]
-        (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
+    (let [winning-bid (apply max-bid (vals bid-map))]
+        (if-not (nil? winning-bid) (inverted-get bid-map winning-bid))))
 
 (defrecord Location [id support influence-limit])
 

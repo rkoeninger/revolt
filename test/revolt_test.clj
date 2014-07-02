@@ -38,10 +38,12 @@
 
 
 
-(deftest basic-stuff
-    (is (= (->Bid 2 0 1) (compare-bids (->Bid 1 1 0) (->Bid 2 0 1))))
-    (is (zero-bid? (compare-bids (->Bid 3 1 0) (->Bid 3 1 0))))
-    (is (= (->Bid 1 4 2) (bid+ (->Bid 0 2 1) (->Bid 1 2 1)))))
+(deftest comparing-bids
+    (is (= (->Bid 2 0 1) (max-bid (->Bid 1 1 0) (->Bid 2 0 1))))
+    (is (nil? (max-bid (->Bid 3 1 0) (->Bid 3 1 0))))
+    (is (= (->Bid 1 4 2) (bid+ (->Bid 0 2 1) (->Bid 1 2 1))))
+    (is (= :c (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 1 2 1) :d (->Bid 3 1 0)})))
+    (is (= nil (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 0) :e (->Bid 0 1 0)}))))
 
 
 
