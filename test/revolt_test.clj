@@ -6,20 +6,20 @@
 (def players [rob joe])
 
 (def hovel  (->Location :hovel  10 2))
-(def estate (->Location :estate 30 4))
+(def saloon (->Location :saloon 30 4))
 (def farm   (->Location :farm   40 6))
-(def palace (->Location :palace 90 8))
+(def castle (->Location :castle 90 8))
 
 (def locs (id-map [hovel estate farm palace]))
 
-(def nil-fn (fn [b p] b))
+(def nil-fn (fn [b w p] b))
 
-(def fig1 (figure :id 0 (->Bank 0 0 0) #{}))
-(def fig2 (figure ))
-(def fig3 (figure ))
-(def fig4 (figure ))
-(def fig5 (figure ))
-(def fig6 (figure ))
+(def fig1 (figure :prince 0 (->Bank 5 0 0) -f castle))
+(def fig2 (figure :beggar 1 (->Bank 0 0 0) b- hovel))
+(def fig3 (figure :barber 8 (->Bank 0 0 0) -- saloon))
+(def fig4 (figure :farmer 1 (->Bank 2 0 0) -- farmer))
+(def fig5 (figure :axeman 3 (->Bank 0 0 1) bf))
+(def fig6 (figure :doctor 0 (->Bank 0 2 0) --))
 
 (def fig-order [fig1 fig2 fig3 fig4 fig5 fig6])
 (def figs (id-map figs-order))

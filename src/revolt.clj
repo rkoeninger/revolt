@@ -20,8 +20,9 @@
 (def bid+ (partial merge-with +))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
-(defn zero-bid? [bid] (every? zero? (map (partial get bid) [:gold :blackmail :force])))
-(defn compare-bid [{:keys [gx bx fx] :as x} {:keys [gy by fy] :as y}]
+(def zero-bid? (partial = bid0))
+(defn compare-bids [{gx :gold bx :blackmail fx :force :as x}
+                    {gy :gold by :blackmail fy :force :as y}]
     (cond
         (> fx fy) x (> fy fx) y
         (> bx by) x (> by bx) y
@@ -29,7 +30,7 @@
         :else bid0))
 (defn get-support-value [{:keys [g b f]}] (+ g (* 3 b) (* 5 f)))
 (defn get-winner [bid-map] ; bid-map : Map Player Bid
-    (let [winning-bid (reduce compare-bid bid0 (vals bid-map))]
+    (let [winning-bid (reduce compare-bids bid0 (vals bid-map))]
         (if-not (zero-bid? winning-bid) (inverted-get bid-map winning-bid))))
 
 (defrecord Location [id support influence-limit])
