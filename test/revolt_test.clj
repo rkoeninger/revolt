@@ -14,12 +14,10 @@
 
 (def locs (apply id-map [hovel saloon farm castle]))
 
-(def nil-fn (fn [b w p] b))
-
 (def prince (figure :prince 0 [5 0 0] -f castle))
 (def beggar (figure :beggar 1 [0 0 0] b- hovel))
 (def barber (figure :barber 8 [0 0 0] -- saloon))
-(def farmer (figure :farmer 1 [2 0 0] -- farmer))
+(def farmer (figure :farmer 1 [2 0 0] -- farm))
 (def axeman (figure :axeman 3 [0 0 1] bf))
 (def doctor (figure :doctor 0 [0 2 0] --))
 
@@ -63,7 +61,10 @@
                     (add-influence saloon joe)
                     (add-influence saloon rob))]
         (is (location-full? board saloon))
+        (is (= [saloon] (get-holdings board rob)))
+        (is (= [] (get-holdings board joe)))
         (is (= rob (get-holder board saloon)))
+        (is (not= joe (get-holder board saloon)))
         (let [board (-> board
                         (add-influence farm joe)
                         (move-influence saloon farm joe)
@@ -72,12 +73,16 @@
             (is (not (location-full? board saloon)))
             (is (nil? (get-holder board saloon)))
             (is (location-full? board farm))
+            (is (= [] (get-holdings board rob)))
+            (is (= [farm] (get-holdings board joe)))
             (is (= joe (get-holder board farm)))
             (let [board (-> board
                             (add-influence hovel rob)
                             (add-influence hovel joe))]
                 (is (location-full? board hovel))
                 (is (nil? (get-holder board hovel)))
+                (is (= [] (get-holdings board rob)))
+                (is (= [farm] (get-holdings board joe)))
                 (is (thrown? AssertionError (add-influence board hovel rob)))
                 (is (thrown? AssertionError (remove-influence board castle joe)))
                 (let [board (-> board
@@ -92,9 +97,26 @@
                     (is (location-full? board farm))
                     (is (location-full? board hovel))
                     (is (not (board-full? board)))
+                    (is (= [] (get-holdings board rob)))
+                    (is (= [farm castle] (get-holdings board joe)))
                     (let [board (-> board
                                     (replace-influence castle joe rob)
                                     (swap-influence hovel joe saloon rob)
                                     (add-influence saloon joe))]
                         (is (location-full? board saloon))
+                        (is (= [hovel] (get-holdings board rob)))
+                        (is (= [farm castle] (get-holdings board joe)))
                         (is (board-full? board))))))))
+
+(deftest rewards
+    (let [board (-> (clear-banks board)
+                    (reward-winner farmer rob)
+                    (reward-winner prince joe))]
+        (is (= 0 (get-support board joe)))
+        (is (= 1 (get-support board rob)))
+        (is (= (->Bid 2 0 0) (get-bank board rob)))
+        (is (= (->Bid 5 0 0) (get-bank board joe)))
+        (is (= 1 (get-influence board farm rob)))
+        (is (= 1 (get-influence board castle joe)))
+        (is (= 3 (get-score board rob)))
+        (is (= 5 (get-score board joe)))))

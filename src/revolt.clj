@@ -41,7 +41,7 @@
     (+ gold (* 3 blackmail) (* 5 force)))
 (defn get-winner [bid-map] ; bid-map : Map Player Bid
     (let [winning-bid (apply unique-max (vals bid-map))]
-        (if-not (nil? winning-bid) (inverted-get bid-map winning-bid))))
+        (if-not (or (nil? winning-bid) (zero-bid? winning-bid)) (inverted-get bid-map winning-bid))))
 
 (defrecord Location [id support influence-limit]
     java.lang.Object
@@ -123,9 +123,9 @@
     (if (location-full? board location)
         (let [inf-map (get-in board [:influence location])
               max-inf (apply unique-max (vals inf-map))]
-            (if-not (nil? max-inf) (inverted-get inf-map max-inf)))))
+            (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf)))))
 (defn get-holdings [board player]
-    (filter (fn [loc] (= player (get-holder board loc))) (:locations board)))
+    (filter (fn [loc] (= player (get-holder board loc))) (vals (:locations board))))
 ; => Seq Location
 (defn get-score [board player]
     (+
@@ -139,7 +139,7 @@
 (defn get-game-winner [board]
     (let [scores (get-scores board)
           max-score (apply unique-max (vals scores))]
-        (if-not (nil? max-score) (inverted-get scores max-score))))
+        (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
 
 ; params : Map Keyword Type
 ; f : (Board, Player, Map Keyword Object) -> Board
@@ -191,22 +191,22 @@
 
 ; locations-map : Map Keyword Location
 (defn make-figures [locations]
-    (let [figs [(figure :general    1  (->Bid 0 0 1) -f (:fortress   locations))
-                (figure :captain    1  (->Bid 0 0 1) -f (:harbor     locations))
-                (figure :innkeeper  3  (->Bid 0 1 0) b- (:tavern     locations))
-                (figure :magistrate 1  (->Bid 0 1 0) b- (:town-hall  locations))
-                (figure :viceroy    0  (->Bid 0 0 0) -- (:palace     locations) occupy-guard-house)
-                (figure :priest     6  (->Bid 0 0 0) -- (:cathedral  locations))
-                (figure :aristocrat 5  (->Bid 3 0 0) -- (:plantation locations))
-                (figure :merchant   3  (->Bid 5 0 0) -- (:market     locations))
-                (figure :printer    10 (->Bid 0 0 0) --)
-                (figure :spy        0  (->Bid 0 0 0) b- nil steal-spot)
-                (figure :apothecary 0  (->Bid 0 0 0) -f nil switch-spots)
-                (figure :messenger  3  (->Bid 0 0 0) -- nil reassign-up-to-2-spots)
-                (figure :mayor      0  (->Bid 0 0 0) bf nil take-open-spot)
-                (figure :constable  5  (->Bid 0 1 0) bf)
-                (figure :rogue      0  (->Bid 0 2 0) bf)
-                (figure :mercenary  0  (->Bid 0 0 1) bf)]]
+    (let [figs [(figure :general    1  [0 0 1] -f (:fortress   locations))
+                (figure :captain    1  [0 0 1] -f (:harbor     locations))
+                (figure :innkeeper  3  [0 1 0] b- (:tavern     locations))
+                (figure :magistrate 1  [0 1 0] b- (:town-hall  locations))
+                (figure :viceroy    0  [0 0 0] -- (:palace     locations) occupy-guard-house)
+                (figure :priest     6  [0 0 0] -- (:cathedral  locations))
+                (figure :aristocrat 5  [3 0 0] -- (:plantation locations))
+                (figure :merchant   3  [5 0 0] -- (:market     locations))
+                (figure :printer    10 [0 0 0] --)
+                (figure :spy        0  [0 0 0] b- nil steal-spot)
+                (figure :apothecary 0  [0 0 0] -f nil switch-spots)
+                (figure :messenger  3  [0 0 0] -- nil reassign-up-to-2-spots)
+                (figure :mayor      0  [0 0 0] bf nil take-open-spot)
+                (figure :constable  5  [0 1 0] bf)
+                (figure :rogue      0  [0 2 0] bf)
+                (figure :mercenary  0  [0 0 1] bf)]]
         [(id-map figs) figs]))
 ; => (Map Keyword Figure, Vector Figure)
 
