@@ -38,7 +38,8 @@
         1 (first bids)
         (let [[bid1 bid2] (take 2 (reverse (sort bids)))]
             (if (not= bid1 bid2) bid1))))
-(defn get-support-value [{:keys [g b f]}] (+ g (* 3 b) (* 5 f)))
+(defn get-support-value [{:keys [gold blackmail force]}]
+    (+ gold (* 3 blackmail) (* 5 force)))
 (defn get-winner [bid-map] ; bid-map : Map Player Bid
     (let [winning-bid (apply max-bid (vals bid-map))]
         (if-not (nil? winning-bid) (inverted-get bid-map winning-bid))))
@@ -56,7 +57,7 @@
     (not (or
         (and (has-blackmail? bid) (blackmail-immune? fig))
         (and (has-force? bid) (force-immune? fig)))))
-(defn validate-bids [bank bids]
+(defn validate-bids [bank bids] ; bids : Map Figure Bid
     (and
         (> (count bids) 0)
         (<= (count bids) 6)
@@ -90,14 +91,14 @@
 (defn get-bank [board player] (get-in board [:banks player]))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (def min-token-count 5)
-(defn fill-bank [{:keys [gold blackmail force] :as bank}]
+(defn fill-bank [{:keys [gold] :as bank}]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- min-token-count token-count))]
         (if (zero? extra-gold) bank (update-in bank [:gold] (partial + extra-gold)))))
 (defn fill-banks [board] (update-in board [:banks] (partial hm-map fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
-    (update-in board [:influence location player] inc))
+    (update-in board [:influence location player] (comp inc #(or % 0))))
 (defn remove-influence [board location player]
     (assert (has-influence board location player) (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
@@ -174,7 +175,7 @@
 ))
 
 (defn figure [id support bank immunities & [location special]]
-    (->Figure id support bank immunities location special))
+    (->Figure id support (if (vector? bank) (apply ->Bid bank) bank) immunities location special))
 
 ; locations-map : Map Keyword Location
 (defn make-figures [locations]

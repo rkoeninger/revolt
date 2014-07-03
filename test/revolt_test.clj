@@ -16,12 +16,12 @@
 
 (def nil-fn (fn [b w p] b))
 
-(def prince (figure :prince 0 (->Bid 5 0 0) -f castle))
-(def beggar (figure :beggar 1 (->Bid 0 0 0) b- hovel))
-(def barber (figure :barber 8 (->Bid 0 0 0) -- saloon))
-(def farmer (figure :farmer 1 (->Bid 2 0 0) -- farmer))
-(def axeman (figure :axeman 3 (->Bid 0 0 1) bf))
-(def doctor (figure :doctor 0 (->Bid 0 2 0) --))
+(def prince (figure :prince 0 [5 0 0] -f castle))
+(def beggar (figure :beggar 1 [0 0 0] b- hovel))
+(def barber (figure :barber 8 [0 0 0] -- saloon))
+(def farmer (figure :farmer 1 [2 0 0] -- farmer))
+(def axeman (figure :axeman 3 [0 0 1] bf))
+(def doctor (figure :doctor 0 [0 2 0] --))
 
 (def figs-order [prince beggar barber farmer axeman doctor])
 (def figs (id-map figs-order))
@@ -36,84 +36,35 @@
     (zipmap players (repeat 0))
     1))
 
-
-
 (deftest comparing-bids
     (is (= (->Bid 2 0 1) (max-bid (->Bid 1 1 0) (->Bid 2 0 1))))
     (is (nil? (max-bid (->Bid 3 1 0) (->Bid 3 1 0))))
     (is (= (->Bid 1 4 2) (bid+ (->Bid 0 2 1) (->Bid 1 2 1))))
     (is (= :c (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 1 2 1) :d (->Bid 3 1 0)})))
-    (is (= nil (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 0) :e (->Bid 0 1 0)}))))
+    (is (= nil (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 0) :e (->Bid 0 1 0)})))
+    (is (= :d (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 1) :e (->Bid 0 1 0)}))))
 
+(deftest validating-bids
+    (is (validate-bid prince (->Bid 2 1 0)))
+    (is (validate-bid prince (->Bid 1 0 0)))
+    (is (not (validate-bid prince (->Bid 1 0 1))))
+    (is (validate-bid beggar (->Bid 2 0 0)))
+    (is (validate-bid beggar (->Bid 1 0 1)))
+    (is (not (validate-bid beggar (->Bid 1 1 0))))
+    (is (validate-bids (->Bid 3 1 1) {prince (->Bid 1 1 0) axeman (->Bid 2 0 0) farmer (->Bid 0 0 1)}))
+    (is (not (validate-bids (->Bid 3 2 1) {prince (->Bid 1 1 0) axeman (->Bid 2 0 0) farmer (->Bid 0 0 1)})))
+    (is (not (validate-bids (->Bid 3 2 1) {prince (->Bid 1 1 1) axeman (->Bid 2 0 0) farmer (->Bid 0 1 0)}))))
 
+(deftest influence
+    (let [board (-> board
+        (add-influence saloon rob)
+        (add-influence saloon rob)
+        (add-influence saloon joe)
+        (add-influence saloon rob))])
+    (is (= rob (get-holder board saloon))))
 
 ; TODO   VVVVV   re-write all this    VVVVV
 (comment
-(deftest bid-validation
-    (is (validate-bid board :constable [3 1 0]))
-    (is (not (validate-fig-bid board :constable [3 0 1])))
-    (is (validate-fig-bid board :spy [0 0 1]))
-    (is (not (validate-fig-bid board :spy [1 1 1]))))
-
-(deftest player-bids-validation
-  (is (validate-player-bids board "rob" {:general [3 1 0] :printer [0 0 1]}))
-  (is (not (validate-player-bids board "rob" {:general [3 0 0] :printer [0 0 1]})))
-  (is (not (validate-player-bids board "rob" {:general [3 1 0] :printer [1 0 1]})))
-  (is (validate-player-bids
-    (add-bank (make-board ["rob" "joe"]) "rob" [2 0 0])
-    "rob"
-    {
-      :general [1 0 0]
-      :printer [1 0 1]
-      :messenger [1 0 0]
-      :priest [1 0 0]
-      :rogue [1 0 0]
-      :apothecary [0 1 0]
-    }))
-  (is (not (validate-player-bids
-    (add-bank (make-board ["rob" "joe"]) "rob" [3 0 0])
-    "rob"
-    {
-      :general [1 0 0]
-      :printer [1 0 1]
-      :messenger [1 0 0]
-      :mercenary [1 0 0]
-      :priest [1 0 0]
-      :rogue [1 0 0]
-      :apothecary [0 1 0]
-    })))
-  (is (not (validate-player-bids
-    (make-board ["rob" "joe"])
-    "rob"
-    {
-      :general [1 0 0]
-      :printer [1 0 1]
-    })))
-  (is (not (validate-player-bids
-    (make-board ["rob" "joe"])
-    "rob"
-    { :general [3 1 1] }))))
-
-(deftest bid-comparison
-  (let [x [2 0 1] y [4 2 0] z [0 0 1] w [1 3 1] u [0 2 0] v [1 0 1]]
-    (is (= x (compare-bids x y)))
-    (is (= w (compare-bids z w)))
-    (is (= x (compare-bids u x)))
-    (is (= z (compare-bids z y)))
-    (is (= y (compare-bids y u)))
-    (is (nil? (compare-bids v v)))
-    (is (= x (compare-bids v x)))))
-
-(deftest bid-winner
-  (is (=
-    "rob"
-    (get-winner {
-      "rob" [2 0 1]
-      "joe" [1 3 0]
-      "jack" [1 0 1]
-      "jesse" [4 2 0]})))
-  (is (nil? (get-winner {})))
-  (is (nil? (get-winner {"rob" [0 0 0]}))))
 
 (deftest influence
   (let [board (-> board
