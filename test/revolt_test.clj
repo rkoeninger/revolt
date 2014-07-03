@@ -12,7 +12,7 @@
 (def farm   (->Location :farm   40 6))
 (def castle (->Location :castle 90 8))
 
-(def locs (id-map [hovel saloon farm castle]))
+(def locs (apply id-map [hovel saloon farm castle]))
 
 (def nil-fn (fn [b w p] b))
 
@@ -24,7 +24,7 @@
 (def doctor (figure :doctor 0 [0 2 0] --))
 
 (def figs-order [prince beggar barber farmer axeman doctor])
-(def figs (id-map figs-order))
+(def figs (apply id-map figs-order))
 
 (def board (->Board
     locs
@@ -36,15 +36,16 @@
     (zipmap players (repeat 0))
     1))
 
-(deftest comparing-bids
-    (is (= (->Bid 2 0 1) (max-bid (->Bid 1 1 0) (->Bid 2 0 1))))
-    (is (nil? (max-bid (->Bid 3 1 0) (->Bid 3 1 0))))
+(deftest bid-operations
+    (is (= (->Bid 2 0 1) (unique-max (->Bid 1 1 0) (->Bid 2 0 1))))
+    (is (nil? (unique-max (->Bid 3 1 0) (->Bid 3 1 0))))
     (is (= (->Bid 1 4 2) (bid+ (->Bid 0 2 1) (->Bid 1 2 1))))
+    (is (= (->Bid 3 0 1) (bid+ (->Bid 1 0 1) bid0 (->Bid 2 0 0))))
     (is (= :c (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 1 2 1) :d (->Bid 3 1 0)})))
     (is (= nil (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 0) :e (->Bid 0 1 0)})))
     (is (= :d (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 2 0 1) :d (->Bid 3 1 1) :e (->Bid 0 1 0)}))))
 
-(deftest validating-bids
+(deftest validation-operations
     (is (validate-bid prince (->Bid 2 1 0)))
     (is (validate-bid prince (->Bid 1 0 0)))
     (is (not (validate-bid prince (->Bid 1 0 1))))
@@ -57,11 +58,12 @@
 
 (deftest influence
     (let [board (-> board
-        (add-influence saloon rob)
-        (add-influence saloon rob)
-        (add-influence saloon joe)
-        (add-influence saloon rob))])
-    (is (= rob (get-holder board saloon))))
+                    (add-influence saloon rob)
+                    (add-influence saloon rob)
+                    (add-influence saloon joe)
+                    (add-influence saloon rob))]
+        (is (location-full? board saloon))
+        (is (= rob (get-holder board saloon)))))
 
 ; TODO   VVVVV   re-write all this    VVVVV
 (comment

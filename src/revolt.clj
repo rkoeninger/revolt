@@ -2,7 +2,12 @@
     (:use [clojure.set :only [map-invert]]))
 
 (defn inverted-get [m v] ((map-invert m) v))
-(defn unique-max [x y] (cond (= x y) 0 :else (max x y)))
+(defn unique-max [& xs]
+    (case (count xs)
+        0 nil
+        1 (first xs)
+        (let [[x1 x2] (take 2 (reverse (sort xs)))]
+            (if (not= x1 x2) x1))))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
 
 ; flip-nested-map : Map a (Map b c) -> Map b (Map a c)
@@ -25,31 +30,31 @@
             (> gx gy) 1 (> gy gx) -1
             :else 0))
     java.lang.Object
-    (toString [this] (str "{" gold " " blackmail " " force "}")))
+    (toString [_] (str "(Bid " gold " " blackmail " " force ")")))
 (defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
 (def bid0 (->Bid 0 0 0))
 (def bid+ (partial merge-with +))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
 (def zero-bid? (partial = bid0))
-(defn max-bid [& bids]
-    (case (count bids)
-        0 nil
-        1 (first bids)
-        (let [[bid1 bid2] (take 2 (reverse (sort bids)))]
-            (if (not= bid1 bid2) bid1))))
 (defn get-support-value [{:keys [gold blackmail force]}]
     (+ gold (* 3 blackmail) (* 5 force)))
 (defn get-winner [bid-map] ; bid-map : Map Player Bid
-    (let [winning-bid (apply max-bid (vals bid-map))]
+    (let [winning-bid (apply unique-max (vals bid-map))]
         (if-not (nil? winning-bid) (inverted-get bid-map winning-bid))))
 
-(defrecord Location [id support influence-limit])
+(defrecord Location [id support influence-limit]
+    java.lang.Object
+    (toString [_] (name id)))
+(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
 
 ; immunities : Set Keyword
 ; location : Option Location
 ; special : Option Special
-(defrecord Figure [id support bank immunities location special])
+(defrecord Figure [id support bank immunities location special]
+    java.lang.Object
+    (toString [_] (name id)))
+(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
 (def has-special? (comp not nil? :special))
 (def blackmail-immune? (comp :blackmail :immunities))
 (def force-immune? (comp :force :immunities))
@@ -64,7 +69,10 @@
         (= bank (reduce bid+ (vals bids)))
         (every? (partial apply validate-bid) bids)))
 
-(defrecord Player [id])
+(defrecord Player [id]
+    java.lang.Object
+    (toString [_] (name id)))
+(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
 
 ; locations : Map Keyword Location
 ; figures : Map Keyword Figure
@@ -74,7 +82,10 @@
 ; influence : Map Player (Map Location Nat)
 ; support : Map Player Nat
 ; turn : Nat
-(defrecord Board [locations figures fig-order players banks influence support turn])
+(defrecord Board [locations figures fig-order players banks influence support turn]
+    java.lang.Object
+    (toString [_] (str "(Board support:" support " influence:" influence " banks:" banks " turn:" turn ")")))
+(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
 (defn location-full? [board location]
@@ -109,9 +120,10 @@
 (defn swap-influence [board location0 player0 location1 player1]
     (-> board (replace-influence location0 player0 player1) (replace-influence location1 player1 player0)))
 (defn get-holder [board location]
-    (let [inf-map (get-in board [:influence location])
-          max-inf (reduce unique-max 0 (vals inf-map))]
-        (if-not (zero? max-inf) (inverted-get inf-map max-inf))))
+    (if (location-full? board location)
+        (let [inf-map (get-in board [:influence location])
+              max-inf (apply unique-max (vals inf-map))]
+            (if-not (nil? max-inf) (inverted-get inf-map max-inf)))))
 (defn get-holdings [board player]
     (filter (fn [loc] (= player (get-holder board loc))) (:locations board)))
 ; => Seq Location
@@ -126,8 +138,8 @@
 (def game-over? board-full?)
 (defn get-game-winner [board]
     (let [scores (get-scores board)
-          max-score (reduce unique-max 0 (vals scores))]
-        (if-not (zero? max-score) (inverted-get scores max-score))))
+          max-score (apply unique-max (vals scores))]
+        (if-not (nil? max-score) (inverted-get scores max-score))))
 
 ; params : Map Keyword Type
 ; f : (Board, Player, Map Keyword Object) -> Board
