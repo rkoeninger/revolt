@@ -93,7 +93,7 @@
           limit (:influence-limit location)]
         (assert (<= occupied limit))
         (= occupied limit)))
-(defn board-full? [board] (every? (partial location-full? board) (:locations board)))
+(defn board-full? [board] (every? (partial location-full? board) (vals (:locations board))))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence [board location player] (not (zero? (get-in board [:influence location player]))))
 (defn add-support [board player amount] (update-in board [:support player] (partial + amount)))

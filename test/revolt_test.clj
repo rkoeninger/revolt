@@ -9,8 +9,8 @@
 
 (def hovel  (->Location :hovel  10 2))
 (def saloon (->Location :saloon 30 4))
-(def farm   (->Location :farm   40 6))
-(def castle (->Location :castle 90 8))
+(def farm   (->Location :farm   40 3))
+(def castle (->Location :castle 90 5))
 
 (def locs (apply id-map [hovel saloon farm castle]))
 
@@ -63,55 +63,38 @@
                     (add-influence saloon joe)
                     (add-influence saloon rob))]
         (is (location-full? board saloon))
-        (is (= rob (get-holder board saloon)))))
-
-; TODO   VVVVV   re-write all this    VVVVV
-(comment
-
-(deftest influence
-  (let [board (-> board
-          (add-inf "rob" :tavern)
-          (add-inf "joe" :tavern)
-          (add-inf "joe" :tavern)
-          (add-inf "joe" :tavern))]
-    (is (loc-full? board :tavern))
-    (let [board (-> board
-            (move-inf "rob" :tavern :market)
-            (replace-inf "joe" "rob" :tavern)
-            (add-inf "joe" :market)
-            (swap-inf "rob" :market "joe" :tavern))]
-      (is (= 2 (total-inf board :market)))
-      (is (= 3 (total-inf board :tavern))))))
-
-(deftest support
-  (let [board (-> board
-          (add-sup "rob" 6)
-          (add-sup "joe" 3)
-          (add-sup "rob" 1)
-          (add-sup "rob" 1)
-          (add-sup "joe" 10))]
-    (is (= (get-in board [:player-sup "rob"]) 8))
-    (is (= (get-in board [:player-sup "joe"]) 13))))
-
-(deftest bank
-  (let [board (-> board
-          clear-banks
-          (add-bank "rob" [2 0 1])
-          (add-bank "joe" [0 1 1])
-          (add-bank "joe" [1 1 2])
-          (add-bank "rob" [3 2 0]))]
-    (is (= (get-in board [:player-bank "rob"]) [5 2 1]))
-    (is (= (get-in board [:player-bank "joe"]) [1 2 3]))))
-
-(deftest turn
-  (let [result (run-turn (make-board ["rob" "joe"]) {
-      ["rob" :general] [2 1 0]
-      ["rob" :printer] [0 0 1]
-      ["joe" :priest] [0 1 1]
-      ["joe" :printer] [3 0 0]
-      ["rob" :mercenary] [1 0 0]})]
-    (is (= (get-in result [:player-bank "rob"]) [3 0 2]))
-    (is (= (get-in result [:player-bank "joe"]) [5 0 0]))
-    (is (= (get-in result [:player-sup "rob"]) 11))
-    (is (= (get-in result [:player-sup "joe"]) 6))))
-)
+        (is (= rob (get-holder board saloon)))
+        (let [board (-> board
+                        (add-influence farm joe)
+                        (move-influence saloon farm joe)
+                        (add-influence farm rob))]
+            (is (thrown? AssertionError (remove-influence board saloon joe)))
+            (is (not (location-full? board saloon)))
+            (is (nil? (get-holder board saloon)))
+            (is (location-full? board farm))
+            (is (= joe (get-holder board farm)))
+            (let [board (-> board
+                            (add-influence hovel rob)
+                            (add-influence hovel joe))]
+                (is (location-full? board hovel))
+                (is (nil? (get-holder board hovel)))
+                (is (thrown? AssertionError (add-influence board hovel rob)))
+                (is (thrown? AssertionError (remove-influence board castle joe)))
+                (let [board (-> board
+                                (add-influence castle joe)
+                                (add-influence castle joe)
+                                (add-influence castle rob)
+                                (add-influence castle joe)
+                                (add-influence castle joe))]
+                    (is (location-full? board castle))
+                    (is (not (location-full? board saloon)))
+                    (is (= 3 (occupied-influence board saloon)))
+                    (is (location-full? board farm))
+                    (is (location-full? board hovel))
+                    (is (not (board-full? board)))
+                    (let [board (-> board
+                                    (replace-influence castle joe rob)
+                                    (swap-influence hovel joe saloon rob)
+                                    (add-influence saloon joe))]
+                        (is (location-full? board saloon))
+                        (is (board-full? board))))))))
