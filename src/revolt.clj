@@ -73,6 +73,7 @@
     java.lang.Object
     (toString [_] (name id)))
 (defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
+(defn touchable? [board winner player] (or (= winner player) (not= player (:guard-house board))))
 
 ; locations : Map Keyword Location
 ; figures : Map Keyword Figure
@@ -142,29 +143,60 @@
         (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
 
 ; params : Map Keyword Type
-; f : (Board, Player, Map Keyword Object) -> Board
-(defrecord Special [params f])
+; doable : (Board, Player) -> Boolean
+;     Returns true if special can be performed in a meaningful way
+; check : (Board, Player, Map Keyword Object) -> Boolean
+;     Returns true if provided args are valid
+; effect : (Board, Player, Map Keyword Object) -> Board
+;     Returns altered board (might raise assertion errors)
+(defrecord Special [params doable check effect])
 
+; Offically, the guard house is like any other Influence Space in that
+; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
+; and the game isn't over if the Guard House is not occupied.
+; I don't feel like implementing it that way.
 (def occupy-guard-house
-    (Special. {} (fn [board winner _] (assoc board :guard-house winner))))
+    (Special. {}
+        (constantly true)
+        (constantly true)
+        (fn [board winner _] (assoc board :guard-house winner))))
 
 (def steal-spot
     (Special. {:location "Location" :player "Player"}
+        (fn [board winner]
+            (some
+                (fn [location]
+                    (let [inf-map (dissoc (get-in board [:influence location]) (:guard-house board))]
+                        (pos? (reduce + (vals inf-map)))))
+                (vals (:locations board))))
         (fn [board winner {:keys [location player]}]
+            (and
+                (touchable? board winner player)
+                ))
+        (fn [board winner {:keys [location player]}]
+            (assert (touchable? board winner player))
             (replace-influence location player winner))))
 
 (def switch-spots
     (Special. {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
+        (fn [board winner] nil)
+        (fn [board winner {:keys [location0 player0 location1 player1]}] false)
         (fn [board winner {:keys [location0 player0 location1 player1]}]
+            (assert (touchable? board winner player0))
+            (assert (touchable? board winner player1))
             (swap-influence location0 player0 location1 player1))))
 
 (def reassign-up-to-2-spots
     (Special. {:reassignments "[(Location, Location)]"}
+        (fn [board winner] nil)
+        (fn [board winner {:keys [reassignments]}] false)
         (fn [board winner {:keys [reassignments]}]
             (reduce (fn [board [location0 location1]] (move-influence board location0 location1 winner)) board reassignments))))
 
 (def take-open-spot
     (Special. {:location "Location"}
+        (fn [board _] (not (board-full? board)))
+        (fn [board _ {:keys [location]}] (not (board-full? board location)))
         (fn [board winner {:keys [location]}]
             (add-influence board location winner))))
 
@@ -251,28 +283,3 @@
                         (run-until-special board (rest figure-list) figure-player-bids)
                         [board (rest figure-list) (:special current-figure)]))))))
 ; => [Board (Vector Figure) Special?]
-
-
-
-
-
-
-
-
-
-(defn run-figure-bids [board figure player-bids] ; player-bids : Map Player Bid
-    "Does not run Special"
-    (let [winner (get-winner player-bids)] (if (nil? winner) board (reward-winner board figure winner))))
-
-(defn run-all-bids [board figure-player-bids] ; player-figure-bids : Map Figure (Map Player Bid)
-    (reduce
-        (fn [b figure] (run-figure-bids b figure (figure-player-bids figure)))
-        board
-        (:figure-order board)))
-
-(defn run-turn [board figure-player-bids] ; figure-player-bids : Map Figure (Map Player Bid)
-    (let [board (-> board
-                    clear-banks
-                    (run-all-bids figure-player-bids)
-                    inc-turn)]
-        (if (board-full? board) board (fill-banks board))))
