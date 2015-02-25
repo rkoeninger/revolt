@@ -10,16 +10,6 @@
             (if (not= x1 x2) x1))))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
 
-; flip-nested-map : Map a (Map b c) -> Map b (Map a c)
-(defn flip-nested-map
-    ([m] (flip-nested-map (keys m) (distinct (mapcat keys (vals m))) m))
-    ([outer-key-domain inner-key-domain m]
-        (into {} (map (fn [inner-key] [inner-key
-            (into {} (map (fn [outer-key] [outer-key
-                ((m outer-key) inner-key)])
-            outer-key-domain))])
-        inner-key-domain))))
-
 (defrecord Bid [gold blackmail force]
     java.lang.Comparable
     (compareTo [{gx :gold bx :blackmail fx :force}
@@ -103,10 +93,10 @@
 (defn get-bank [board player] (get-in board [:banks player]))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (def min-token-count 5)
-(defn fill-bank [{:keys [gold] :as bank}]
+(defn fill-bank [bank]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- min-token-count token-count))]
-        (if (zero? extra-gold) bank (update-in bank [:gold] (partial + extra-gold)))))
+        (bid+ bank (->Bid extra-gold 0 0))))
 (defn fill-banks [board] (update-in board [:banks] (partial hm-map fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
@@ -122,8 +112,8 @@
     (-> board (replace-influence location0 player0 player1) (replace-influence location1 player1 player0)))
 (defn get-current-holder [board location]
     (let [inf-map (get-in board [:influence location])
-              max-inf (apply unique-max (vals inf-map))]
-            (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
+          max-inf (apply unique-max (vals inf-map))]
+        (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
 (defn get-holdings [board player]
@@ -197,7 +187,7 @@
 (def take-open-spot
     (Special. {:location "Location"}
         (fn [board _] (not (board-full? board)))
-        (fn [board _ {:keys [location]}] (not (board-full? board location)))
+        (fn [board _ {:keys [location]}] (not (location-full? board location)))
         (fn [board winner {:keys [location]}]
             (add-influence board location winner))))
 
@@ -260,22 +250,34 @@
 
 (defn inc-turn [board] (update-in board [:turn] inc))
 
-(defn run-special [board special callback]
-    board)
+(defn run-special [board {:keys [params doable check effect] :as special} player callback]
+    (if-not (doable board player)
+        board
+        (let [args (if (seq params) (callback player params))]
+            (assert (check args))
+            (effect board player args))))
 
-; callback : Player (Map Keyword String) -> Map Keyword Any
-(defn reward-winner [board figure winner callback]
-    (let [location (:location figure)
-          special (:special figure)
-          board (add-support board winner (:support figure))
-          board (add-bank board winner (:bank figure))
-          board (if-not (or (nil? location) (location-full? board location)) (add-influence board location winner) board)
-          board (if (has-special? figure) (run-special board (:special figure) callback) board)]
+(defn eval-special [board special player callback]
+    (if (not (nil? special))
+        (run-special board special player callback)
         board))
+
+(defn eval-influence [board location player]
+    (if-not (or (nil? location) (location-full? board location))
+        (add-influence board location player)
+        board))
+
+; callback : Player (Map Keyword String) -> Map Keyword Object
+(defn reward-winner [board figure winner callback]
+    (-> board
+        (add-support winner (:support figure))
+        (add-bank winner (:bank figure))
+        (eval-influence (:location figure) winner)
+        (eval-special (:special figure) winner callback)))
 
 ; figure-list : Vector Figure
 ; figure-player-bids : Map Figure (Map Player Bid)
-; callback : Player (Map Keyword String) -> Map Keyword Any
+; callback : Player (Map Keyword String) -> Map Keyword Object
 (defn eval-bids0 [board figure-list bids callback]
     (if (empty? figure-list)
         board
@@ -285,7 +287,7 @@
             (eval-bids0 board (rest figure-list) bids callback))))
 
 ; bids : Map Keyword (Map Player Bid)
-; callback : Player (Map Keyword String) -> Map Keyword Any
+; callback : Player (Map Keyword String) -> Map Keyword Object
 ; => Board
 (defn eval-bids [board bids callback] (eval-bids0 board (:fig-order board) bids callback))
 

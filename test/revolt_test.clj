@@ -149,22 +149,5 @@
         (is (= 9 (get-support board rob)))
         (is (= 4 (get-support board joe)))
         (is (= (->Bid 5 0 0) (get-bank board rob)))
-        (is (= (->Bid 4 0 1) (get-bank board joe))))) ; joe gets 2 extra gold in (fill-banks)
-
-
-
-(comment
-
-(def hovel  (->Location :hovel  10 2))
-(def saloon (->Location :saloon 30 4))
-(def farm   (->Location :farm   40 3))
-(def castle (->Location :castle 90 5))
-
-(def prince (figure :prince 0 [5 0 0] -f castle))
-(def beggar (figure :beggar 1 [0 0 0] b- hovel))
-(def barber (figure :barber 8 [0 0 0] -- saloon))
-(def farmer (figure :farmer 1 [2 0 0] -- farm))
-(def axeman (figure :axeman 3 [0 0 1] bf))
-(def doctor (figure :doctor 0 [0 2 0] --))
-
-    )
+        (is (= (->Bid 4 0 1) (get-bank board joe))) ; joe gets 2 extra gold in (fill-banks)
+        (is (not (game-over? board)))))
