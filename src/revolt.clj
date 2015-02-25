@@ -56,8 +56,8 @@
     (toString [_] (name id)))
 (defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
 (def has-special? (comp not nil? :special))
-(def blackmail-immune? (comp :blackmail :immunities))
-(def force-immune? (comp :force :immunities))
+(def blackmail-immune? (comp boolean :blackmail :immunities))
+(def force-immune? (comp boolean :force :immunities))
 (defn validate-bid [fig bid]
     (not (or
         (and (has-blackmail? bid) (blackmail-immune? fig))
@@ -120,11 +120,12 @@
     (-> board (remove-influence location player0) (add-influence location player1)))
 (defn swap-influence [board location0 player0 location1 player1]
     (-> board (replace-influence location0 player0 player1) (replace-influence location1 player1 player0)))
-(defn get-holder [board location]
-    (if (location-full? board location)
-        (let [inf-map (get-in board [:influence location])
+(defn get-current-holder [board location]
+    (let [inf-map (get-in board [:influence location])
               max-inf (apply unique-max (vals inf-map))]
-            (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf)))))
+            (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
+(defn get-holder [board location]
+    (if (location-full? board location) (get-current-holder board location)))
 (defn get-holdings [board player]
     (filter (fn [loc] (= player (get-holder board loc))) (vals (:locations board))))
 ; => Seq Location
@@ -219,7 +220,7 @@
 ))
 
 (defn figure [id support bank immunities & [location special]]
-    (->Figure id support (if (vector? bank) (apply ->Bid bank) bank) immunities location special))
+    (->Figure id support (apply ->Bid bank) immunities location special))
 
 ; locations-map : Map Keyword Location
 (defn make-figures [locations]
@@ -240,7 +241,7 @@
                 (figure :rogue      0  [0 2 0] bf)
                 (figure :mercenary  0  [0 0 1] bf)]]
         [(id-map figs) figs]))
-; => (Map Keyword Figure, Vector Figure)
+; => [Map Keyword Figure, Vector Figure]
 
 (def init-bank (->Bid 3 1 1))
 
@@ -262,28 +263,35 @@
 (defn run-special [board special callback]
     board)
 
-; callback : [Special Player Board] -> Board
+; callback : Player (Map Keyword String) -> Map Keyword Any
 (defn reward-winner [board figure winner callback]
     (let [location (:location figure)
           special (:special figure)
           board (add-support board winner (:support figure))
           board (add-bank board winner (:bank figure))
           board (if-not (or (nil? location) (location-full? board location)) (add-influence board location winner) board)
-          board (if (has-special? figure) (callback (:special figure) winner board) board)]
+          board (if (has-special? figure) (run-special board (:special figure) callback) board)]
         board))
 
 ; figure-list : Vector Figure
-; player-figure-bids : Map Figure (Map Player Bid)
-; callback : [Special Player Board] -> Board
-(defn run-turn [board figure-list figure-player-bids callback]
+; figure-player-bids : Map Figure (Map Player Bid)
+; callback : Player (Map Keyword String) -> Map Keyword Any
+(defn eval-bids0 [board figure-list bids callback]
     (if (empty? figure-list)
         board
         (let [current-figure (first figure-list)
-              player-bids (figure-player-bids current-figure)
-              winner (get-winner player-bids)]
-            (run-turn
-                (if (nil? winner) board (reward-winner board current-figure winner callback))
-                (rest figure-list)
-                figure-player-bids
-                callback))))
+              winner (get-winner (bids current-figure))
+              board (if (nil? winner) board (reward-winner board current-figure winner callback))]
+            (eval-bids0 board (rest figure-list) bids callback))))
+
+; bids : Map Keyword (Map Player Bid)
+; callback : Player (Map Keyword String) -> Map Keyword Any
 ; => Board
+(defn eval-bids [board bids callback] (eval-bids0 board (:fig-order board) bids callback))
+
+(defn run-turn [board bids callback]
+    (-> board
+        clear-banks
+        (eval-bids bids callback)
+        fill-banks
+        inc-turn))

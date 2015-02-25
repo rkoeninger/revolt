@@ -1,7 +1,8 @@
-(ns revolt-test)
+(ns revolt-test
+    (:use revolt)
+    (:use clojure.test))
 
-(use 'revolt)
-(use 'clojure.test)
+(defn dummy-callback [player params] params)
 
 (def rob (->Player "Rob"))
 (def joe (->Player "Joe"))
@@ -110,8 +111,8 @@
 
 (deftest rewards
     (let [board (-> (clear-banks board)
-                    (reward-winner farmer rob)
-                    (reward-winner prince joe))]
+                    (reward-winner farmer rob dummy-callback)
+                    (reward-winner prince joe dummy-callback))]
         (is (= 0 (get-support board joe)))
         (is (= 1 (get-support board rob)))
         (is (= (->Bid 2 0 0) (get-bank board rob)))
@@ -120,3 +121,50 @@
         (is (= 1 (get-influence board castle joe)))
         (is (= 3 (get-score board rob)))
         (is (= 5 (get-score board joe)))))
+
+(deftest scenario-first-turn
+    (let [bids {prince {rob (->Bid 0 1 0) joe (->Bid 0 0 0)}
+                beggar {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
+                barber {rob (->Bid 0 0 1) joe (->Bid 0 1 0)}
+                farmer {rob (->Bid 0 0 0) joe (->Bid 0 0 1)}
+                axeman {rob (->Bid 2 0 0) joe (->Bid 3 0 0)}
+                doctor {rob (->Bid 0 0 0) joe (->Bid 0 0 0)}}
+          board (run-turn board bids dummy-callback)]
+        (is (= rob (get-current-holder board castle)))
+        (is (= rob (get-current-holder board hovel)))
+        (is (= rob (get-current-holder board saloon)))
+        (is (= joe (get-current-holder board farm)))
+        (is (= 1 (get-influence board castle rob)))
+        (is (= 1 (get-influence board hovel rob)))
+        (is (= 1 (get-influence board saloon rob)))
+        (is (= 0 (get-influence board farm rob)))
+        (is (= 0 (get-influence board castle joe)))
+        (is (= 0 (get-influence board hovel joe)))
+        (is (= 0 (get-influence board saloon joe)))
+        (is (= 1 (get-influence board farm joe)))
+        (is (not (location-full? board saloon)))
+        (is (not (location-full? board farm)))
+        (is (not (location-full? board castle)))
+        (is (not (location-full? board hovel)))
+        (is (= 9 (get-support board rob)))
+        (is (= 4 (get-support board joe)))
+        (is (= (->Bid 5 0 0) (get-bank board rob)))
+        (is (= (->Bid 4 0 1) (get-bank board joe))))) ; joe gets 2 extra gold in (fill-banks)
+
+
+
+(comment
+
+(def hovel  (->Location :hovel  10 2))
+(def saloon (->Location :saloon 30 4))
+(def farm   (->Location :farm   40 3))
+(def castle (->Location :castle 90 5))
+
+(def prince (figure :prince 0 [5 0 0] -f castle))
+(def beggar (figure :beggar 1 [0 0 0] b- hovel))
+(def barber (figure :barber 8 [0 0 0] -- saloon))
+(def farmer (figure :farmer 1 [2 0 0] -- farm))
+(def axeman (figure :axeman 3 [0 0 1] bf))
+(def doctor (figure :doctor 0 [0 2 0] --))
+
+    )
