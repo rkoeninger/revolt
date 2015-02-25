@@ -259,27 +259,31 @@
 
 (defn inc-turn [board] (update-in board [:turn] inc))
 
-(defn reward-winner [board figure winner]
-    "Does not run Special"
+(defn run-special [board special callback]
+    board)
+
+; callback : [Special Player Board] -> Board
+(defn reward-winner [board figure winner callback]
     (let [location (:location figure)
           special (:special figure)
           board (add-support board winner (:support figure))
           board (add-bank board winner (:bank figure))
-          board (if-not (or (nil? location) (location-full? board location)) (add-influence board location winner) board)]
+          board (if-not (or (nil? location) (location-full? board location)) (add-influence board location winner) board)
+          board (if (has-special? figure) (callback (:special figure) winner board) board)]
         board))
 
 ; figure-list : Vector Figure
 ; player-figure-bids : Map Figure (Map Player Bid)
-(defn run-until-special [board figure-list figure-player-bids]
+; callback : [Special Player Board] -> Board
+(defn run-turn [board figure-list figure-player-bids callback]
     (if (empty? figure-list)
         board
         (let [current-figure (first figure-list)
               player-bids (figure-player-bids current-figure)
               winner (get-winner player-bids)]
-            (if (nil? winner)
-                board
-                (let [board (reward-winner board current-figure winner)]
-                    (if-not (has-special? current-figure)
-                        (run-until-special board (rest figure-list) figure-player-bids)
-                        [board (rest figure-list) (:special current-figure)]))))))
-; => [Board (Vector Figure) Special?]
+            (run-turn
+                (if (nil? winner) board (reward-winner board current-figure winner callback))
+                (rest figure-list)
+                figure-player-bids
+                callback))))
+; => Board
