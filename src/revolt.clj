@@ -168,6 +168,11 @@
         (eval-influence (:location figure) winner)
         (eval-special (:special figure) winner callback)))
 
+(defn eval-reward [board figure winner callback]
+    (if (nil? winner)
+        board
+        (reward-winner board figure winner callback)))
+
 ; figure-list : Vector Figure
 ; bids : Map Figure (Map Player Bid)
 ; callback : Player (Map Keyword String) -> Map Keyword Object
@@ -178,9 +183,9 @@
     ([board bids callback figure-list]
         (if (empty? figure-list)
             board
-            (let [current-figure (first figure-list)
-                  winner (get-winner (bids current-figure))
-                  board (if (nil? winner) board (reward-winner board current-figure winner callback))]
+            (let [figure (first figure-list)
+                  winner (get-winner (bids figure))
+                  board (eval-reward board figure winner callback)]
                 (eval-bids board bids callback (rest figure-list))))))
 
 (defn run-turn [board bids callback]
@@ -225,12 +230,15 @@
             (assert (touchable? board winner player1))
             (swap-influence location0 player0 location1 player1))))
 
+(defn eval-reassignment [winner board [location0 location1]]
+    (move-influence board location0 location1 winner))
+
 (def reassign-up-to-2-spots
     (Special. {:reassignments "[(Location, Location)]"}
         (fn [board winner] nil)
         (fn [board winner {:keys [reassignments]}] false)
         (fn [board winner {:keys [reassignments]}]
-            (reduce (fn [board [location0 location1]] (move-influence board location0 location1 winner)) board reassignments))))
+            (reduce (partial eval-reassignment winner) board reassignments))))
 
 (def take-open-spot
     (Special. {:location "Location"}
