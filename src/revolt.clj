@@ -276,20 +276,19 @@
         (eval-special (:special figure) winner callback)))
 
 ; figure-list : Vector Figure
-; figure-player-bids : Map Figure (Map Player Bid)
-; callback : Player (Map Keyword String) -> Map Keyword Object
-(defn eval-bids0 [board figure-list bids callback]
-    (if (empty? figure-list)
-        board
-        (let [current-figure (first figure-list)
-              winner (get-winner (bids current-figure))
-              board (if (nil? winner) board (reward-winner board current-figure winner callback))]
-            (eval-bids0 board (rest figure-list) bids callback))))
-
-; bids : Map Keyword (Map Player Bid)
+; bids : Map Figure (Map Player Bid)
 ; callback : Player (Map Keyword String) -> Map Keyword Object
 ; => Board
-(defn eval-bids [board bids callback] (eval-bids0 board (:fig-order board) bids callback))
+(defn eval-bids
+    ([board bids callback]
+        (eval-bids board bids callback (:fig-order board)))
+    ([board bids callback figure-list]
+        (if (empty? figure-list)
+            board
+            (let [current-figure (first figure-list)
+                  winner (get-winner (bids current-figure))
+                  board (if (nil? winner) board (reward-winner board current-figure winner callback))]
+                (eval-bids board bids callback (rest figure-list))))))
 
 (defn run-turn [board bids callback]
     (-> board
