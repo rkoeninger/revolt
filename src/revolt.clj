@@ -132,6 +132,7 @@
     (let [scores (get-scores board)
           max-score (apply unique-max (vals scores))]
         (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
+(defn inc-turn [board] (update-in board [:turn] inc))
 
 ; params : Map Keyword Type
 ; doable : (Board, Player) -> Boolean
@@ -141,6 +142,53 @@
 ; effect : (Board, Player, Map Keyword Object) -> Board
 ;     Returns altered board (might raise assertion errors)
 (defrecord Special [params doable check effect])
+
+(defn run-special [board {:keys [params doable check effect] :as special} player callback]
+    (if-not (doable board player)
+        board
+        (let [args (if (seq params) (callback player params))]
+            (assert (check args))
+            (effect board player args))))
+
+(defn eval-special [board special player callback]
+    (if (not (nil? special))
+        (run-special board special player callback)
+        board))
+
+(defn eval-influence [board location player]
+    (if-not (or (nil? location) (location-full? board location))
+        (add-influence board location player)
+        board))
+
+; callback : Player (Map Keyword String) -> Map Keyword Object
+(defn reward-winner [board figure winner callback]
+    (-> board
+        (add-support winner (:support figure))
+        (add-bank winner (:bank figure))
+        (eval-influence (:location figure) winner)
+        (eval-special (:special figure) winner callback)))
+
+; figure-list : Vector Figure
+; bids : Map Figure (Map Player Bid)
+; callback : Player (Map Keyword String) -> Map Keyword Object
+; => Board
+(defn eval-bids
+    ([board bids callback]
+        (eval-bids board bids callback (:fig-order board)))
+    ([board bids callback figure-list]
+        (if (empty? figure-list)
+            board
+            (let [current-figure (first figure-list)
+                  winner (get-winner (bids current-figure))
+                  board (if (nil? winner) board (reward-winner board current-figure winner callback))]
+                (eval-bids board bids callback (rest figure-list))))))
+
+(defn run-turn [board bids callback]
+    (-> board
+        clear-banks
+        (eval-bids bids callback)
+        fill-banks
+        inc-turn))
 
 ; Offically, the guard house is like any other Influence Space in that
 ; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
@@ -206,8 +254,7 @@
     (->Location :harbor     40 6)
     (->Location :town-hall  45 7)
     (->Location :fortress   50 8)
-    (->Location :palace     55 8)
-))
+    (->Location :palace     55 8)))
 
 (defn figure [id support bank immunities & [location special]]
     (->Figure id support (apply ->Bid bank) immunities location special))
@@ -247,52 +294,3 @@
             (zipmap (vals locations) (repeat (zipmap players (repeat 0)))) ; : Map Location (Map Player Nat)
             (zipmap players (repeat 0)) ; : Map Player Nat
             1)))
-
-(defn inc-turn [board] (update-in board [:turn] inc))
-
-(defn run-special [board {:keys [params doable check effect] :as special} player callback]
-    (if-not (doable board player)
-        board
-        (let [args (if (seq params) (callback player params))]
-            (assert (check args))
-            (effect board player args))))
-
-(defn eval-special [board special player callback]
-    (if (not (nil? special))
-        (run-special board special player callback)
-        board))
-
-(defn eval-influence [board location player]
-    (if-not (or (nil? location) (location-full? board location))
-        (add-influence board location player)
-        board))
-
-; callback : Player (Map Keyword String) -> Map Keyword Object
-(defn reward-winner [board figure winner callback]
-    (-> board
-        (add-support winner (:support figure))
-        (add-bank winner (:bank figure))
-        (eval-influence (:location figure) winner)
-        (eval-special (:special figure) winner callback)))
-
-; figure-list : Vector Figure
-; bids : Map Figure (Map Player Bid)
-; callback : Player (Map Keyword String) -> Map Keyword Object
-; => Board
-(defn eval-bids
-    ([board bids callback]
-        (eval-bids board bids callback (:fig-order board)))
-    ([board bids callback figure-list]
-        (if (empty? figure-list)
-            board
-            (let [current-figure (first figure-list)
-                  winner (get-winner (bids current-figure))
-                  board (if (nil? winner) board (reward-winner board current-figure winner callback))]
-                (eval-bids board bids callback (rest figure-list))))))
-
-(defn run-turn [board bids callback]
-    (-> board
-        clear-banks
-        (eval-bids bids callback)
-        fill-banks
-        inc-turn))
