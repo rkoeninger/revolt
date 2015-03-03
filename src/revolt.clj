@@ -70,7 +70,7 @@
 ; fig-order : Vector Figure
 ; players : Vector Player
 ; banks : Map Player Bid
-; influence : Map Player (Map Location Nat)
+; influence : Map Location (Map Player Nat)
 ; support : Map Player Nat
 ; turn : Nat
 (defrecord Board [locations figures fig-order players banks influence support turn]
@@ -86,7 +86,7 @@
         (= occupied limit)))
 (defn board-full? [board] (every? (partial location-full? board) (vals (:locations board))))
 (defn get-influence [board location player] (get-in board [:influence location player]))
-(defn has-influence [board location player] (not (zero? (get-in board [:influence location player]))))
+(defn has-influence? [board location player] (not (zero? (get-in board [:influence location player]))))
 (defn add-support [board player amount] (update-in board [:support player] (partial + amount)))
 (defn get-support [board player] (get-in board [:support player]))
 (defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
@@ -102,7 +102,7 @@
     (assert (not (location-full? board location)) (str location " already full"))
     (update-in board [:influence location player] (comp inc #(or % 0))))
 (defn remove-influence [board location player]
-    (assert (has-influence board location player) (str player " has no influence on " location))
+    (assert (has-influence? board location player) (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
 (defn move-influence [board location0 location1 player]
     (-> board (remove-influence location0 player) (add-influence location1 player)))
@@ -147,7 +147,7 @@
     (if-not (doable board player)
         board
         (let [args (if (seq params) (callback player params))]
-            (assert (check args))
+            (assert (check board player args))
             (effect board player args))))
 
 (defn eval-special [board special player callback]
@@ -216,10 +216,10 @@
         (fn [board winner {:keys [location player]}]
             (and
                 (touchable? board winner player)
-                ))
+                (has-influence? board location player)))
         (fn [board winner {:keys [location player]}]
             (assert (touchable? board winner player))
-            (replace-influence location player winner))))
+            (replace-influence board location player winner))))
 
 (def switch-spots
     (Special. {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
@@ -228,7 +228,7 @@
         (fn [board winner {:keys [location0 player0 location1 player1]}]
             (assert (touchable? board winner player0))
             (assert (touchable? board winner player1))
-            (swap-influence location0 player0 location1 player1))))
+            (swap-influence board location0 player0 location1 player1))))
 
 (defn eval-reassignment [winner board [location0 location1]]
     (move-influence board location0 location1 winner))
