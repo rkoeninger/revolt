@@ -47,6 +47,45 @@
         (is (= 1 (get-influence board courtroom rob)))
         (is (= 1 (get-influence board courtroom joe)))))
 
+(deftest steal-spot-empty-board
+    (let [doable (:doable steal-spot) check (:check steal-spot)]
+        (is (not (doable board rob)))
+        (is (not (doable board joe)))
+        (is (not (check board rob {:location hideout :player rob})))
+        (is (not (check board rob {:location hideout :player joe})))
+        (is (not (check board joe {:location hideout :player rob})))
+        (is (not (check board joe {:location hideout :player joe})))))
+
+(deftest steal-spot-only-other-player-has-guard-house
+    (let [doable (:doable steal-spot)
+          check (:check steal-spot)
+          board (-> board
+                    (add-influence hideout rob)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom joe))
+          board-rob-in-gh (assoc board :guard-house rob)
+          board-joe-in-gh (assoc board :guard-house joe)]
+        (is (not (touchable? board-joe-in-gh rob joe)))
+        (is (not (touchable? board-rob-in-gh joe rob)))
+        (is (not (doable board-joe-in-gh rob)))
+        (is (not (doable board-rob-in-gh joe)))
+        (is (doable board-rob-in-gh rob))
+        (is (doable board-joe-in-gh joe))))
+
+(deftest steal-spot-single-valid-target)
+
+(deftest swap-spots-empty-board
+    (is (not ((:doable swap-spots) board rob)))
+    (is (not ((:doable swap-spots) board joe)))
+    (is (not ((:check swap-spots) board rob {:location hideout :player rob})))
+    (is (not ((:check swap-spots) board rob {:location hideout :player joe})))
+    (is (not ((:check swap-spots) board joe {:location hideout :player rob})))
+    (is (not ((:check swap-spots) board joe {:location hideout :player joe}))))
+
+(deftest swap-spots-only-one-player-on-board)
+
+(deftest swap-spots-only-other-player-has-guard-house)
+
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
                 judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}

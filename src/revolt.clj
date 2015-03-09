@@ -1,5 +1,6 @@
 (ns revolt
-    (:use [clojure.set :only [map-invert]]))
+    (:use [clojure.set :only [map-invert]])
+    (:use [clojure.math.combinatorics :only [cartesian-product]]))
 
 (defn inverted-get [m v] ((map-invert m) v))
 (defn unique-max [& xs]
@@ -82,8 +83,7 @@
 (defn location-full? [board location]
     (let [occupied (occupied-influence board location)
           limit (:influence-limit location)]
-        (assert (<= occupied limit))
-        (= occupied limit)))
+        (>= occupied limit)))
 (defn board-full? [board] (every? (partial location-full? board) (vals (:locations board))))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence? [board location player] (not (zero? (get-in board [:influence location player]))))
@@ -92,7 +92,7 @@
 (defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
 (defn get-bank [board player] (get-in board [:banks player]))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
-(def min-token-count 5)
+(def min-token-count nil) ; Forward declare, actual value is specified later
 (defn fill-bank [bank]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- min-token-count token-count))]
@@ -140,7 +140,7 @@
 ; check : (Board, Player, Map Keyword Object) -> Boolean
 ;     Returns true if provided args are valid
 ; effect : (Board, Player, Map Keyword Object) -> Board
-;     Returns altered board (might raise assertion errors)
+;     Returns altered board
 (defrecord Special [params doable check effect])
 
 (defn run-special [board {:keys [params doable check effect] :as special} player callback]
@@ -199,51 +199,88 @@
 ; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
 ; and the game isn't over if the Guard House is not occupied.
 ; I don't feel like implementing it that way.
+; Occupant of the guard house is immue to rival's use of Spy and Apothecary
 (def occupy-guard-house
     (Special. {}
         (constantly true)
         (constantly true)
-        (fn [board winner _] (assoc board :guard-house winner))))
+        (fn [board winner args] (assoc board :guard-house winner))))
 
+(defn can-steal? [board winner player location]
+    (and (not= winner player)
+        (touchable? board winner player)
+        (has-influence? board location player)))
+
+; Replace one Influence Cube with one of your own.
 (def steal-spot
     (Special. {:location "Location" :player "Player"}
         (fn [board winner]
-            (some
-                (fn [location]
-                    (let [inf-map (dissoc (get-in board [:influence location]) (:guard-house board))]
-                        (pos? (reduce + (vals inf-map)))))
-                (vals (:locations board))))
+            (let [pairs (cartesian-product (vals (:locations board)) (:players board))]
+                (some
+                    (fn [[location player]]
+                        (can-steal? board winner player location))
+                    pairs)))
         (fn [board winner {:keys [location player]}]
-            (and
-                (touchable? board winner player)
+            (and (touchable? board winner player)
                 (has-influence? board location player)))
         (fn [board winner {:keys [location player]}]
-            (assert (touchable? board winner player))
             (replace-influence board location player winner))))
 
-(def switch-spots
+(defn can-swap? [board winner location0 player0 location1 player1]
+    (and (not= location0 location1)
+        (not= player0 player1)
+        (touchable? board winner player0)
+        (touchable? board winner player1)
+        (has-influence? board location0 player0)
+        (has-influence? board location1 player1)))
+
+(defn any-swaps? [board winner]
+    (let [pairs (cartesian-product (vals (:locations board)) (:players board))
+          pair-pairs (cartesian-product pairs pairs)]
+        (some
+            (fn [[[location0 player0] [location1 player1]]]
+                (can-swap? board winner location0 player0 location1 player1))
+            pair-pairs)))
+
+; Swap the cubes in any two Influence Spaces.
+(def swap-spots
     (Special. {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
-        (fn [board winner] nil)
-        (fn [board winner {:keys [location0 player0 location1 player1]}] false)
+        any-swaps?
         (fn [board winner {:keys [location0 player0 location1 player1]}]
-            (assert (touchable? board winner player0))
-            (assert (touchable? board winner player1))
+            (can-swap? board winner location0 player0 location1 player1))
+        (fn [board winner {:keys [location0 player0 location1 player1]}]
             (swap-influence board location0 player0 location1 player1))))
 
 (defn eval-reassignment [winner board [location0 location1]]
     (move-influence board location0 location1 winner))
 
+(defn player-has-influence? [board player]
+    (some pos? (map #(get-influence board % player) (vals (:locations board)))))
+
+(defn can-move? [board player [location0 location1]]
+    (and (has-influence? board location0 player)
+        (not (location-full? board location1))))
+
+; Reassign up to two of your cubes already on the board.
 (def reassign-up-to-2-spots
-    (Special. {:reassignments "[(Location, Location)]"}
-        (fn [board winner] nil)
-        (fn [board winner {:keys [reassignments]}] false)
+    (Special. {:reassignments "[[Location Location]]"}
+        (fn [board winner]
+            (and (not (board-full? board))
+                (pos? (reduce + (map winner (vals (:influence board)))))
+                (player-has-influence? board winner)))
+        (fn [board winner {:keys [reassignments]}]
+            (and (<= (count reassignments) 2)
+                (every? (partial can-move? board winner) reassignments)))
         (fn [board winner {:keys [reassignments]}]
             (reduce (partial eval-reassignment winner) board reassignments))))
 
+; Influence any open Influence Space.
 (def take-open-spot
     (Special. {:location "Location"}
-        (fn [board _] (not (board-full? board)))
-        (fn [board _ {:keys [location]}] (not (location-full? board location)))
+        (fn [board winner]
+            (not (board-full? board)))
+        (fn [board winner {:keys [location]}]
+            (not (location-full? board location)))
         (fn [board winner {:keys [location]}]
             (add-influence board location winner))))
 
@@ -254,6 +291,9 @@
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
+(defn figure [id support bank immunities & [location special]]
+    (->Figure id support (apply ->Bid bank) immunities location special))
+
 (defn make-locations [] (id-map
     (->Location :tavern     20 4)
     (->Location :market     25 5)
@@ -263,9 +303,6 @@
     (->Location :town-hall  45 7)
     (->Location :fortress   50 8)
     (->Location :palace     55 8)))
-
-(defn figure [id support bank immunities & [location special]]
-    (->Figure id support (apply ->Bid bank) immunities location special))
 
 ; locations-map : Map Keyword Location
 (defn make-figures [locations]
@@ -279,7 +316,7 @@
                 (figure :merchant   3  [5 0 0] -- (:market     locations))
                 (figure :printer    10 [0 0 0] --)
                 (figure :spy        0  [0 0 0] b- nil steal-spot)
-                (figure :apothecary 0  [0 0 0] -f nil switch-spots)
+                (figure :apothecary 0  [0 0 0] -f nil swap-spots)
                 (figure :messenger  3  [0 0 0] -- nil reassign-up-to-2-spots)
                 (figure :mayor      0  [0 0 0] bf nil take-open-spot)
                 (figure :constable  5  [0 1 0] bf)
@@ -289,6 +326,8 @@
 ; => [Map Keyword Figure, Vector Figure]
 
 (def init-bank (->Bid 3 1 1))
+
+(def min-token-count 5)
 
 (defn make-board [players]
     (let [locations (make-locations)
