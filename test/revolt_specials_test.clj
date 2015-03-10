@@ -48,7 +48,8 @@
         (is (= 1 (get-influence board courtroom joe)))))
 
 (deftest steal-spot-empty-board
-    (let [doable (:doable steal-spot) check (:check steal-spot)]
+    (let [doable (:doable steal-spot)
+          check (:check steal-spot)]
         (is (not (doable board rob)))
         (is (not (doable board joe)))
         (is (not (check board rob {:location hideout :player rob})))
@@ -72,19 +73,74 @@
         (is (doable board-rob-in-gh rob))
         (is (doable board-joe-in-gh joe))))
 
-(deftest steal-spot-single-valid-target)
+(deftest steal-spot-single-valid-target
+    (let [doable (:doable steal-spot)
+          check (:check steal-spot)
+          rob-choice {:location courtroom :player joe}
+          joe-choice {:location hideout :player rob}
+          board (-> board
+                    (add-influence hideout rob)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom rob))]
+        (is (doable board rob))
+        (is (doable board joe))
+        (is (check board rob rob-choice))
+        (is (check board joe joe-choice))
+        (let [board (run-special board steal-spot rob (constantly rob-choice))]
+            (is (= 1 (get-influence board hideout rob)))
+            (is (= 0 (get-influence board hideout joe)))
+            (is (= 2 (get-influence board courtroom rob)))
+            (is (= 1 (get-influence board courtroom joe))))
+        (let [board (run-special board steal-spot joe (constantly joe-choice))]
+            (is (= 0 (get-influence board hideout rob)))
+            (is (= 1 (get-influence board hideout joe)))
+            (is (= 1 (get-influence board courtroom rob)))
+            (is (= 2 (get-influence board courtroom joe))))))
 
 (deftest swap-spots-empty-board
-    (is (not ((:doable swap-spots) board rob)))
-    (is (not ((:doable swap-spots) board joe)))
-    (is (not ((:check swap-spots) board rob {:location hideout :player rob})))
-    (is (not ((:check swap-spots) board rob {:location hideout :player joe})))
-    (is (not ((:check swap-spots) board joe {:location hideout :player rob})))
-    (is (not ((:check swap-spots) board joe {:location hideout :player joe}))))
+    (let [doable (:doable steal-spot)
+          check (:check steal-spot)]
+        (is (not (doable board rob)))
+        (is (not (doable board joe)))
+        (is (not (check board rob {:location hideout :player rob})))
+        (is (not (check board rob {:location hideout :player joe})))
+        (is (not (check board joe {:location hideout :player rob})))
+        (is (not (check board joe {:location hideout :player joe})))))
 
-(deftest swap-spots-only-one-player-on-board)
+(deftest swap-spots-single-valid-target
+    (let [doable (:doable swap-spots)
+          check (:check swap-spots)
+          choice {:location0 courtroom :player0 joe :location1 hideout :player1 rob}
+          board (-> board
+                    (add-influence hideout rob)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom rob))]
+        (is (doable board rob))
+        (is (doable board joe))
+        (is (check board rob choice))
+        (let [board (run-special board swap-spots rob (constantly choice))]
+            (is (= 0 (get-influence board hideout rob)))
+            (is (= 1 (get-influence board hideout joe)))
+            (is (= 2 (get-influence board courtroom rob)))
+            (is (= 1 (get-influence board courtroom joe))))))
 
-(deftest swap-spots-only-other-player-has-guard-house)
+(deftest swap-spots-only-other-player-has-guard-house
+    (let [doable (:doable swap-spots)
+          check (:check swap-spots)
+          board (-> board
+                    (add-influence hideout rob)
+                    (add-influence courtroom joe)
+                    (add-influence courtroom joe))
+          board-rob-in-gh (assoc board :guard-house rob)
+          board-joe-in-gh (assoc board :guard-house joe)]
+        (is (not (touchable? board-joe-in-gh rob joe)))
+        (is (not (touchable? board-rob-in-gh joe rob)))
+        (is (not (doable board-joe-in-gh rob)))
+        (is (not (doable board-rob-in-gh joe)))
+        (is (doable board-rob-in-gh rob))
+        (is (doable board-joe-in-gh joe))))
 
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
