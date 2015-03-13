@@ -142,6 +142,55 @@
         (is (doable board-rob-in-gh rob))
         (is (doable board-joe-in-gh joe))))
 
+(deftest take-open-spot-full-board
+    (let [doable (:doable take-open-spot)
+          check (:check take-open-spot)
+          board (-> board
+                    (add-influence hideout joe)
+                    (add-influence courtroom rob)
+                    (add-influence courtroom rob)
+                    (add-influence courtroom rob)
+                    (add-influence courtroom rob)
+                    (add-influence courtroom rob)
+                    (add-influence courtroom rob)
+                    (assoc :guard-house joe))]
+        (is (board-full? board))
+        (is (not (doable board rob)))
+        (is (not (doable board joe)))
+        (is (not (check board rob {:location hideout})))
+        (is (not (check board joe {:location hideout})))
+        (is (not (check board rob {:location courtroom})))
+        (is (not (check board joe {:location courtroom})))))
+
+(deftest take-open-spot-one-full-location
+    (let [doable (:doable take-open-spot)
+          check (:check take-open-spot)
+          board (-> board
+                    (add-influence hideout joe)
+                    (assoc :guard-house rob))]
+        (is (not (board-full? board)))
+        (is (not (location-full? board courtroom)))
+        (is (location-full? board hideout))
+        (is (doable board rob))
+        (is (doable board joe))
+        (is (not (check board rob {:location hideout})))
+        (is (not (check board joe {:location hideout})))
+        (is (check board rob {:location courtroom}))
+        (is (check board joe {:location courtroom}))))
+
+(deftest take-open-spot-empty-board
+    (let [doable (:doable take-open-spot)
+          check (:check take-open-spot)]
+        (is (not (board-full? board)))
+        (is (not (location-full? board courtroom)))
+        (is (not (location-full? board hideout)))
+        (is (doable board rob))
+        (is (doable board joe))
+        (is (check board rob {:location hideout}))
+        (is (check board joe {:location hideout}))
+        (is (check board rob {:location courtroom}))
+        (is (check board joe {:location courtroom}))))
+
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
                 judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
