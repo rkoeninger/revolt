@@ -151,6 +151,3 @@
         (is (= (->Bid 5 0 0) (get-bank board rob)))
         (is (= (->Bid 4 0 1) (get-bank board joe))) ; joe gets 2 extra gold in (fill-banks)
         (is (not (game-over? board)))))
-
-(deftest scoring-does-not-include-bank-until-game-over
-    (is false "TODO - when the player checks score, shouldn't include bank"))
