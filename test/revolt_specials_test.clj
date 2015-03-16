@@ -206,8 +206,8 @@
     1))
 
 (deftest reassign-spots-empty-board
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board reassign-board]
         (is (not (doable board rob)))
         (is (not (doable board joe)))
@@ -223,8 +223,8 @@
         (is (not (check board joe {:reassignments [[loc3 loc1] [loc3 loc2]]})))))
 
 (deftest reassign-spots-full-board
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe)
                     (add-influence loc1 rob)
@@ -250,16 +250,16 @@
         (is (not (check board joe {:reassignments [[loc3 loc1] [loc3 loc2]]})))))
 
 (deftest reassign-one-from-location-with-one-cube
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe))]
         (is (doable board joe))
         (is (check board joe {:reassignments [[loc1 loc3]]}))))
 
 (deftest reassign-one-from-location-with-two-cubes
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe)
                     (add-influence loc1 joe))]
@@ -267,16 +267,16 @@
         (is (check board joe {:reassignments [[loc1 loc3]]}))))
 
 (deftest reassign-two-from-same-location-with-one-cube
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe))]
         (is (doable board joe))
         (is (not (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]})))))
 
 (deftest reassign-two-from-same-location-with-two-cubes
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe)
                     (add-influence loc1 joe))]
@@ -284,8 +284,8 @@
         (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))))
 
 (deftest reassign-one-to-location-with-one-open-spaces
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 rob)
                     (add-influence loc2 joe))]
@@ -293,8 +293,8 @@
         (is (check board joe {:reassignments [[loc2 loc1]]}))))
 
 (deftest reassign-one-to-location-with-two-open-spaces
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc2 joe)
                     (add-influence loc2 joe))]
@@ -302,8 +302,8 @@
         (is (check board joe {:reassignments [[loc2 loc1]]}))))
 
 (deftest reassign-two-to-same-location-with-one-open-spaces
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 joe)
                     (add-influence loc2 rob)
@@ -313,8 +313,8 @@
         (is (not (check board rob {:reassignments [[loc2 loc1] [loc3 loc1]]})))))
 
 (deftest reassign-two-to-same-location-with-two-open-spaces
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 rob)
                     (add-influence loc2 joe)
@@ -324,8 +324,8 @@
         (is (check board rob {:reassignments [[loc1 loc2] [loc3 loc2]]}))))
 
 (deftest reassign-one-from-b-to-c-then-from-a-to-b
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 rob)
                     (add-influence loc2 rob))]
@@ -333,8 +333,8 @@
         (is (check board rob {:reassignments [[loc2 loc3] [loc1 loc2]]}))))
 
 (deftest reassign-one-from-a-to-b-then-from-b-to-c
-    (let [doable (:doable reassign-up-to-2-spots)
-          check (:check reassign-up-to-2-spots)
+    (let [doable (:doable reassign-spots)
+          check (:check reassign-spots)
           board (-> reassign-board
                     (add-influence loc1 rob))]
         (is (doable board rob))

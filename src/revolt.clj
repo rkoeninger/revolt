@@ -2,14 +2,11 @@
     (:use [clojure.set :only [map-invert]])
     (:use [clojure.math.combinatorics :only [cartesian-product]]))
 
-(defn inverted-get [m v] ((map-invert m) v))
-(defn unique-max [& xs]
-    (case (count xs)
-        0 nil
-        1 (first xs)
-        (let [[x1 x2] (take 2 (reverse (sort xs)))]
-            (if (not= x1 x2) x1))))
-(defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
+(load "revolt_helpers")
+
+(defrecord Player [id]
+    java.lang.Object
+    (toString [_] (name id)))
 
 (defrecord Bid [gold blackmail force]
     java.lang.Comparable
@@ -22,7 +19,39 @@
             :else 0))
     java.lang.Object
     (toString [_] (str "(Bid " gold " " blackmail " " force ")")))
-(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
+
+(defrecord Location [id support influence-limit]
+    java.lang.Object
+    (toString [_] (name id)))
+
+(defrecord Special [params   ; Map Keyword String
+                    doable   ; [Board  Player] -> Boolean
+                             ; Returns true if winner can meaningfully perform special
+                    check    ; [Board  Player  (Map Keyword Object)] -> Boolean
+                             ; Returns true if provided args are valid
+                    effect]) ; [Board  Player  (Map Keyword Object)] -> Board
+                             ; Returns altered board according to args
+
+(defrecord Figure [id
+                   support    ; Nat
+                   bank       ; Bid
+                   immunities ; Set Keyword
+                   location   ; Location | nil
+                   special]   ; Special | nil
+    java.lang.Object
+    (toString [_] (name id)))
+
+(defrecord Board [locations ; Map Keyword Location
+                  figures   ; Map Keyword Figure
+                  fig-order ; Vector Figure
+                  players   ; Collection Player
+                  banks     ; Map Player Bid
+                  influence ; Map Location (Map Player Nat)
+                  support   ; Map Player Nat
+                  turn]     ; Nat
+    java.lang.Object
+    (toString [_] (str "(Board support:" support " influence:" influence " banks:" banks " turn:" turn ")")))
+
 (def bid0 (->Bid 0 0 0))
 (def bid+ (partial merge-with +))
 (def has-blackmail? (comp pos? :blackmail))
@@ -30,22 +59,9 @@
 (def zero-bid? (partial = bid0))
 (defn get-support-value [{:keys [gold blackmail force]}]
     (+ gold (* 3 blackmail) (* 5 force)))
-(defn get-winner [bid-map] ; bid-map : Map Player Bid
+(defn get-winner [bid-map] ; [Map Player Bid] => Player | nil
     (let [winning-bid (apply unique-max (vals bid-map))]
         (if-not (or (nil? winning-bid) (zero-bid? winning-bid)) (inverted-get bid-map winning-bid))))
-
-(defrecord Location [id support influence-limit]
-    java.lang.Object
-    (toString [_] (name id)))
-(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
-
-; immunities : Set Keyword
-; location : Option Location
-; special : Option Special
-(defrecord Figure [id support bank immunities location special]
-    java.lang.Object
-    (toString [_] (name id)))
-(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
 (def has-special? (comp not nil? :special))
 (def blackmail-immune? (comp boolean :blackmail :immunities))
 (def force-immune? (comp boolean :force :immunities))
@@ -53,32 +69,13 @@
     (not (or
         (and (has-blackmail? bid) (blackmail-immune? fig))
         (and (has-force? bid) (force-immune? fig)))))
-(defn validate-bids [bank bids] ; bids : Map Figure Bid
+(defn validate-bids [bank bids] ; [Bid  (Map Figure Bid)] => Boolean
     (and
         (> (count bids) 0)
         (<= (count bids) 6)
         (= bank (reduce bid+ (vals bids)))
         (every? (partial apply validate-bid) bids)))
-
-(defrecord Player [id]
-    java.lang.Object
-    (toString [_] (name id)))
-(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
 (defn touchable? [board winner player] (or (= winner player) (not= player (:guard-house board))))
-
-; locations : Map Keyword Location
-; figures : Map Keyword Figure
-; fig-order : Vector Figure
-; players : Vector Player
-; banks : Map Player Bid
-; influence : Map Location (Map Player Nat)
-; support : Map Player Nat
-; turn : Nat
-(defrecord Board [locations figures fig-order players banks influence support turn]
-    java.lang.Object
-    (toString [_] (str "(Board support:" support " influence:" influence " banks:" banks " turn:" turn ")")))
-(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
-(defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
 (defn available-influence [board location] (max 0 (- (:influence-limit location) (occupied-influence board location))))
 (defn location-full? [board location]
@@ -117,32 +114,21 @@
         (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
-(defn get-holdings [board player]
+(defn get-holdings [board player] ; [Board  Player] => Seq Location
     (filter (fn [loc] (= player (get-holder board loc))) (vals (:locations board))))
-; => Seq Location
 (defn get-score [board player]
     (+
         (get-in board [:support player])
         (reduce + (map :support (get-holdings board player)))
         (get-support-value (get-in board [:banks player]))))
-(defn get-scores [board]
+(defn get-scores [board] ; [Board] => Map Player Nat
     (into {} (map (partial get-score board) (:players board))))
-; => Map Player Nat
 (def game-over? board-full?)
 (defn get-game-winner [board]
     (let [scores (get-scores board)
           max-score (apply unique-max (vals scores))]
         (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
 (defn inc-turn [board] (update-in board [:turn] inc))
-
-; params : Map Keyword Type
-; doable : (Board, Player) -> Boolean
-;     Returns true if special can be performed in a meaningful way
-; check : (Board, Player, Map Keyword Object) -> Boolean
-;     Returns true if provided args are valid
-; effect : (Board, Player, Map Keyword Object) -> Board
-;     Returns altered board
-(defrecord Special [params doable check effect])
 
 (defn run-special [board {:keys [params doable check effect] :as special} player callback]
     (if-not (doable board player)
@@ -200,6 +186,7 @@
 ; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
 ; and the game isn't over if the Guard House is not occupied.
 ; I don't feel like implementing it that way.
+
 ; Occupant of the guard house is immue to rival's use of Spy and Apothecary
 (def occupy-guard-house
     (Special. {}
@@ -267,7 +254,7 @@
 (defn other-than [xs x] (filter (partial not= x) xs))
 
 ; Reassign up to two of your cubes already on the board.
-(def reassign-up-to-2-spots
+(def reassign-spots
     (Special. {:reassignments "[[Location Location]]"}
         (fn [board winner]
             (let [locations (vals (:locations board))]
@@ -323,8 +310,7 @@
     (->Location :fortress   50 8)
     (->Location :palace     55 8)))
 
-; locations-map : Map Keyword Location
-(defn make-figures [locations]
+(defn make-figures [locations] ; [Map Keyword Location] -> [(Map Keyword Figure)  (Vector Figure)]
     (let [figs [(figure :general    1  [0 0 1] -f (:fortress   locations))
                 (figure :captain    1  [0 0 1] -f (:harbor     locations))
                 (figure :innkeeper  3  [0 1 0] b- (:tavern     locations))
@@ -336,13 +322,12 @@
                 (figure :printer    10 [0 0 0] --)
                 (figure :spy        0  [0 0 0] b- nil steal-spot)
                 (figure :apothecary 0  [0 0 0] -f nil swap-spots)
-                (figure :messenger  3  [0 0 0] -- nil reassign-up-to-2-spots)
+                (figure :messenger  3  [0 0 0] -- nil reassign-spots)
                 (figure :mayor      0  [0 0 0] bf nil take-open-spot)
                 (figure :constable  5  [0 1 0] bf)
                 (figure :rogue      0  [0 2 0] bf)
                 (figure :mercenary  0  [0 0 1] bf)]]
         [(id-map figs) figs]))
-; => [Map Keyword Figure, Vector Figure]
 
 (def init-bank (->Bid 3 1 1))
 
@@ -360,3 +345,9 @@
             (zipmap (vals locations) (repeat (zipmap players (repeat 0)))) ; : Map Location (Map Player Nat)
             (zipmap players (repeat 0)) ; : Map Player Nat
             1)))
+
+(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
