@@ -80,6 +80,7 @@
 (defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
+(defn available-influence [board location] (max 0 (- (:influence-limit location) (occupied-influence board location))))
 (defn location-full? [board location]
     (let [occupied (occupied-influence board location)
           limit (:influence-limit location)]
@@ -261,16 +262,34 @@
     (and (has-influence? board location0 player)
         (not (location-full? board location1))))
 
+(defn not-full? [board location] (not (location-full? board location)))
+
+(defn other-than [xs x] (filter (partial not= x) xs))
+
 ; Reassign up to two of your cubes already on the board.
 (def reassign-up-to-2-spots
     (Special. {:reassignments "[[Location Location]]"}
         (fn [board winner]
-            (and (not (board-full? board))
-                (pos? (reduce + (map winner (vals (:influence board)))))
-                (player-has-influence? board winner)))
+            (let [locations (vals (:locations board))]
+                (some
+                    (fn [location]
+                        (and
+                            (has-influence? board location winner)
+                            (some
+                                (partial not-full? board)
+                                (other-than locations location))))
+                    locations)))
         (fn [board winner {:keys [reassignments]}]
-            (and (<= (count reassignments) 2)
-                (every? (partial can-move? board winner) reassignments)))
+            (and
+                (<= (count reassignments) 2)
+                (let [existing-cubes (into {} (map #(vector (first %) (get (last %) winner)) (:influence board)))
+                      selected-cubes (frequencies (map first reassignments))
+                      diffs (merge-with - existing-cubes selected-cubes)]
+                    (every? (comp not neg?) (vals diffs)))
+                (let [available-spots (into {} (map #(vector % (available-influence board %)) (vals (:locations board))))
+                      selected-spots (frequencies (map last reassignments))
+                      diffs (merge-with - available-spots selected-spots)]
+                    (every? (comp not neg?) (vals diffs)))))
         (fn [board winner {:keys [reassignments]}]
             (reduce (partial eval-reassignment winner) board reassignments))))
 
