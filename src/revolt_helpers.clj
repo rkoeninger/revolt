@@ -9,3 +9,4 @@
             (if (not= x1 x2) x1))))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
 (defn other-than [xs x] (filter (partial not= x) xs))
+(defn to-map [kf vf xs] (into {} (map #(vector (kf %) (vf %)) xs)))

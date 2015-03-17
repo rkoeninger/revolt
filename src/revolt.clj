@@ -50,7 +50,10 @@
                   support   ; Map Player Nat
                   turn]     ; Nat
     java.lang.Object
-    (toString [_] (str "(Board support:" support " influence:" influence " banks:" banks " turn:" turn ")")))
+    (toString [_] (str "(Board support:" support
+                           " influence:" influence
+                               " banks:" banks
+                                " turn:" turn ")")))
 
 (def bid0 (->Bid 0 0 0))
 (def bid+ (partial merge-with +))
@@ -116,51 +119,47 @@
         (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
-(defn get-holdings [board player] ; [Board  Player] => Seq Location
+(defn get-holdings [board player]
     (filter #(= player (get-holder board %)) (:locations board)))
 (defn get-score [board player]
-    (+
-        (get-in board [:support player])
-        (reduce + (map :support (get-holdings board player)))
+    (+  (get-support board player)
+        (reduce + (map :reduce (get-holdings board player)))
         (get-support-value (get-bank board player))))
-(defn get-scores [board] ; [Board] => Map Player Nat
-    (into {} (map (partial get-score board) (:players board))))
+(defn get-scores [board] (to-map identity (partial get-score board) (:players board)))
 (def game-over? board-full?)
+(defn get-rankings [board]
+    (let [ordered-scores (sort (distinct (vals (get-scores board))))
+          get-rank #(+ 1 (.indexOf ordered-scores (get-score board %)))]
+        (to-map identity get-rank (:players board))))
 (defn get-game-winner [board]
     (let [scores (get-scores board)
           max-score (apply unique-max (vals scores))]
         (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
 (defn inc-turn [board] (update-in board [:turn] inc))
-
 (defn run-special [board {:keys [params doable check effect] :as special} player callback]
     (if-not (doable board player)
         board
         (let [args (if (seq params) (callback player params))]
             (assert (check board player args))
             (effect board player args))))
-
 (defn eval-special [board special player callback]
     (if (not (nil? special))
         (run-special board special player callback)
         board))
-
 (defn eval-influence [board location player]
     (if-not (or (nil? location) (location-full? board location))
         (add-influence board location player)
         board))
-
 (defn reward-winner [board figure winner callback]
     (-> board
         (add-support winner (:support figure))
         (add-bank winner (:bank figure))
         (eval-influence (:location figure) winner)
         (eval-special (:special figure) winner callback)))
-
 (defn eval-reward [board figure winner callback]
     (if (nil? winner)
         board
         (reward-winner board figure winner callback)))
-
 (defn eval-bids
     ([board bids callback] (eval-bids board bids callback (:figures board)))
     ([board        ; Board
@@ -173,7 +172,6 @@
                   winner (get-winner (bids figure))
                   board (eval-reward board figure winner callback)]
                 (eval-bids board bids callback (rest figure-list))))))
-
 (defn run-turn [board bids callback]
     (-> board
         clear-banks
@@ -188,7 +186,7 @@
 
 ; Occupant of the guard house is immue to rival's use of Spy and Apothecary
 (def occupy-guard-house
-    (Special. {}
+    (->Special {}
         (constantly true)
         (constantly true)
         (fn [board winner args] (set-guard-house board winner))))
@@ -200,7 +198,7 @@
 
 ; Replace one Influence Cube with one of your own.
 (def steal-spot
-    (Special. {:location "Location" :player "Player"}
+    (->Special {:location "Location" :player "Player"}
         (fn [board winner]
             (let [pairs (cartesian-product (:locations board) (:players board))]
                 (some
@@ -240,7 +238,7 @@
 
 ; Reassign up to two of your cubes already on the board.
 (def reassign-spots
-    (Special. {:reassignments "[[Location Location]]"}
+    (->Special {:reassignments "[[Location Location]]"}
         (fn [board winner]
             (some
                 (fn [location]
@@ -269,7 +267,7 @@
 
 ; Influence any open Influence Space.
 (def take-open-spot
-    (Special. {:location "Location"}
+    (->Special {:location "Location"}
         (fn [board winner]
             (not (board-full? board)))
         (fn [board winner {:keys [location]}]
@@ -290,8 +288,7 @@
     (->Location :harbor     40 6)
     (->Location :town-hall  45 7)
     (->Location :fortress   50 8)
-    (->Location :palace     55 8)
-])
+    (->Location :palace     55 8)])
 
 (defn location [id] (first (filter (fn [l] (= id (:id l))) locations)))
 
@@ -311,8 +308,7 @@
     (->Figure :mayor      0  (->Bid 0 0 0) bf nil take-open-spot)
     (->Figure :constable  5  (->Bid 0 1 0) bf nil nil)
     (->Figure :rogue      0  (->Bid 0 2 0) bf nil nil)
-    (->Figure :mercenary  0  (->Bid 0 0 1) bf nil nil)
-])
+    (->Figure :mercenary  0  (->Bid 0 0 1) bf nil nil)])
 
 (def init-bank (->Bid 3 1 1))
 
