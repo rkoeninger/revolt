@@ -8,3 +8,4 @@
         (let [[x1 x2] (take 2 (reverse (sort xs)))]
             (if (not= x1 x2) x1))))
 (defn hm-map [f m] (into {} (for [[k v] m] [k (f v)])))
+(defn other-than [xs x] (filter (partial not= x) xs))

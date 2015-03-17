@@ -25,12 +25,13 @@
     (toString [_] (name id)))
 
 (defrecord Special [params   ; Map Keyword String
+                             ;     Description of arguments needed by special
                     doable   ; [Board  Player] -> Boolean
-                             ; Returns true if winner can meaningfully perform special
+                             ;     Returns true if winner can meaningfully perform special
                     check    ; [Board  Player  (Map Keyword Object)] -> Boolean
-                             ; Returns true if provided args are valid
+                             ;     Returns true if provided args are valid
                     effect]) ; [Board  Player  (Map Keyword Object)] -> Board
-                             ; Returns altered board according to args
+                             ;     Returns altered board according to args
 
 (defrecord Figure [id
                    support    ; Nat
@@ -41,9 +42,8 @@
     java.lang.Object
     (toString [_] (name id)))
 
-(defrecord Board [locations ; Map Keyword Location
-                  figures   ; Map Keyword Figure
-                  fig-order ; Vector Figure
+(defrecord Board [locations ; Collection Location
+                  figures   ; Vector Figure
                   players   ; Collection Player
                   banks     ; Map Player Bid
                   influence ; Map Location (Map Player Nat)
@@ -75,6 +75,7 @@
         (<= (count bids) 6)
         (= bank (reduce bid+ (vals bids)))
         (every? (partial apply validate-bid) bids)))
+(defn set-guard-house [board player] (assoc board :guard-house player))
 (defn touchable? [board winner player] (or (= winner player) (not= player (:guard-house board))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
 (defn available-influence [board location] (max 0 (- (:influence-limit location) (occupied-influence board location))))
@@ -82,13 +83,14 @@
     (let [occupied (occupied-influence board location)
           limit (:influence-limit location)]
         (>= occupied limit)))
-(defn board-full? [board] (every? (partial location-full? board) (vals (:locations board))))
+(defn not-full? [board location] (not (location-full? board location)))
+(defn board-full? [board] (every? (partial location-full? board) (:locations board)))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence? [board location player] (not (zero? (get-in board [:influence location player]))))
 (defn add-support [board player amount] (update-in board [:support player] (partial + amount)))
 (defn get-support [board player] (get-in board [:support player]))
-(defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
 (defn get-bank [board player] (get-in board [:banks player]))
+(defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
 (def min-token-count nil) ; Forward declare, actual value is specified later
 (defn fill-bank [bank]
@@ -115,12 +117,12 @@
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
 (defn get-holdings [board player] ; [Board  Player] => Seq Location
-    (filter (fn [loc] (= player (get-holder board loc))) (vals (:locations board))))
+    (filter #(= player (get-holder board %)) (:locations board)))
 (defn get-score [board player]
     (+
         (get-in board [:support player])
         (reduce + (map :support (get-holdings board player)))
-        (get-support-value (get-in board [:banks player]))))
+        (get-support-value (get-bank board player))))
 (defn get-scores [board] ; [Board] => Map Player Nat
     (into {} (map (partial get-score board) (:players board))))
 (def game-over? board-full?)
@@ -147,7 +149,6 @@
         (add-influence board location player)
         board))
 
-; callback : Player (Map Keyword String) -> Map Keyword Object
 (defn reward-winner [board figure winner callback]
     (-> board
         (add-support winner (:support figure))
@@ -160,14 +161,12 @@
         board
         (reward-winner board figure winner callback)))
 
-; figure-list : Vector Figure
-; bids : Map Figure (Map Player Bid)
-; callback : Player (Map Keyword String) -> Map Keyword Object
-; => Board
 (defn eval-bids
-    ([board bids callback]
-        (eval-bids board bids callback (:fig-order board)))
-    ([board bids callback figure-list]
+    ([board bids callback] (eval-bids board bids callback (:figures board)))
+    ([board        ; Board
+      bids         ; Map Figure (Map Player Bid)
+      callback     ; [Player  (Map Keyword String)] -> Map Keyword Object
+      figure-list] ; Vector Figure
         (if (empty? figure-list)
             board
             (let [figure (first figure-list)
@@ -192,7 +191,7 @@
     (Special. {}
         (constantly true)
         (constantly true)
-        (fn [board winner args] (assoc board :guard-house winner))))
+        (fn [board winner args] (set-guard-house board winner))))
 
 (defn can-steal? [board winner player location]
     (and (not= winner player)
@@ -203,7 +202,7 @@
 (def steal-spot
     (Special. {:location "Location" :player "Player"}
         (fn [board winner]
-            (let [pairs (cartesian-product (vals (:locations board)) (:players board))]
+            (let [pairs (cartesian-product (:locations board) (:players board))]
                 (some
                     (fn [[location player]]
                         (can-steal? board winner player location))
@@ -223,7 +222,7 @@
         (has-influence? board location1 player1)))
 
 (defn any-swaps? [board winner]
-    (let [pairs (cartesian-product (vals (:locations board)) (:players board))
+    (let [pairs (cartesian-product (:locations board) (:players board))
           pair-pairs (cartesian-product pairs pairs)]
         (some
             (fn [[[location0 player0] [location1 player1]]]
@@ -239,33 +238,18 @@
         (fn [board winner {:keys [location0 player0 location1 player1]}]
             (swap-influence board location0 player0 location1 player1))))
 
-(defn eval-reassignment [winner board [location0 location1]]
-    (move-influence board location0 location1 winner))
-
-(defn player-has-influence? [board player]
-    (some pos? (map #(get-influence board % player) (vals (:locations board)))))
-
-(defn can-move? [board player [location0 location1]]
-    (and (has-influence? board location0 player)
-        (not (location-full? board location1))))
-
-(defn not-full? [board location] (not (location-full? board location)))
-
-(defn other-than [xs x] (filter (partial not= x) xs))
-
 ; Reassign up to two of your cubes already on the board.
 (def reassign-spots
     (Special. {:reassignments "[[Location Location]]"}
         (fn [board winner]
-            (let [locations (vals (:locations board))]
-                (some
-                    (fn [location]
-                        (and
-                            (has-influence? board location winner)
-                            (some
-                                (partial not-full? board)
-                                (other-than locations location))))
-                    locations)))
+            (some
+                (fn [location]
+                    (and
+                        (has-influence? board location winner)
+                        (some
+                            (comp not (partial location-full? board))
+                            (other-than (:locations board) location))))
+                (:locations board)))
         (fn [board winner {:keys [reassignments]}]
             (and
                 (<= (count reassignments) 2)
@@ -273,12 +257,15 @@
                       selected-cubes (frequencies (map first reassignments))
                       diffs (merge-with - existing-cubes selected-cubes)]
                     (every? (comp not neg?) (vals diffs)))
-                (let [available-spots (into {} (map #(vector % (available-influence board %)) (vals (:locations board))))
+                (let [available-spots (into {} (map #(vector % (available-influence board %)) (:locations board)))
                       selected-spots (frequencies (map last reassignments))
                       diffs (merge-with - available-spots selected-spots)]
                     (every? (comp not neg?) (vals diffs)))))
         (fn [board winner {:keys [reassignments]}]
-            (reduce (partial eval-reassignment winner) board reassignments))))
+            (reduce
+                (fn [board [src dest]] (move-influence board src dest winner))
+                board
+                reassignments))))
 
 ; Influence any open Influence Space.
 (def take-open-spot
@@ -290,17 +277,12 @@
         (fn [board winner {:keys [location]}]
             (add-influence board location winner))))
 
-(defn id-map [& things] (into {} (map (fn [x] [(:id x) x]) things)))
-
 (def -- #{})
 (def b- #{:blackmail})
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
-(defn figure [id support bank immunities & [location special]]
-    (->Figure id support (apply ->Bid bank) immunities location special))
-
-(defn make-locations [] (id-map
+(def locations [
     (->Location :tavern     20 4)
     (->Location :market     25 5)
     (->Location :plantation 30 6)
@@ -308,43 +290,43 @@
     (->Location :harbor     40 6)
     (->Location :town-hall  45 7)
     (->Location :fortress   50 8)
-    (->Location :palace     55 8)))
+    (->Location :palace     55 8)
+])
 
-(defn make-figures [locations] ; [Map Keyword Location] -> [(Map Keyword Figure)  (Vector Figure)]
-    (let [figs [(figure :general    1  [0 0 1] -f (:fortress   locations))
-                (figure :captain    1  [0 0 1] -f (:harbor     locations))
-                (figure :innkeeper  3  [0 1 0] b- (:tavern     locations))
-                (figure :magistrate 1  [0 1 0] b- (:town-hall  locations))
-                (figure :viceroy    0  [0 0 0] -- (:palace     locations) occupy-guard-house)
-                (figure :priest     6  [0 0 0] -- (:cathedral  locations))
-                (figure :aristocrat 5  [3 0 0] -- (:plantation locations))
-                (figure :merchant   3  [5 0 0] -- (:market     locations))
-                (figure :printer    10 [0 0 0] --)
-                (figure :spy        0  [0 0 0] b- nil steal-spot)
-                (figure :apothecary 0  [0 0 0] -f nil swap-spots)
-                (figure :messenger  3  [0 0 0] -- nil reassign-spots)
-                (figure :mayor      0  [0 0 0] bf nil take-open-spot)
-                (figure :constable  5  [0 1 0] bf)
-                (figure :rogue      0  [0 2 0] bf)
-                (figure :mercenary  0  [0 0 1] bf)]]
-        [(id-map figs) figs]))
+(defn location [id] (first (filter (fn [l] (= id (:id l))) locations)))
+
+(def figures [
+    (->Figure :general    1  (->Bid 0 0 1) -f (location :fortress)   nil)
+    (->Figure :captain    1  (->Bid 0 0 1) -f (location :harbor)     nil)
+    (->Figure :innkeeper  3  (->Bid 0 1 0) b- (location :tavern)     nil)
+    (->Figure :magistrate 1  (->Bid 0 1 0) b- (location :town-hall)  nil)
+    (->Figure :viceroy    0  (->Bid 0 0 0) -- (location :palace)     occupy-guard-house)
+    (->Figure :priest     6  (->Bid 0 0 0) -- (location :cathedral)  nil)
+    (->Figure :aristocrat 5  (->Bid 3 0 0) -- (location :plantation) nil)
+    (->Figure :merchant   3  (->Bid 5 0 0) -- (location :market)     nil)
+    (->Figure :printer    10 (->Bid 0 0 0) -- nil nil)
+    (->Figure :spy        0  (->Bid 0 0 0) b- nil steal-spot)
+    (->Figure :apothecary 0  (->Bid 0 0 0) -f nil swap-spots)
+    (->Figure :messenger  3  (->Bid 0 0 0) -- nil reassign-spots)
+    (->Figure :mayor      0  (->Bid 0 0 0) bf nil take-open-spot)
+    (->Figure :constable  5  (->Bid 0 1 0) bf nil nil)
+    (->Figure :rogue      0  (->Bid 0 2 0) bf nil nil)
+    (->Figure :mercenary  0  (->Bid 0 0 1) bf nil nil)
+])
 
 (def init-bank (->Bid 3 1 1))
 
 (def min-token-count 5)
 
 (defn make-board [players]
-    (let [locations (make-locations)
-          [figures figure-order] (make-figures locations)]
-        (->Board
-            locations ; : Map Keyword Location
-            figures ; : Map Keyword Figure
-            figure-order ; : Vector Figure
-            players ; : Vector Player
-            (zipmap players (repeat init-bank)) ; : Map Player Bid
-            (zipmap (vals locations) (repeat (zipmap players (repeat 0)))) ; : Map Location (Map Player Nat)
-            (zipmap players (repeat 0)) ; : Map Player Nat
-            1)))
+    (->Board
+        locations
+        figures
+        players
+        (zipmap players (repeat init-bank))
+        (zipmap locations (repeat (zipmap players (repeat 0))))
+        (zipmap players (repeat 0))
+        1))
 
 (defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
 (defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))

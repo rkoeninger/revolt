@@ -13,25 +13,23 @@
 (def farm   (->Location :farm   40 3))
 (def castle (->Location :castle 90 5))
 
-(def locs (apply id-map [hovel saloon farm castle]))
+(def locs [hovel saloon farm castle])
 
-(def prince (figure :prince 0 [5 0 0] -f castle))
-(def beggar (figure :beggar 1 [0 0 0] b- hovel))
-(def barber (figure :barber 8 [0 0 0] -- saloon))
-(def farmer (figure :farmer 1 [2 0 0] -- farm))
-(def axeman (figure :axeman 3 [0 0 1] bf))
-(def doctor (figure :doctor 0 [0 2 0] --))
+(def prince (->Figure :prince 0 (->Bid 5 0 0) -f castle nil))
+(def beggar (->Figure :beggar 1 (->Bid 0 0 0) b- hovel nil))
+(def barber (->Figure :barber 8 (->Bid 0 0 0) -- saloon nil))
+(def farmer (->Figure :farmer 1 (->Bid 2 0 0) -- farm nil))
+(def axeman (->Figure :axeman 3 (->Bid 0 0 1) bf nil nil))
+(def doctor (->Figure :doctor 0 (->Bid 0 2 0) -- nil nil))
 
-(def figs-order [prince beggar barber farmer axeman doctor])
-(def figs (apply id-map figs-order))
+(def figs [prince beggar barber farmer axeman doctor])
 
 (def board (->Board
     locs
     figs
-    figs-order
     players
     (zipmap players (repeat (->Bid 3 1 1)))
-    (zipmap (vals locs) (repeat (zipmap players (repeat 0))))
+    (zipmap locs (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))
     1))
 

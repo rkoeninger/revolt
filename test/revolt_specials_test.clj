@@ -9,28 +9,26 @@
 (def hideout   (->Location :hideout   20 1))
 (def courtroom (->Location :courtroom 30 6))
 
-(def locs (apply id-map [hideout courtroom]))
+(def locs [hideout courtroom])
 
 (def clear-spot
     (->Special {:location "Location" :player "Player"}
         (fn [board winner]
-            (pos? (reduce + (map (partial occupied-influence board) (vals (:locations board))))))
+            (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
         (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
         (fn [board winner {:keys [location player]}] (remove-influence board location player))))
 
-(def assassin (figure :assassin 0 [0 0 2] -f hideout   clear-spot))
-(def judge    (figure :judge    4 [0 1 0] b- courtroom steal-spot))
+(def assassin (->Figure :assassin 0 (->Bid 0 0 2) -f hideout   clear-spot))
+(def judge    (->Figure :judge    4 (->Bid 0 1 0) b- courtroom steal-spot))
 
-(def figs-order [assassin judge])
-(def figs (apply id-map figs-order))
+(def figs [assassin judge])
 
 (def board (->Board
     locs
     figs
-    figs-order
     players
     (zipmap players (repeat (->Bid 0 0 0)))
-    (zipmap (vals locs) (repeat (zipmap players (repeat 0))))
+    (zipmap locs (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))
     1))
 
@@ -195,11 +193,10 @@
 (def loc2 (->Location :loc2 20 3))
 (def loc3 (->Location :loc3 30 4))
 
-(def reassigner (figure :reassigner 0 [0 0 0] -- nil reassign-spots))
+(def reassigner (->Figure :reassigner 0 bid0 -- nil reassign-spots))
 
 (def reassign-board (->Board
-    {:loc1 loc1 :loc2 loc2 :loc3 loc3}
-    {:reassigner reassigner}
+    [loc1 loc2 loc3]
     [reassigner]
     [rob joe]
     (zipmap players (repeat bid0))
