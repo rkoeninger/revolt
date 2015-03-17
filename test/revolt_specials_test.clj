@@ -195,12 +195,14 @@
 (def loc2 (->Location :loc2 20 3))
 (def loc3 (->Location :loc3 30 4))
 
+(def reassigner (figure :reassigner 0 [0 0 0] -- nil reassign-spots))
+
 (def reassign-board (->Board
-    { :loc1 loc1 :loc2 loc2 :loc3 loc3 }
-    {}
-    []
-    []
-    []
+    {:loc1 loc1 :loc2 loc2 :loc3 loc3}
+    {:reassigner reassigner}
+    [reassigner]
+    [rob joe]
+    (zipmap players (repeat bid0))
     (zipmap [loc1 loc2 loc3] (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))
     1))
@@ -339,6 +341,22 @@
                     (add-influence loc1 rob))]
         (is (doable board rob))
         (is (not (check board rob {:reassignments [[loc1 loc2] [loc3 loc2]]})))))
+
+(deftest scenario-reassign
+    (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
+          callback (fn [player params] {:reassignments [[loc1 loc2] [loc3 loc2]]})
+          board (-> reassign-board
+                    (add-bank rob (->Bid 1 0 0))
+                    (add-influence loc1 rob)
+                    (add-influence loc2 joe)
+                    (add-influence loc3 rob)
+                    (run-turn bids callback))]
+        (is (= 0 (get-influence board loc1 rob)))
+        (is (= 0 (get-influence board loc1 joe)))
+        (is (= 2 (get-influence board loc2 rob)))
+        (is (= 1 (get-influence board loc2 joe)))
+        (is (= 0 (get-influence board loc3 rob)))
+        (is (= 0 (get-influence board loc3 joe)))))
 
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
