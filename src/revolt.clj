@@ -114,9 +114,9 @@
 (defn swap-influence [board location0 player0 location1 player1]
     (-> board (replace-influence location0 player0 player1) (replace-influence location1 player1 player0)))
 (defn get-current-holder [board location]
-    (let [inf-map (get-in board [:influence location])
-          max-inf (apply unique-max (vals inf-map))]
-        (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get inf-map max-inf))))
+    (let [influence (get-in board [:influence location])
+          max-inf (apply unique-max (vals influence))]
+        (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get influence max-inf))))
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
 (defn get-holdings [board player]
@@ -125,12 +125,16 @@
     (+  (get-support board player)
         (reduce + (map :reduce (get-holdings board player)))
         (get-support-value (get-bank board player))))
-(defn get-scores [board] (to-map identity (partial get-score board) (:players board)))
+(defn get-scores [board]
+    (let [players (:players board)]
+        (zipmap players (map (partial get-score board) players))))
 (def game-over? board-full?)
+(defn get-rank [board player]
+    (let [ordered-scores (reverse (sort (distinct (vals (get-scores board)))))]
+        (+ 1 (.indexOf ordered-scores (get-score board player)))))
 (defn get-rankings [board]
-    (let [ordered-scores (sort (distinct (vals (get-scores board))))
-          get-rank #(+ 1 (.indexOf ordered-scores (get-score board %)))]
-        (to-map identity get-rank (:players board))))
+    (let [players (:players board)]
+        (zipmap players (map (partial get-rank board) players))))
 (defn get-game-winner [board]
     (let [scores (get-scores board)
           max-score (apply unique-max (vals scores))]

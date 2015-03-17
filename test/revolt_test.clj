@@ -107,6 +107,51 @@
                         (is (= [farm castle] (get-holdings board joe)))
                         (is (board-full? board))))))))
 
+(deftest scoring-all-unique-scores
+    (let [board (-> (make-board [:a :b :c :d :e])
+                    (add-support :a 34)
+                    (add-support :b 25)
+                    (add-support :c 61)
+                    (add-support :d 33)
+                    (add-support :e 44))]
+        (is (= 3 (get-rank board :a)))
+        (is (= 5 (get-rank board :b)))
+        (is (= 1 (get-rank board :c)))
+        (is (= 4 (get-rank board :d)))
+        (is (= 2 (get-rank board :e)))
+        (is (= {:a 3 :b 5 :c 1 :d 4 :e 2} (get-rankings board)))
+        (is (= :c (get-game-winner board)))))
+
+(deftest scoring-duplicate-middle-scores
+    (let [board (-> (make-board [:a :b :c :d :e])
+                    (add-support :a 33)
+                    (add-support :b 25)
+                    (add-support :c 61)
+                    (add-support :d 33)
+                    (add-support :e 25))]
+        (is (= 2 (get-rank board :a)))
+        (is (= 3 (get-rank board :b)))
+        (is (= 1 (get-rank board :c)))
+        (is (= 2 (get-rank board :d)))
+        (is (= 3 (get-rank board :e)))
+        (is (= {:a 2 :b 3 :c 1 :d 2 :e 3} (get-rankings board)))
+        (is (= :c (get-game-winner board)))))
+
+(deftest scoring-duplicate-highest-scores
+    (let [board (-> (make-board [:a :b :c :d :e])
+                    (add-support :a 33)
+                    (add-support :b 25)
+                    (add-support :c 61)
+                    (add-support :d 33)
+                    (add-support :e 61))]
+        (is (= 2 (get-rank board :a)))
+        (is (= 3 (get-rank board :b)))
+        (is (= 1 (get-rank board :c)))
+        (is (= 2 (get-rank board :d)))
+        (is (= 1 (get-rank board :e)))
+        (is (= {:a 2 :b 3 :c 1 :d 2 :e 1} (get-rankings board)))
+        (is (= nil (get-game-winner board)))))
+
 (deftest rewards
     (let [board (-> (clear-banks board)
                     (reward-winner farmer rob dummy-callback)
