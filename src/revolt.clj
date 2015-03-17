@@ -10,15 +10,9 @@
 
 (defrecord Bid [gold blackmail force]
     java.lang.Comparable
-    (compareTo [{gx :gold bx :blackmail fx :force}
-                {gy :gold by :blackmail fy :force}]
-        (cond
-            (> fx fy) 1 (> fy fx) -1
-            (> bx by) 1 (> by bx) -1
-            (> gx gy) 1 (> gy gx) -1
-            :else 0))
+    (compareTo [x y] (compare-or x y [:force :blackmail :gold]))
     java.lang.Object
-    (toString [_] (str "(Bid " gold " " blackmail " " force ")")))
+    (toString [_] (str "(Bid " gold "g " blackmail "b " force "f)")))
 
 (defrecord Location [id support influence-limit]
     java.lang.Object
@@ -42,13 +36,13 @@
     java.lang.Object
     (toString [_] (name id)))
 
-(defrecord Board [locations ; Collection Location
+(defrecord Board [turn      ; Nat
+                  locations ; Collection Location
                   figures   ; Vector Figure
                   players   ; Collection Player
                   banks     ; Map Player Bid
                   influence ; Map Location (Map Player Nat)
-                  support   ; Map Player Nat
-                  turn]     ; Nat
+                  support]  ; Map Player Nat
     java.lang.Object
     (toString [_] (str "(Board support:" support
                            " influence:" influence
@@ -69,15 +63,14 @@
 (def blackmail-immune? (comp boolean :blackmail :immunities))
 (def force-immune? (comp boolean :force :immunities))
 (defn validate-bid [fig bid]
-    (not (or
-        (and (has-blackmail? bid) (blackmail-immune? fig))
-        (and (has-force? bid) (force-immune? fig)))))
-(defn validate-bids [bank bids] ; [Bid  (Map Figure Bid)] => Boolean
-    (and
-        (> (count bids) 0)
-        (<= (count bids) 6)
-        (= bank (reduce bid+ (vals bids)))
-        (every? (partial apply validate-bid) bids)))
+    (nor (and (has-blackmail? bid) (blackmail-immune? fig))
+         (and (has-force? bid) (force-immune? fig))))
+(defn validate-bids [bank  ; Bid
+                     bids] ; Map Figure Bid
+    (and (> (count bids) 0)
+         (<= (count bids) 6)
+         (= bank (reduce bid+ (vals bids)))
+         (every? (partial apply validate-bid) bids)))
 (defn set-guard-house [board player] (assoc board :guard-house player))
 (defn touchable? [board winner player] (or (= winner player) (not= player (:guard-house board))))
 (defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
@@ -95,12 +88,11 @@
 (defn get-bank [board player] (get-in board [:banks player]))
 (defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
 (defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
-(def min-token-count nil) ; Forward declare, actual value is specified later
 (defn fill-bank [bank]
     (let [token-count (reduce + (vals bank))
-          extra-gold (max 0 (- min-token-count token-count))]
+          extra-gold (max 0 (- 5 token-count))]
         (bid+ bank (->Bid extra-gold 0 0))))
-(defn fill-banks [board] (update-in board [:banks] (partial hm-map fill-bank)))
+(defn fill-banks [board] (update-in board [:banks] (partial map-vals fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
     (update-in board [:influence location player] (comp inc #(or % 0))))
@@ -122,9 +114,9 @@
 (defn get-holdings [board player]
     (filter #(= player (get-holder board %)) (:locations board)))
 (defn get-score [board player]
-    (+  (get-support board player)
-        (reduce + (map :reduce (get-holdings board player)))
-        (get-support-value (get-bank board player))))
+    (+ (get-support board player)
+       (reduce + (map :reduce (get-holdings board player)))
+       (get-support-value (get-bank board player))))
 (defn get-scores [board]
     (let [players (:players board)]
         (zipmap players (map (partial get-score board) players))))
@@ -183,153 +175,10 @@
         fill-banks
         inc-turn))
 
-; Offically, the guard house is like any other Influence Space in that
-; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
-; and the game isn't over if the Guard House is not occupied.
-; I don't feel like implementing it that way.
-
-; Occupant of the guard house is immue to rival's use of Spy and Apothecary
-(def occupy-guard-house
-    (->Special {}
-        (constantly true)
-        (constantly true)
-        (fn [board winner args] (set-guard-house board winner))))
-
-(defn can-steal? [board winner player location]
-    (and (not= winner player)
-        (touchable? board winner player)
-        (has-influence? board location player)))
-
-; Replace one Influence Cube with one of your own.
-(def steal-spot
-    (->Special {:location "Location" :player "Player"}
-        (fn [board winner]
-            (let [pairs (cartesian-product (:locations board) (:players board))]
-                (some
-                    (fn [[location player]]
-                        (can-steal? board winner player location))
-                    pairs)))
-        (fn [board winner {:keys [location player]}]
-            (and (touchable? board winner player)
-                (has-influence? board location player)))
-        (fn [board winner {:keys [location player]}]
-            (replace-influence board location player winner))))
-
-(defn can-swap? [board winner location0 player0 location1 player1]
-    (and (not= location0 location1)
-        (not= player0 player1)
-        (touchable? board winner player0)
-        (touchable? board winner player1)
-        (has-influence? board location0 player0)
-        (has-influence? board location1 player1)))
-
-(defn any-swaps? [board winner]
-    (let [pairs (cartesian-product (:locations board) (:players board))
-          pair-pairs (cartesian-product pairs pairs)]
-        (some
-            (fn [[[location0 player0] [location1 player1]]]
-                (can-swap? board winner location0 player0 location1 player1))
-            pair-pairs)))
-
-; Swap the cubes in any two Influence Spaces.
-(def swap-spots
-    (Special. {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
-        any-swaps?
-        (fn [board winner {:keys [location0 player0 location1 player1]}]
-            (can-swap? board winner location0 player0 location1 player1))
-        (fn [board winner {:keys [location0 player0 location1 player1]}]
-            (swap-influence board location0 player0 location1 player1))))
-
-; Reassign up to two of your cubes already on the board.
-(def reassign-spots
-    (->Special {:reassignments "[[Location Location]]"}
-        (fn [board winner]
-            (some
-                (fn [location]
-                    (and
-                        (has-influence? board location winner)
-                        (some
-                            (comp not (partial location-full? board))
-                            (other-than (:locations board) location))))
-                (:locations board)))
-        (fn [board winner {:keys [reassignments]}]
-            (and
-                (<= (count reassignments) 2)
-                (let [existing-cubes (into {} (map #(vector (first %) (get (last %) winner)) (:influence board)))
-                      selected-cubes (frequencies (map first reassignments))
-                      diffs (merge-with - existing-cubes selected-cubes)]
-                    (every? (comp not neg?) (vals diffs)))
-                (let [available-spots (into {} (map #(vector % (available-influence board %)) (:locations board)))
-                      selected-spots (frequencies (map last reassignments))
-                      diffs (merge-with - available-spots selected-spots)]
-                    (every? (comp not neg?) (vals diffs)))))
-        (fn [board winner {:keys [reassignments]}]
-            (reduce
-                (fn [board [src dest]] (move-influence board src dest winner))
-                board
-                reassignments))))
-
-; Influence any open Influence Space.
-(def take-open-spot
-    (->Special {:location "Location"}
-        (fn [board winner]
-            (not (board-full? board)))
-        (fn [board winner {:keys [location]}]
-            (not (location-full? board location)))
-        (fn [board winner {:keys [location]}]
-            (add-influence board location winner))))
-
-(def -- #{})
-(def b- #{:blackmail})
-(def -f #{:force})
-(def bf #{:blackmail :force})
-
-(def locations [
-    (->Location :tavern     20 4)
-    (->Location :market     25 5)
-    (->Location :plantation 30 6)
-    (->Location :cathedral  35 7)
-    (->Location :harbor     40 6)
-    (->Location :town-hall  45 7)
-    (->Location :fortress   50 8)
-    (->Location :palace     55 8)])
-
-(defn location [id] (first (filter (fn [l] (= id (:id l))) locations)))
-
-(def figures [
-    (->Figure :general    1  (->Bid 0 0 1) -f (location :fortress)   nil)
-    (->Figure :captain    1  (->Bid 0 0 1) -f (location :harbor)     nil)
-    (->Figure :innkeeper  3  (->Bid 0 1 0) b- (location :tavern)     nil)
-    (->Figure :magistrate 1  (->Bid 0 1 0) b- (location :town-hall)  nil)
-    (->Figure :viceroy    0  (->Bid 0 0 0) -- (location :palace)     occupy-guard-house)
-    (->Figure :priest     6  (->Bid 0 0 0) -- (location :cathedral)  nil)
-    (->Figure :aristocrat 5  (->Bid 3 0 0) -- (location :plantation) nil)
-    (->Figure :merchant   3  (->Bid 5 0 0) -- (location :market)     nil)
-    (->Figure :printer    10 (->Bid 0 0 0) -- nil nil)
-    (->Figure :spy        0  (->Bid 0 0 0) b- nil steal-spot)
-    (->Figure :apothecary 0  (->Bid 0 0 0) -f nil swap-spots)
-    (->Figure :messenger  3  (->Bid 0 0 0) -- nil reassign-spots)
-    (->Figure :mayor      0  (->Bid 0 0 0) bf nil take-open-spot)
-    (->Figure :constable  5  (->Bid 0 1 0) bf nil nil)
-    (->Figure :rogue      0  (->Bid 0 2 0) bf nil nil)
-    (->Figure :mercenary  0  (->Bid 0 0 1) bf nil nil)])
-
-(def init-bank (->Bid 3 1 1))
-
-(def min-token-count 5)
-
-(defn make-board [players]
-    (->Board
-        locations
-        figures
-        players
-        (zipmap players (repeat init-bank))
-        (zipmap locations (repeat (zipmap players (repeat 0))))
-        (zipmap players (repeat 0))
-        1))
-
 (defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
 (defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
 (defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
 (defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
 (defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
+
+(load "revolt_setup")

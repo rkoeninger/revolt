@@ -25,13 +25,13 @@
 (def figs [prince beggar barber farmer axeman doctor])
 
 (def board (->Board
+    1
     locs
     figs
     players
     (zipmap players (repeat (->Bid 3 1 1)))
     (zipmap locs (repeat (zipmap players (repeat 0))))
-    (zipmap players (repeat 0))
-    1))
+    (zipmap players (repeat 0))))
 
 (deftest bid-operations
     (is (= (->Bid 2 0 1) (unique-max (->Bid 1 1 0) (->Bid 2 0 1))))
@@ -107,7 +107,7 @@
                         (is (= [farm castle] (get-holdings board joe)))
                         (is (board-full? board))))))))
 
-(deftest scoring-all-unique-scores
+(deftest ranking-all-unique-scores
     (let [board (-> (make-board [:a :b :c :d :e])
                     (add-support :a 34)
                     (add-support :b 25)
@@ -122,7 +122,7 @@
         (is (= {:a 3 :b 5 :c 1 :d 4 :e 2} (get-rankings board)))
         (is (= :c (get-game-winner board)))))
 
-(deftest scoring-duplicate-middle-scores
+(deftest ranking-duplicate-middle-scores
     (let [board (-> (make-board [:a :b :c :d :e])
                     (add-support :a 33)
                     (add-support :b 25)
@@ -137,7 +137,7 @@
         (is (= {:a 2 :b 3 :c 1 :d 2 :e 3} (get-rankings board)))
         (is (= :c (get-game-winner board)))))
 
-(deftest scoring-duplicate-highest-scores
+(deftest ranking-duplicate-highest-scores
     (let [board (-> (make-board [:a :b :c :d :e])
                     (add-support :a 33)
                     (add-support :b 25)

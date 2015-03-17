@@ -24,13 +24,13 @@
 (def figs [assassin judge])
 
 (def board (->Board
+    1
     locs
     figs
     players
     (zipmap players (repeat (->Bid 0 0 0)))
     (zipmap locs (repeat (zipmap players (repeat 0))))
-    (zipmap players (repeat 0))
-    1))
+    (zipmap players (repeat 0))))
 
 (deftest simple-special
     (let [callback (constantly {:location courtroom :player joe})
@@ -196,13 +196,13 @@
 (def reassigner (->Figure :reassigner 0 bid0 -- nil reassign-spots))
 
 (def reassign-board (->Board
+    1
     [loc1 loc2 loc3]
     [reassigner]
     [rob joe]
     (zipmap players (repeat bid0))
     (zipmap [loc1 loc2 loc3] (repeat (zipmap players (repeat 0))))
-    (zipmap players (repeat 0))
-    1))
+    (zipmap players (repeat 0))))
 
 (deftest reassign-spots-empty-board
     (let [doable (:doable reassign-spots)
