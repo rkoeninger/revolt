@@ -21,8 +21,8 @@
 (defn sub-map [outer-map inner-key]
     (reduce-kv
         (fn [result-map ; Map a c
-        	 outer-key  ; a
-        	 inner-map] ; Mab b c
+             outer-key  ; a
+             inner-map] ; Mab b c
             (assoc result-map outer-key (inner-map inner-key)))
         {}
         outer-map))
