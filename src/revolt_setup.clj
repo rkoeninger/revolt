@@ -12,11 +12,6 @@
         (constantly true)
         (fn [board winner args] (set-guard-house board winner))))
 
-(defn can-steal? [board winner player location]
-    (and (not= winner player)
-        (touchable? board winner player)
-        (has-influence? board location player)))
-
 ; Replace one Influence Cube with one of your own.
 (def steal-spot
     (->Special {:location "Location" :player "Player"}
@@ -24,7 +19,9 @@
             (let [pairs (cartesian-product (:locations board) (:players board))]
                 (some
                     (fn [[location player]]
-                        (can-steal? board winner player location))
+                        (and (not= winner player)
+                            (touchable? board winner player)
+                            (has-influence? board location player)))
                     pairs)))
         (fn [board winner {:keys [location player]}]
             (and (touchable? board winner player)
@@ -50,7 +47,7 @@
 
 ; Swap the cubes in any two Influence Spaces.
 (def swap-spots
-    (Special. {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
+    (->Special {:location0 "Location" :player0 "Player" :location1 "Location" :player1 "Player"}
         any-swaps?
         (fn [board winner {:keys [location0 player0 location1 player1]}]
             (can-swap? board winner location0 player0 location1 player1))
@@ -112,17 +109,17 @@
     (->Location :fortress   50 8)
     (->Location :palace     55 8)])
 
-(defn location [id] (first (filter (fn [l] (= id (:id l))) locations)))
+(defn- influences [id] (first (filter (fn [l] (= id (:id l))) locations)))
 
 (def figures [
-    (->Figure :general    1  (->Bid 0 0 1) -f (location :fortress)   nil)
-    (->Figure :captain    1  (->Bid 0 0 1) -f (location :harbor)     nil)
-    (->Figure :innkeeper  3  (->Bid 0 1 0) b- (location :tavern)     nil)
-    (->Figure :magistrate 1  (->Bid 0 1 0) b- (location :town-hall)  nil)
-    (->Figure :viceroy    0  (->Bid 0 0 0) -- (location :palace)     occupy-guard-house)
-    (->Figure :priest     6  (->Bid 0 0 0) -- (location :cathedral)  nil)
-    (->Figure :aristocrat 5  (->Bid 3 0 0) -- (location :plantation) nil)
-    (->Figure :merchant   3  (->Bid 5 0 0) -- (location :market)     nil)
+    (->Figure :general    1  (->Bid 0 0 1) -f (influences :fortress)   nil)
+    (->Figure :captain    1  (->Bid 0 0 1) -f (influences :harbor)     nil)
+    (->Figure :innkeeper  3  (->Bid 0 1 0) b- (influences :tavern)     nil)
+    (->Figure :magistrate 1  (->Bid 0 1 0) b- (influences :town-hall)  nil)
+    (->Figure :viceroy    0  (->Bid 0 0 0) -- (influences :palace)     occupy-guard-house)
+    (->Figure :priest     6  (->Bid 0 0 0) -- (influences :cathedral)  nil)
+    (->Figure :aristocrat 5  (->Bid 3 0 0) -- (influences :plantation) nil)
+    (->Figure :merchant   3  (->Bid 5 0 0) -- (influences :market)     nil)
     (->Figure :printer    10 (->Bid 0 0 0) -- nil nil)
     (->Figure :spy        0  (->Bid 0 0 0) b- nil steal-spot)
     (->Figure :apothecary 0  (->Bid 0 0 0) -f nil swap-spots)
