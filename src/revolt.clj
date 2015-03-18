@@ -56,7 +56,7 @@
 (def zero-bid? (partial = bid0))
 (defn get-support-value [{:keys [gold blackmail force]}]
     (+ gold (* 3 blackmail) (* 5 force)))
-(defn get-winner [bid-map] ; [Map Player Bid] => Player | nil
+(defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
     (let [winning-bid (apply unique-max (vals bid-map))]
         (if-not (or (nil? winning-bid) (zero-bid? winning-bid)) (inverted-get bid-map winning-bid))))
 (def has-special? (comp not nil? :special))
@@ -95,7 +95,7 @@
 (defn fill-banks [board] (update-in board [:banks] (partial map-vals fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
-    (update-in board [:influence location player] (comp inc #(or % 0))))
+    (update-in board [:influence location player] inc))
 (defn remove-influence [board location player]
     (assert (has-influence? board location player) (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
@@ -122,8 +122,8 @@
         (zipmap players (map (partial get-score board) players))))
 (def game-over? board-full?)
 (defn get-rank [board player]
-    (let [ordered-scores (reverse (sort (distinct (vals (get-scores board)))))]
-        (+ 1 (.indexOf ordered-scores (get-score board player)))))
+    (let [ordered-scores (sort (distinct (vals (get-scores board))))]
+        (- (count ordered-scores) (.indexOf ordered-scores (get-score board player)))))
 (defn get-rankings [board]
     (let [players (:players board)]
         (zipmap players (map (partial get-rank board) players))))
@@ -132,30 +132,22 @@
           max-score (apply unique-max (vals scores))]
         (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
 (defn inc-turn [board] (update-in board [:turn] inc))
-(defn run-special [board {:keys [params doable check effect] :as special} player callback]
+(defn run-special [board {:keys [params doable check effect]} player callback]
     (if-not (doable board player)
         board
         (let [args (if (seq params) (callback player params))]
             (assert (check board player args))
             (effect board player args))))
-(defn eval-special [board special player callback]
-    (if (not (nil? special))
-        (run-special board special player callback)
-        board))
-(defn eval-influence [board location player]
-    (if-not (or (nil? location) (location-full? board location))
-        (add-influence board location player)
-        board))
-(defn reward-winner [board figure winner callback]
-    (-> board
-        (add-support winner (:support figure))
-        (add-bank winner (:bank figure))
-        (eval-influence (:location figure) winner)
-        (eval-special (:special figure) winner callback)))
-(defn eval-reward [board figure winner callback]
-    (if (nil? winner)
-        board
-        (reward-winner board figure winner callback)))
+(defn reward-winner [board {:keys [support bank location special]} winner callback]
+    (let [eval-support (fn [board] (add-support board winner support))
+          eval-bank (fn [board] (add-bank board winner bank))
+          eval-influence
+              (fn [board] (if (or (nil? location) (location-full? board location)) board
+                  (add-influence board location winner)))
+          eval-special
+              (fn [board] (if (nil? special) board
+                  (run-special board special winner callback)))]
+        (-> board eval-support eval-bank eval-influence eval-special)))
 (defn eval-bids
     ([board bids callback] (eval-bids board bids callback (:figures board)))
     ([board        ; Board
@@ -166,8 +158,8 @@
             board
             (let [figure (first figure-list)
                   winner (get-winner (bids figure))
-                  board (eval-reward board figure winner callback)]
-                (eval-bids board bids callback (rest figure-list))))))
+                  board (if (nil? winner) board (reward-winner board figure winner callback))]
+                (recur board bids callback (rest figure-list))))))
 (defn run-turn [board bids callback]
     (-> board
         clear-banks

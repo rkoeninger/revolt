@@ -62,8 +62,8 @@
                     (add-influence hideout rob)
                     (add-influence courtroom joe)
                     (add-influence courtroom joe))
-          board-rob-in-gh (assoc board :guard-house rob)
-          board-joe-in-gh (assoc board :guard-house joe)]
+          board-rob-in-gh (set-guard-house board rob)
+          board-joe-in-gh (set-guard-house board joe)]
         (is (not (touchable? board-joe-in-gh rob joe)))
         (is (not (touchable? board-rob-in-gh joe rob)))
         (is (not (doable board-joe-in-gh rob)))
@@ -131,8 +131,8 @@
                     (add-influence hideout rob)
                     (add-influence courtroom joe)
                     (add-influence courtroom joe))
-          board-rob-in-gh (assoc board :guard-house rob)
-          board-joe-in-gh (assoc board :guard-house joe)]
+          board-rob-in-gh (set-guard-house board rob)
+          board-joe-in-gh (set-guard-house board joe)]
         (is (not (touchable? board-joe-in-gh rob joe)))
         (is (not (touchable? board-rob-in-gh joe rob)))
         (is (not (doable board-joe-in-gh rob)))
@@ -151,7 +151,7 @@
                     (add-influence courtroom rob)
                     (add-influence courtroom rob)
                     (add-influence courtroom rob)
-                    (assoc :guard-house joe))]
+                    (set-guard-house joe))]
         (is (board-full? board))
         (is (not (doable board rob)))
         (is (not (doable board joe)))
@@ -165,7 +165,7 @@
           check (:check take-open-spot)
           board (-> board
                     (add-influence hideout joe)
-                    (assoc :guard-house rob))]
+                    (set-guard-house rob))]
         (is (not (board-full? board)))
         (is (not (location-full? board courtroom)))
         (is (location-full? board hideout))
