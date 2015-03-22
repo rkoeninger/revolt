@@ -10,7 +10,7 @@
     (->Special {}
         (constantly true)
         (constantly true)
-        (fn [board winner args] (set-guard-house board winner))))
+        (fn [board winner _] (set-guard-house board winner))))
 
 ; Replace one Influence Cube with one of your own.
 (def steal-spot
@@ -51,7 +51,7 @@
         any-swaps?
         (fn [board winner {:keys [location0 player0 location1 player1]}]
             (can-swap? board winner location0 player0 location1 player1))
-        (fn [board winner {:keys [location0 player0 location1 player1]}]
+        (fn [board _ {:keys [location0 player0 location1 player1]}]
             (swap-influence board location0 player0 location1 player1))))
 
 ; Reassign up to two of your cubes already on the board.
@@ -87,9 +87,9 @@
 ; Influence any open Influence Space.
 (def take-open-spot
     (->Special {:location "Location"}
-        (fn [board winner]
+        (fn [board _]
             (not (board-full? board)))
-        (fn [board winner {:keys [location]}]
+        (fn [board _ {:keys [location]}]
             (not (location-full? board location)))
         (fn [board winner {:keys [location]}]
             (add-influence board location winner))))

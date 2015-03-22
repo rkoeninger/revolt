@@ -28,7 +28,7 @@
     locs
     figs
     players
-    (zipmap players (repeat (->Bid 0 0 0)))
+    (zipmap players (repeat zero-bid))
     (zipmap locs (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))))
 
@@ -193,14 +193,14 @@
 (def loc2 (->Location :loc2 20 3))
 (def loc3 (->Location :loc3 30 4))
 
-(def reassigner (->Figure :reassigner 0 bid0 -- nil reassign-spots))
+(def reassigner (->Figure :reassigner 0 zero-bid -- nil reassign-spots))
 
 (def reassign-board (->Board
     1
     [loc1 loc2 loc3]
     [reassigner]
     [rob joe]
-    (zipmap players (repeat bid0))
+    (zipmap players (repeat zero-bid))
     (zipmap [loc1 loc2 loc3] (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))))
 

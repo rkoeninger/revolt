@@ -10,7 +10,7 @@
 
 (defrecord Bid [gold blackmail force]
     java.lang.Comparable
-    (compareTo [x y] (compare-or x y [:force :blackmail :gold]))
+    (compareTo [x y] (serial-compare x y [:force :blackmail :gold]))
     java.lang.Object
     (toString [_] (str "(Bid " gold "g " blackmail "b " force "f)")))
 
@@ -49,16 +49,23 @@
                                " banks:" banks
                                 " turn:" turn ")")))
 
-(def bid0 (->Bid 0 0 0))
-(def bid+ (partial merge-with +))
+(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
+
+(def plus-bid (partial merge-with +))
+(def zero-bid (->Bid 0 0 0))
+(def zero-bid? (partial = zero-bid))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
-(def zero-bid? (partial = bid0))
 (defn get-support-value [{:keys [gold blackmail force]}]
     (+ gold (* 3 blackmail) (* 5 force)))
 (defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
-    (let [winning-bid (apply unique-max (vals bid-map))]
-        (if-not (or (nil? winning-bid) (zero-bid? winning-bid)) (inverted-get bid-map winning-bid))))
+    (let [winning-bid (unique-max (vals bid-map))]
+        (if-not (or (nil? winning-bid) (zero-bid? winning-bid))
+            (inverted-get bid-map winning-bid))))
 (def has-special? (comp not nil? :special))
 (def blackmail-immune? (comp boolean :blackmail :immunities))
 (def force-immune? (comp boolean :force :immunities))
@@ -69,29 +76,34 @@
                      bids] ; Map Figure Bid
     (and (> (count bids) 0)
          (<= (count bids) 6)
-         (= bank (reduce bid+ (vals bids)))
+         (= bank (reduce plus-bid (vals bids)))
          (every? (partial apply validate-bid) bids)))
 (defn set-guard-house [board player] (assoc board :guard-house player))
-(defn touchable? [board winner player] (or (= winner player) (not= player (:guard-house board))))
-(defn occupied-influence [board location] (reduce + (vals (get-in board [:influence location]))))
-(defn available-influence [board location] (max 0 (- (:influence-limit location) (occupied-influence board location))))
+(defn touchable? [board winner player]
+    (or (= winner player) (not= player (:guard-house board))))
+(defn occupied-influence [board location]
+    (reduce + (vals (get-in board [:influence location]))))
+(defn available-influence [board location]
+    (max 0 (- (:influence-limit location) (occupied-influence board location))))
 (defn location-full? [board location]
     (let [occupied (occupied-influence board location)
           limit (:influence-limit location)]
         (>= occupied limit)))
-(defn not-full? [board location] (not (location-full? board location)))
 (defn board-full? [board] (every? (partial location-full? board) (:locations board)))
 (defn get-influence [board location player] (get-in board [:influence location player]))
-(defn has-influence? [board location player] (not (zero? (get-in board [:influence location player]))))
-(defn add-support [board player amount] (update-in board [:support player] (partial + amount)))
+(defn has-influence? [board location player]
+    (not (zero? (get-influence board location player))))
+(defn add-support [board player amount]
+    (update-in board [:support player] (partial + amount)))
 (defn get-support [board player] (get-in board [:support player]))
 (defn get-bank [board player] (get-in board [:banks player]))
-(defn add-bank [board player bank] (update-in board [:banks player] (partial bid+ bank)))
-(defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat bid0))))
+(defn add-bank [board player bank]
+    (update-in board [:banks player] (partial plus-bid bank)))
+(defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat zero-bid))))
 (defn fill-bank [bank]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- 5 token-count))]
-        (bid+ bank (->Bid extra-gold 0 0))))
+        (plus-bid bank (->Bid extra-gold 0 0))))
 (defn fill-banks [board] (update-in board [:banks] (partial map-vals fill-bank)))
 (defn add-influence [board location player]
     (assert (not (location-full? board location)) (str location " already full"))
@@ -100,14 +112,20 @@
     (assert (has-influence? board location player) (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
 (defn move-influence [board location0 location1 player]
-    (-> board (remove-influence location0 player) (add-influence location1 player)))
+    (-> board
+        (remove-influence location0 player)
+        (add-influence location1 player)))
 (defn replace-influence [board location player0 player1]
-    (-> board (remove-influence location player0) (add-influence location player1)))
+    (-> board
+        (remove-influence location player0)
+        (add-influence location player1)))
 (defn swap-influence [board location0 player0 location1 player1]
-    (-> board (replace-influence location0 player0 player1) (replace-influence location1 player1 player0)))
+    (-> board
+        (replace-influence location0 player0 player1)
+        (replace-influence location1 player1 player0)))
 (defn get-current-holder [board location]
     (let [influence (get-in board [:influence location])
-          max-inf (apply unique-max (vals influence))]
+          max-inf (unique-max (vals influence))]
         (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get influence max-inf))))
 (defn get-holder [board location]
     (if (location-full? board location) (get-current-holder board location)))
@@ -123,14 +141,16 @@
 (def game-over? board-full?)
 (defn get-rank [board player]
     (let [ordered-scores (sort (distinct (vals (get-scores board))))]
-        (- (count ordered-scores) (.indexOf ordered-scores (get-score board player)))))
+        (- (count ordered-scores)
+           (.indexOf ordered-scores (get-score board player)))))
 (defn get-rankings [board]
     (let [players (:players board)]
         (zipmap players (map (partial get-rank board) players))))
 (defn get-game-winner [board]
     (let [scores (get-scores board)
-          max-score (apply unique-max (vals scores))]
-        (if-not (or (nil? max-score) (zero? max-score)) (inverted-get scores max-score))))
+          max-score (unique-max (vals scores))]
+        (if-not (or (nil? max-score) (zero? max-score))
+            (inverted-get scores max-score))))
 (defn inc-turn [board] (update-in board [:turn] inc))
 (defn run-special [board {:keys [params doable check effect]} player callback]
     (if-not (doable board player)
@@ -166,11 +186,5 @@
         (eval-bids bids callback)
         fill-banks
         inc-turn))
-
-(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
 
 (load "revolt_setup")
