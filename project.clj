@@ -6,14 +6,14 @@
     :test-paths ["test"]
     :resource-paths ["resources" "target/resources"]
     :frodo/config-resource "revolt_server.edn"
-    :cljsbuild {
-        :builds [{:source-paths ["src"]
-                  :compiler {:output-to "target/resources/js/revolt_client.js"
-                             :optimizations :whitespace
-                             :pretty-print true}}]}
+    :cljsbuild
+        {:builds [{:source-paths ["src"]
+                   :compiler {:output-to "target/resources/js/revolt_client.js"
+                              :optimizations :whitespace
+                              :pretty-print true}}]}
     :aliases {"server" ["do"
-                           ["shell" "mkdir" "-p" "target/resources"]
-                           ["pdo" ["cljsbuild" "auto"] "frodo"]]}
+                        ["shell" "mkdir" "-p" "target/resources"]
+                        ["pdo" ["cljsbuild" "auto"] "frodo"]]}
     :plugins [[lein-pdo "0.1.1"]
               [jarohen/lein-frodo "0.4.1"]
               [lein-cljsbuild "1.0.3"]
