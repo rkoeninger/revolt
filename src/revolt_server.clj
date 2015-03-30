@@ -71,14 +71,14 @@
                                      (pr-str message)
                                      (java.util.Date.))})))
 
-(defn ws-handler [{:keys [channel remote-addr]}]
+(defn ws-handler [{:keys [ws-channel remote-addr]}]
     (println "Opened connection from:" remote-addr)
-    (add-channel channel)
+    (add-channel ws-channel)
     (go-loop []
-        (when-let [{:keys [message error] :as packet} (<! channel)]
+        (when-let [{:keys [message error] :as packet} (<! ws-channel)]
             (prn "Message received:" packet)
             (handle-message message
-                            (fn [message] (go (>! channel message)))
+                            (fn [message] (go (>! ws-channel message)))
                             (fn [message] (go (doseq [ch @channels] (>! ch message))))
                             board
                             bids
