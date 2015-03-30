@@ -16,7 +16,9 @@
         (let [[x y] (take 2 (reverse (sort coll)))]
             (if (not= x y) x))))
 (defn other-than [coll x] (filter (partial not= x) coll))
-(defn map-vals [f m] (into {} (for [[k v] m] [k (f v)])))
+(defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
+(defn map-vals [f m] (map-kv identity f m))
+(defn map-keys [f m] (map-kv f identity m))
 
 ; [Map a (Map b c), b] -> Map a c
 (defn sub-map [outer-map inner-key]
@@ -26,3 +28,8 @@
             (assoc result-map outer-key (inner-map inner-key)))
         {}
         outer-map))
+
+; [Map a (Map b c)] -> Map b (Map a c)
+(defn relevel [m]
+    (let [inner-keys (set (map keys (vals m)))] ; Set b
+        (into {} (map #(vector % (sub-map m %)) inner-keys))))

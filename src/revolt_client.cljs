@@ -1,6 +1,6 @@
 (ns revolt-server.client
     (:require [chord.client :refer [ws-ch]]
-              [cljs.core.async :refer [chan <! >! put! close! timeout]]
+              [cljs.core.async :refer [chan <! >! put! close!]]
               [cljs.reader :as edn]
               [flow.core :as f :include-macros true]
               [chord.http :as ajax]
@@ -15,14 +15,12 @@
 (defn try-read-edn [s]
   (try
     (let [edn (edn/read-string s)]
-      (if (symbol? edn)
-        s
-        edn))
+      (if (symbol? edn) s edn))
     (catch js/Error _ s)))
 
 (defn read-message []
   {:user-name @!user-name
-   :content   @!input-value})
+   :content   (try-read-edn @!input-value)})
 
 (defn message-box [new-msg-ch]
   (f/el
@@ -64,9 +62,7 @@
      [message-box new-msg-ch]
      [message-list !msgs]]))
 
-(defn add-msg [msgs new-msg]
-  (->> (cons new-msg msgs)
-       (take 10)))
+(defn add-msg [msgs new-msg] (take 10 (cons new-msg msgs)))
 
 (defn receive-msgs! [!msgs server-ch]
   (go-loop []
@@ -96,12 +92,10 @@
             (if error
               (f/root js/document.body
                 (f/el
-                  [:div
-                   "Couldn't connect to websocket: "
-                   (pr-str error)
-                   " @ "
-                   ws-url]))
-
+                  [:div "Couldn't connect to websocket: "
+                        (pr-str error)
+                        " @ "
+                        ws-url]))
               (let [!msgs (doto (atom []) (receive-msgs! ws-channel))
                     new-msg-ch (doto (chan) (send-msgs! ws-channel))]
                 (f/root js/document.body
