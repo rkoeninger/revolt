@@ -1,10 +1,9 @@
 (ns revolt-server.client
     (:require [chord.client :refer [ws-ch]]
-              [cljs.core.async :refer [chan <! >! put! close!]]
+              [cljs.core.async :refer [chan <! >! put!]]
               [cljs.reader :as edn]
               [flow.core :as f :include-macros true]
-              [chord.http :as ajax]
-              [cemerick.url :refer (url)])
+              [cemerick.url :refer [url]])
     (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
 
 (enable-console-print!)
