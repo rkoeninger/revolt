@@ -1,4 +1,4 @@
-(ns revolt-server.client
+(ns revolt-client
     (:require [chord.client :refer [ws-ch]]
               [cljs.core.async :refer [chan <! >! put!]]
               [cljs.reader :as edn]
