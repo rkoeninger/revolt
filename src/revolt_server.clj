@@ -26,49 +26,45 @@
         [:body
             [:div#content]]))
 
-(defn start-game []
-    (reset! board (revolt/make-board (vec (map revolt/->Player @player-ids)))))
+(defn start-game [board-atom player-ids-atom]
+    (reset! board-atom (revolt/make-board (vec (map revolt/->Player @player-ids-atom)))))
 
-(defn handle-turn []
-    (swap! board revolt/run-turn (revolt/relevel @bids) (constantly {})))
-
-(defn transmit [sender-channel message] (go (>! sender-channel message)))
-
-(defn broadcast [message] (go (doseq [ch @channels] (>! ch message))))
+(defn handle-turn [board-atom bids-atom]
+    (swap! board-atom revolt/run-turn (revolt/relevel @bids-atom) (constantly {})))
 
 (defn player-by-id [player-id]
     (first (filter #(= player-id (:id %)) (:players @board))))
 
 (defn figure-by-id [figure-id]
-    (first (filter #(= figure-id (:id %)) (:figure @board))))
+    (first (filter #(= figure-id (:id %)) (:figures @board))))
 
-(defn handle-message [sender-channel message]
+(defn handle-message [sender-channel message transmit broadcast board-atom bids-atom player-ids-atom]
     (case (:type (:content message))
         :signup
-            (if (nil? @board)
-                (do (swap! player-ids conj (:user-name message))
+            (if (nil? @board-atom)
+                (do (swap! player-ids-atom conj (:user-name message))
                     (broadcast {:content   :signup-accepted
                                 :user-name (:user-name message)}))
                 (transmit sender-channel {:content :game-already-started}))
         :start-game
-            (if (nil? @board)
-                (do (start-game)
-                    (broadcast {:content (revolt/board-setup @board)})
-                    (broadcast {:content (revolt/board-status @board)}))
+            (if (nil? @board-atom)
+                (do (start-game board-atom player-ids-atom)
+                    (broadcast {:content (revolt/board-setup @board-atom)})
+                    (broadcast {:content (revolt/board-status @board-atom)}))
                 (transmit sender-channel {:content :game-already-started}))
         :submit-bids
-            (if-not (contains? @bids (:user-name message))
+            (if-not (contains? @bids-atom (:user-name message))
                     (let [player-bids (:bids (:content message))]
                         (if (and player-bids
-                                 (revolt/validate-bids (revolt/get-bank @board (player-by-id (:user-name @board)))
+                                 (revolt/validate-bids (revolt/get-bank @board-atom (player-by-id (:user-name message)))
                                                        (revolt/map-keys figure-by-id player-bids)))
-                            (do (swap! bids assoc (:user-name message) player-bids)
-                                (println @bids)
+                            (do (swap! bids-atom assoc (:user-name message) player-bids)
+                                (println @bids-atom)
                                 (transmit sender-channel {:content :bids-accepted})
-                                (if (= (count @player-ids) (count @bids))
-                                    (do (handle-turn)
-                                        (reset! bids {})
-                                        (broadcast {:content (revolt/board-status @board)}))))
+                                (if (= (count @player-ids-atom) (count @bids-atom))
+                                    (do (handle-turn board-atom bids-atom)
+                                        (reset! bids-atom {})
+                                        (broadcast {:content (revolt/board-status @board-atom)}))))
                             (transmit sender-channel {:content :invalid-bid})))
                     (transmit sender-channel {:content :bid-already-submitted}))
         (transmit sender-channel
@@ -82,7 +78,13 @@
     (go-loop []
         (when-let [{:keys [message error] :as packet} (<! ws-channel)]
             (prn "Message received:" packet)
-            (handle-message ws-channel message)
+            (handle-message ws-channel
+                            message
+                            (fn [sender message] (go (>! sender message)))
+                            (fn [message] (go (doseq [ch @channels] (>! ch message))))
+                            board
+                            bids
+                            player-ids)
             (recur))))
 
 (defroutes app-routes
