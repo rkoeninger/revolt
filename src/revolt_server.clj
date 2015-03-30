@@ -88,11 +88,6 @@
 (defroutes app-routes
     (GET "/"     [] (response (page-frame)))
     (GET "/ws"   [] (wrap-websocket-handler ws-handler {:format :transit-json}))
-    (ANY "/ajax" [] (wrap-restful-format
-        (fn [{:keys [body-params] :as req}]
-            (response {:you-said body-params
-                       :req (dissoc req :async-channel :body)}))
-        :formats [:edn :json-kw]))
     (resources "/js" {:root "js"}))
 
 (def app #'app-routes)

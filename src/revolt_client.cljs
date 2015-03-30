@@ -78,26 +78,23 @@
 
 (def ws-url (str "ws://" (:host (url js/window.location)) ":3000/ws"))
 
+(defn show-error [error]
+  (f/root js/document.body
+          (f/el [:div "Couldn't connect to websocket: "
+                      (pr-str error)
+                      " @ "
+                      ws-url])))
+
+(defn send-receive [ws-channel]
+  (let [!msgs (doto (atom []) (receive-msgs! ws-channel))
+        new-msg-ch (doto (chan) (send-msgs! ws-channel))]
+    (f/root js/document.body
+            (f/el [message-component !msgs new-msg-ch]))))
+
 (set! (.-onload js/window)
       (fn []
         (go
-          (-> (<! (ajax/post "/ajax"
-                             {:query-params {:a 1 :b 2}
-                              :req-format   :json-kw
-                              :body         {:a 3 :b 4}}))
-              clj->js
-              js/console.log))
-        (go
           (let [{:keys [ws-channel error]} (<! (ws-ch ws-url {:format :transit-json}))]
             (if error
-              (f/root js/document.body
-                (f/el
-                  [:div "Couldn't connect to websocket: "
-                        (pr-str error)
-                        " @ "
-                        ws-url]))
-              (let [!msgs (doto (atom []) (receive-msgs! ws-channel))
-                    new-msg-ch (doto (chan) (send-msgs! ws-channel))]
-                (f/root js/document.body
-                  (f/el
-                     [message-component !msgs new-msg-ch]))))))))
+                (show-error error)
+                (send-receive ws-channel))))))
