@@ -35,6 +35,33 @@
 		(is (= #{"rob" "joe"} @player-ids-atom))
 		(is (= [{:content :signup-accepted :user-name "joe"}] @broadcast-responses))
 		(clear-responses)
-		
-
-        ))
+		(handle-message sender-channel
+                        {:user-name "rob"
+                         :content {:type :start-game}}
+                        transmit
+                        broadcast
+                        board-atom
+                        nil
+                        player-ids-atom)
+        (is @board-atom)
+        (clear-responses)
+        (handle-message sender-channel
+                        {:user-name "moe"
+                         :content {:type :signup}}
+                        transmit
+                        broadcast
+                        board-atom
+                        nil
+                        player-ids-atom)
+        (is (= #{"rob" "joe"} @player-ids-atom))
+        (is (= [{:content :game-already-started}] @transmit-responses))
+        (clear-responses)
+        (handle-message sender-channel
+                        {:user-name "moe"
+                         :content {:type :start-game}}
+                        transmit
+                        broadcast
+                        board-atom
+                        nil
+                        player-ids-atom)
+        (is (= [{:content :game-already-started}] @transmit-responses))))
