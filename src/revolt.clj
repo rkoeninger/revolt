@@ -186,5 +186,20 @@
         (eval-bids bids callback)
         fill-banks
         inc-turn))
+(defn board-status [{:keys [turn support banks influence]}]
+    {:turn      turn
+     :support   (map-keys :id support)
+     :banks     (map-keys :id banks)
+     :influence (map-kv :id (partial map-keys :id) influence)})
+(defn figure-setup [{:keys [id support bank immunities location]}]
+    {:id          id
+     :support     support
+     :bank        bank
+     :immunities  immunities
+     :location-id (:id location)})
+(defn board-setup [{:keys [players figures locations]}]
+    {:players   players
+     :figures   (vec (map figure-setup figures))
+     :locations locations})
 
 (load "revolt_setup")
