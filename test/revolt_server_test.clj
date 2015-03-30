@@ -8,11 +8,11 @@
           player-ids (atom #{})
           transmit-responses (atom [])
           broadcast-responses (atom [])
-          transmit #(swap! transmit-responses conj %2)
-          broadcast #(swap! broadcast-responses conj %)
+          transmit (partial swap! transmit-responses conj)
+          broadcast (partial swap! broadcast-responses conj)
           handle #(do (reset! transmit-responses [])
                       (reset! broadcast-responses [])
-                      (handle-message nil % transmit broadcast board nil player-ids))]
+                      (handle-message % transmit broadcast board nil player-ids))]
         (handle {:user-name "rob" :content {:type :signup}})
         (is (= #{"rob"} @player-ids))
         (is (= [{:content :signup-accepted :user-name "rob"}] @broadcast-responses))

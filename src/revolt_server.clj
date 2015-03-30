@@ -14,7 +14,7 @@
 
 (def player-ids (atom #{}))
 
-(def bids (atom {})) ; Map PlayerId (Map FigureId Bid)
+(def bids (atom {})) ; Map Player.Id (Map Figure.Id Bid)
 
 (defn add-channel [ch] (swap! channels conj ch))
 
@@ -38,20 +38,20 @@
 (defn figure-by-id [figure-id]
     (first (filter #(= figure-id (:id %)) (:figures @board))))
 
-(defn handle-message [sender-channel message transmit broadcast board-atom bids-atom player-ids-atom]
+(defn handle-message [message transmit broadcast board-atom bids-atom player-ids-atom]
     (case (:type (:content message))
         :signup
             (if (nil? @board-atom)
                 (do (swap! player-ids-atom conj (:user-name message))
                     (broadcast {:content   :signup-accepted
                                 :user-name (:user-name message)}))
-                (transmit sender-channel {:content :game-already-started}))
+                (transmit {:content :game-already-started}))
         :start-game
             (if (nil? @board-atom)
                 (do (start-game board-atom player-ids-atom)
                     (broadcast {:content (revolt/board-setup @board-atom)})
                     (broadcast {:content (revolt/board-status @board-atom)}))
-                (transmit sender-channel {:content :game-already-started}))
+                (transmit {:content :game-already-started}))
         :submit-bids
             (if-not (contains? @bids-atom (:user-name message))
                     (let [player-bids (:bids (:content message))]
@@ -60,27 +60,25 @@
                                                        (revolt/map-keys figure-by-id player-bids)))
                             (do (swap! bids-atom assoc (:user-name message) player-bids)
                                 (println @bids-atom)
-                                (transmit sender-channel {:content :bids-accepted})
+                                (transmit {:content :bids-accepted})
                                 (if (= (count @player-ids-atom) (count @bids-atom))
                                     (do (handle-turn board-atom bids-atom)
                                         (reset! bids-atom {})
                                         (broadcast {:content (revolt/board-status @board-atom)}))))
-                            (transmit sender-channel {:content :invalid-bid})))
-                    (transmit sender-channel {:content :bid-already-submitted}))
-        (transmit sender-channel
-                  {:received (format "Unrecognized message: '%s' at %s."
+                            (transmit {:content :invalid-bid})))
+                    (transmit {:content :bid-already-submitted}))
+        (transmit {:received (format "Unrecognized message: '%s' at %s."
                                      (pr-str message)
                                      (java.util.Date.))})))
 
-(defn ws-handler [{:keys [ws-channel remote-addr]}]
+(defn ws-handler [{:keys [channel remote-addr]}]
     (println "Opened connection from:" remote-addr)
-    (add-channel ws-channel)
+    (add-channel channel)
     (go-loop []
-        (when-let [{:keys [message error] :as packet} (<! ws-channel)]
+        (when-let [{:keys [message error] :as packet} (<! channel)]
             (prn "Message received:" packet)
-            (handle-message ws-channel
-                            message
-                            (fn [sender message] (go (>! sender message)))
+            (handle-message message
+                            (fn [message] (go (>! channel message)))
                             (fn [message] (go (doseq [ch @channels] (>! ch message))))
                             board
                             bids
