@@ -32,41 +32,46 @@
 (defn handle-turn [board-atom bids-atom]
     (swap! board-atom revolt/run-turn (revolt/relevel @bids-atom) (constantly {})))
 
-(defn player-by-id [player-id]
-    (first (filter #(= player-id (:id %)) (:players @board))))
+(defn player-by-id [!board player-id]
+    (first (filter #(= player-id (:id %)) (:players @!board))))
 
-(defn figure-by-id [figure-id]
-    (first (filter #(= figure-id (:id %)) (:figures @board))))
+(defn figure-by-id [!board figure-id]
+    (first (filter #(= figure-id (:id %)) (:figures @!board))))
+
+(defn handle-signup [transmit broadcast user-name board-atom player-ids-atom]
+    (if (nil? @board-atom)
+        (do (swap! player-ids-atom conj user-name)
+            (broadcast {:content :signup-accepted :user-name user-name}))
+        (transmit {:content :game-already-started})))
+
+(defn handle-start-game [transmit broadcast board-atom player-ids-atom]
+    (if (nil? @board-atom)
+        (do (start-game board-atom player-ids-atom)
+            (broadcast {:content (revolt/board-setup @board-atom)})
+            (broadcast {:content (revolt/board-status @board-atom)}))
+        (transmit {:content :game-already-started})))
+
+(defn handle-submit-bids [transmit broadcast user-name bids board-atom bids-atom]
+    (if-not (contains? @bids-atom user-name)
+            (let [player-bids bids]
+                (if (and player-bids
+                         (revolt/validate-bids (revolt/get-bank @board-atom (player-by-id board-atom user-name))
+                                               (revolt/map-keys (partial board-atom figure-by-id) player-bids)))
+                    (do (swap! bids-atom assoc user-name player-bids)
+                        (println @bids-atom)
+                        (transmit {:content :bids-accepted})
+                        (if (= (count (:players @board-atom)) (count @bids-atom))
+                            (do (handle-turn board-atom bids-atom)
+                                (reset! bids-atom {})
+                                (broadcast {:content (revolt/board-status @board-atom)}))))
+                    (transmit {:content :invalid-bid})))
+            (transmit {:content :bid-already-submitted})))
 
 (defn handle-message [message transmit broadcast board-atom bids-atom player-ids-atom]
     (case (:type (:content message))
-        :signup
-            (if (nil? @board-atom)
-                (do (swap! player-ids-atom conj (:user-name message))
-                    (broadcast {:content   :signup-accepted
-                                :user-name (:user-name message)}))
-                (transmit {:content :game-already-started}))
-        :start-game
-            (if (nil? @board-atom)
-                (do (start-game board-atom player-ids-atom)
-                    (broadcast {:content (revolt/board-setup @board-atom)})
-                    (broadcast {:content (revolt/board-status @board-atom)}))
-                (transmit {:content :game-already-started}))
-        :submit-bids
-            (if-not (contains? @bids-atom (:user-name message))
-                    (let [player-bids (:bids (:content message))]
-                        (if (and player-bids
-                                 (revolt/validate-bids (revolt/get-bank @board-atom (player-by-id (:user-name message)))
-                                                       (revolt/map-keys figure-by-id player-bids)))
-                            (do (swap! bids-atom assoc (:user-name message) player-bids)
-                                (println @bids-atom)
-                                (transmit {:content :bids-accepted})
-                                (if (= (count @player-ids-atom) (count @bids-atom))
-                                    (do (handle-turn board-atom bids-atom)
-                                        (reset! bids-atom {})
-                                        (broadcast {:content (revolt/board-status @board-atom)}))))
-                            (transmit {:content :invalid-bid})))
-                    (transmit {:content :bid-already-submitted}))
+        :signup (handle-signup transmit broadcast (:user-name message) board-atom player-ids-atom)
+        :start-game (handle-start-game transmit broadcast board-atom player-ids-atom)
+        :submit-bids (handle-submit-bids transmit broadcast (:user-name message) (:bids (:content message)) board-atom bids-atom)
         (transmit {:received (format "Unrecognized message: '%s' at %s."
                                      (pr-str message)
                                      (java.util.Date.))})))
