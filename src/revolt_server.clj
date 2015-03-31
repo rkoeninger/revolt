@@ -8,6 +8,61 @@
               [hiccup.page :refer [html5 include-js]]
               [ring.middleware.format :refer [wrap-restful-format]]))
 
+(defn page-frame []
+    (html5
+        [:head
+            [:title "Revolt Server"]
+            (include-js "/js/revolt_client.js")]
+        [:body
+            [:div#content]]))
+
+(defn handle-signup [transmit broadcast player-id !board !player-ids]
+    (if @!board
+        (transmit {:content :game-already-started})
+        (do (swap! !player-ids conj player-id)
+            (broadcast {:content :signup-accepted :player-id player-id}))))
+
+(defn handle-start-game [transmit broadcast !board !player-ids]
+    (if @!board
+        (transmit {:content :game-already-started})
+        (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
+            (broadcast {:content (revolt/board-setup @!board)})
+            (broadcast {:content (revolt/board-status @!board)}))))
+
+(defn handle-turn [!board !bids]
+    (swap! !board revolt/run-turn (revolt/relevel @!bids) (constantly {})))
+
+(defn player-by-id [!board player-id]
+    (first (filter #(= player-id (:id %)) (:players @!board))))
+
+(defn figure-by-id [!board figure-id]
+    (first (filter #(= figure-id (:id %)) (:figures @!board))))
+
+(defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids]
+    (if (contains? @!bids user-name)
+        (transmit {:content :bid-already-submitted})
+        (if (and player-bids
+                 (revolt/validate-bids
+                     (revolt/get-bank @!board (player-by-id !board user-name))
+                     (revolt/map-keys (partial !board figure-by-id) player-bids)))
+            (do (swap! !bids assoc user-name player-bids)
+                (println @!bids)
+                (transmit {:content :bids-accepted})
+                (if (= (count (:players @!board)) (count @!bids))
+                    (do (handle-turn !board !bids)
+                        (reset! !bids {})
+                        (broadcast {:content (revolt/board-status @!board)}))))
+            (transmit {:content :invalid-bid}))))
+
+(defn handle-message [{:keys [player-id content] :as message} transmit broadcast !board !bids !player-ids]
+    (case (:type content)
+        :signup (handle-signup transmit broadcast player-id !board !player-ids)
+        :start-game (handle-start-game transmit broadcast !board !player-ids)
+        :submit-bids (handle-submit-bids transmit broadcast player-id (:bids content) !board !bids)
+        (transmit {:received (format "Unrecognized message: '%s' at %s."
+                                     (pr-str message)
+                                     (java.util.Date.))})))
+
 (def channels (atom #{}))
 
 (def board (atom nil))
@@ -17,64 +72,6 @@
 (def bids (atom {})) ; Map Player.Id (Map Figure.Id Bid)
 
 (defn add-channel [ch] (swap! channels conj ch))
-
-(defn page-frame []
-    (html5
-        [:head
-            [:title "Revolt Server"]
-            (include-js "/js/revolt_client.js")]
-        [:body
-            [:div#content]]))
-
-(defn start-game [board-atom player-ids-atom]
-    (reset! board-atom (revolt/make-board (vec (map revolt/->Player @player-ids-atom)))))
-
-(defn handle-turn [board-atom bids-atom]
-    (swap! board-atom revolt/run-turn (revolt/relevel @bids-atom) (constantly {})))
-
-(defn player-by-id [!board player-id]
-    (first (filter #(= player-id (:id %)) (:players @!board))))
-
-(defn figure-by-id [!board figure-id]
-    (first (filter #(= figure-id (:id %)) (:figures @!board))))
-
-(defn handle-signup [transmit broadcast user-name board-atom player-ids-atom]
-    (if (nil? @board-atom)
-        (do (swap! player-ids-atom conj user-name)
-            (broadcast {:content :signup-accepted :user-name user-name}))
-        (transmit {:content :game-already-started})))
-
-(defn handle-start-game [transmit broadcast board-atom player-ids-atom]
-    (if (nil? @board-atom)
-        (do (start-game board-atom player-ids-atom)
-            (broadcast {:content (revolt/board-setup @board-atom)})
-            (broadcast {:content (revolt/board-status @board-atom)}))
-        (transmit {:content :game-already-started})))
-
-(defn handle-submit-bids [transmit broadcast user-name bids board-atom bids-atom]
-    (if-not (contains? @bids-atom user-name)
-            (let [player-bids bids]
-                (if (and player-bids
-                         (revolt/validate-bids (revolt/get-bank @board-atom (player-by-id board-atom user-name))
-                                               (revolt/map-keys (partial board-atom figure-by-id) player-bids)))
-                    (do (swap! bids-atom assoc user-name player-bids)
-                        (println @bids-atom)
-                        (transmit {:content :bids-accepted})
-                        (if (= (count (:players @board-atom)) (count @bids-atom))
-                            (do (handle-turn board-atom bids-atom)
-                                (reset! bids-atom {})
-                                (broadcast {:content (revolt/board-status @board-atom)}))))
-                    (transmit {:content :invalid-bid})))
-            (transmit {:content :bid-already-submitted})))
-
-(defn handle-message [message transmit broadcast board-atom bids-atom player-ids-atom]
-    (case (:type (:content message))
-        :signup (handle-signup transmit broadcast (:user-name message) board-atom player-ids-atom)
-        :start-game (handle-start-game transmit broadcast board-atom player-ids-atom)
-        :submit-bids (handle-submit-bids transmit broadcast (:user-name message) (:bids (:content message)) board-atom bids-atom)
-        (transmit {:received (format "Unrecognized message: '%s' at %s."
-                                     (pr-str message)
-                                     (java.util.Date.))})))
 
 (defn ws-handler [{:keys [ws-channel remote-addr]}]
     (println "Opened connection from:" remote-addr)

@@ -11,15 +11,9 @@
 (def !user-name (atom nil))
 (def !input-value (atom nil))
 
-(defn try-read-edn [s]
-  (try
-    (let [edn (edn/read-string s)]
-      (if (symbol? edn) s edn))
-    (catch js/Error _ s)))
-
 (defn read-message []
   {:user-name @!user-name
-   :content   (try-read-edn @!input-value)})
+   :content   (edn/read-string @!input-value)})
 
 (defn message-box [new-msg-ch]
   (f/el
@@ -61,12 +55,10 @@
      [message-box new-msg-ch]
      [message-list !msgs]]))
 
-(defn add-msg [msgs new-msg] (take 10 (cons new-msg msgs)))
-
 (defn receive-msgs! [!msgs server-ch]
   (go-loop []
     (when-let [msg (<! server-ch)]
-      (swap! !msgs add-msg msg)
+      (swap! !msgs conj msg)
       (recur))))
 
 (defn send-msgs! [new-msg-ch server-ch]
