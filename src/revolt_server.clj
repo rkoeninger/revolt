@@ -38,15 +38,19 @@
 (defn figure-by-id [!board figure-id]
     (first (filter #(= figure-id (:id %)) (:figures @!board))))
 
+(defn make-bid [{:keys [gold blackmail force]}]
+    (revolt/->Bid (or gold      0)
+                  (or blackmail 0)
+                  (or force     0)))
+
 (defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids]
     (if (contains? @!bids user-name)
         (transmit {:content :bid-already-submitted})
         (if (and player-bids
                  (revolt/validate-bids
                      (revolt/get-bank @!board (player-by-id !board user-name))
-                     (revolt/map-keys (partial !board figure-by-id) player-bids)))
+                     (revolt/map-kv (partial figure-by-id !board) make-bid player-bids)))
             (do (swap! !bids assoc user-name player-bids)
-                (println @!bids)
                 (transmit {:content :bids-accepted})
                 (if (= (count (:players @!board)) (count @!bids))
                     (do (handle-turn !board !bids)

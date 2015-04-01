@@ -26,3 +26,28 @@
         (is (= [{:content :game-already-started}] @!transmit-responses))
         (handle {:player-id "moe" :content {:type :start-game}})
         (is (= [{:content :game-already-started}] @!transmit-responses))))
+
+(deftest simple-bid-validation
+    (let [!board (atom nil)
+          !bids (atom {})
+          !player-ids (atom #{})
+          !transmit-responses (atom [])
+          !broadcast-responses (atom [])
+          transmit (partial swap! !transmit-responses conj)
+          broadcast (partial swap! !broadcast-responses conj)
+          handle #(do (reset! !transmit-responses [])
+                      (reset! !broadcast-responses [])
+                      (handle-message % transmit broadcast !board !bids !player-ids))]
+          (handle {:player-id "rob" :content {:type :signup}})
+          (handle {:player-id "joe" :content {:type :signup}})
+          (handle {:player-id "rob" :content {:type :start-game}})
+          (handle {:player-id "rob" :content {:type :submit-bids
+                                              :bids {:priest {:gold      3
+                                                              :blackmail 1
+                                                              :force     1}}}})
+          (is (= [{:content :bids-accepted}] @!transmit-responses))
+          (handle {:player-id "joe" :content {:type :submit-bids
+                                              :bids {:merchant {:gold      3
+                                                                :blackmail 1
+                                                                :force     1}}}})
+          (is (= 2 (:turn @!board)))))
