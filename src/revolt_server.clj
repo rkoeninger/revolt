@@ -45,7 +45,7 @@
 
 (defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids]
     (if (contains? @!bids user-name)
-        (transmit {:content :bid-already-submitted})
+        (transmit {:content :bids-already-submitted})
         (if (and player-bids
                  (revolt/validate-bids
                      (revolt/get-bank @!board (player-by-id !board user-name))

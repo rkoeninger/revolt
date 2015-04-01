@@ -46,8 +46,14 @@
                                                               :blackmail 1
                                                               :force     1}}}})
           (is (= [{:content :bids-accepted}] @!transmit-responses))
+          (handle {:player-id "rob" :content {:type :submit-bids
+                                              :bids {:priest {:gold      3
+                                                              :blackmail 1
+                                                              :force     1}}}})
+          (is (= [{:content :bids-already-submitted}] @!transmit-responses))
           (handle {:player-id "joe" :content {:type :submit-bids
                                               :bids {:merchant {:gold      3
                                                                 :blackmail 1
                                                                 :force     1}}}})
+          (is (= [{:content :bids-accepted}] @!transmit-responses))
           (is (= 2 (:turn @!board)))))
