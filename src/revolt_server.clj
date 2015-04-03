@@ -1,5 +1,5 @@
 (ns revolt-server
-    (:require [revolt]
+    (:require [revolt :refer [map-keys map-kv]]
               [ring.util.response :refer [response]]
               [compojure.core :refer [defroutes GET ANY]]
               [compojure.route :refer [resources]]
@@ -16,6 +16,24 @@
         [:body
             [:div#content]]))
 
+(defn board-status [{:keys [turn support banks influence]}]
+    {:turn      turn
+     :support   (map-keys :id support)
+     :banks     (map-keys :id banks)
+     :influence (map-kv :id (partial map-keys :id) influence)})
+
+(defn figure-setup [{:keys [id support bank immunities location]}]
+    {:id          id
+     :support     support
+     :bank        bank
+     :immunities  immunities
+     :location-id (:id location)})
+
+(defn board-setup [{:keys [players figures locations]}]
+    {:players   players
+     :figures   (vec (map figure-setup figures))
+     :locations locations})
+
 (defn handle-signup [transmit broadcast player-id !board !player-ids]
     (if @!board
         (transmit {:content :game-already-started})
@@ -26,36 +44,44 @@
     (if @!board
         (transmit {:content :game-already-started})
         (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
-            (broadcast {:content (revolt/board-setup @!board)})
-            (broadcast {:content (revolt/board-status @!board)}))))
+            (broadcast {:content (board-setup @!board)})
+            (broadcast {:content (board-status @!board)}))))
 
-(defn handle-turn [!board !bids]
-    (swap! !board revolt/run-turn (revolt/relevel @!bids) (constantly {})))
+(defn player-by-id [board player-id]
+    (first (filter #(= player-id (:id %)) (:players board))))
 
-(defn player-by-id [!board player-id]
-    (first (filter #(= player-id (:id %)) (:players @!board))))
+(defn figure-by-id [board figure-id]
+    (first (filter #(= figure-id (:id %)) (:figures board))))
 
-(defn figure-by-id [!board figure-id]
-    (first (filter #(= figure-id (:id %)) (:figures @!board))))
-
-(defn make-bid [{:keys [gold blackmail force]}]
+(defn read-bid [{:keys [gold blackmail force]}]
     (revolt/->Bid (or gold      0)
                   (or blackmail 0)
                   (or force     0)))
+
+(defn read-figure-bid-map [board bids]
+    (map-kv (partial figure-by-id board) read-bid bids))
+
+(defn read-player-figure-bid-map [board bids]
+    (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
+
+(defn handle-turn [!board !bids]
+    (swap! !board revolt/run-turn
+                  (revolt/relevel (read-player-figure-bid-map @!board @!bids))
+                  (constantly {})))
 
 (defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids]
     (if (contains? @!bids user-name)
         (transmit {:content :bids-already-submitted})
         (if (and player-bids
                  (revolt/validate-bids
-                     (revolt/get-bank @!board (player-by-id !board user-name))
-                     (revolt/map-kv (partial figure-by-id !board) make-bid player-bids)))
+                     (revolt/get-bank @!board (player-by-id @!board user-name))
+                     (read-figure-bid-map @!board player-bids)))
             (do (swap! !bids assoc user-name player-bids)
                 (transmit {:content :bids-accepted})
                 (if (= (count (:players @!board)) (count @!bids))
                     (do (handle-turn !board !bids)
                         (reset! !bids {})
-                        (broadcast {:content (revolt/board-status @!board)}))))
+                        (broadcast {:content (board-status @!board)}))))
             (transmit {:content :invalid-bid}))))
 
 (defn handle-message [{:keys [player-id content] :as message} transmit broadcast !board !bids !player-ids]

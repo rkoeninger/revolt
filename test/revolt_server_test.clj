@@ -3,6 +3,22 @@
     (:use revolt-server)
     (:use clojure.test))
 
+(deftest read-functions
+    (let [f1 (->Figure :f1 0 zero-bid #{} nil nil)
+          f2 (->Figure :f2 0 zero-bid #{} nil nil)
+          f3 (->Figure :f3 0 zero-bid #{} nil nil)
+          p1 (->Player :p1)
+          p2 (->Player :p2)
+          board (->Board nil nil [f1 f2 f3] [p1 p2] nil nil nil)]
+        (is (= {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
+               (read-figure-bid-map board {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}})))
+        (is (= {p1 {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
+                p2 {f1 (->Bid 1 0 0) f2 (->Bid 1 1 0) f3 (->Bid 1 0 1)}}
+               (read-player-figure-bid-map
+                   board
+                   {:p1 {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}
+                    :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}})))))
+
 (deftest signup-rejected-after-game-has-started
     (let [!board (atom nil)
           !player-ids (atom #{})
@@ -27,7 +43,7 @@
         (handle {:player-id "moe" :content {:type :start-game}})
         (is (= [{:content :game-already-started}] @!transmit-responses))))
 
-(deftest simple-bid-validation
+(deftest simple-bid-validation-first-turn-scenario
     (let [!board (atom nil)
           !bids (atom {})
           !player-ids (atom #{})
@@ -47,13 +63,19 @@
                                                               :force     1}}}})
           (is (= [{:content :bids-accepted}] @!transmit-responses))
           (handle {:player-id "rob" :content {:type :submit-bids
-                                              :bids {:priest {:gold      3
-                                                              :blackmail 1
-                                                              :force     1}}}})
+                                              :bids {:printer {:gold      3
+                                                               :blackmail 1
+                                                               :force     1}}}})
           (is (= [{:content :bids-already-submitted}] @!transmit-responses))
+          (is (= 1 (:turn @!board)))
           (handle {:player-id "joe" :content {:type :submit-bids
-                                              :bids {:merchant {:gold      3
-                                                                :blackmail 1
-                                                                :force     1}}}})
+                                              :bids {:merchant  {:blackmail 1
+                                                                 :force     1}
+                                                     :mercenary {:gold      2}
+                                                     :printer   {:gold      1}}}})
           (is (= [{:content :bids-accepted}] @!transmit-responses))
-          (is (= 2 (:turn @!board)))))
+          (is (= 2 (:turn @!board)))
+          (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
+          (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
+          (is (= 6 (get-support @!board (->Player "rob"))))
+          (is (= 13 (get-support @!board (->Player "joe"))))))
