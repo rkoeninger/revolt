@@ -29,7 +29,15 @@
         {}
         outer-map))
 
+(defn first-not-nil [x y] (if (nil? x) y x))
+
 ; [Map a (Map b c)] -> Map b (Map a c)
-(defn relevel [m]
-    (let [inner-keys (set (map keys (vals m)))] ; Set b
-        (into {} (map #(vector % (sub-map m %)) inner-keys))))
+; [Map a (Map b c), c] -> Map b (Map a c)
+; [Map a (Map b c), c, Set a, Set b] -> Map b (Map a c)
+(defn relevel
+    ([m] (relevel m nil))
+    ([m default-val] (relevel m default-val (keys m) (set (mapcat keys (vals m)))))
+    ([m default-val all-outer-keys all-inner-keys]
+        (let [default-inner-map (zipmap all-outer-keys (repeat default-val))
+              or-default #(merge-with first-not-nil (sub-map m %) default-inner-map)]
+            (into {} (map #(vector % (or-default %)) all-inner-keys)))))
