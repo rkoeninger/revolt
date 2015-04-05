@@ -133,7 +133,7 @@
     (filter #(= player (get-holder board %)) (:locations board)))
 (defn get-score [board player]
     (+ (get-support board player)
-       (reduce + (map :reduce (get-holdings board player)))
+       (reduce + (map :support (get-holdings board player)))
        (get-support-value (get-bank board player))))
 (defn get-scores [board]
     (let [players (:players board)]

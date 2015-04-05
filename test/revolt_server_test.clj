@@ -54,28 +54,72 @@
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
                       (handle-message % transmit broadcast !board !bids !player-ids))]
-          (handle {:player-id "rob" :content {:type :signup}})
-          (handle {:player-id "joe" :content {:type :signup}})
-          (handle {:player-id "rob" :content {:type :start-game}})
-          (handle {:player-id "rob" :content {:type :submit-bids
-                                              :bids {:priest {:gold      3
-                                                              :blackmail 1
-                                                              :force     1}}}})
-          (is (= [{:content :bids-accepted}] @!transmit-responses))
-          (handle {:player-id "rob" :content {:type :submit-bids
-                                              :bids {:printer {:gold      3
-                                                               :blackmail 1
-                                                               :force     1}}}})
-          (is (= [{:content :bids-already-submitted}] @!transmit-responses))
-          (is (= 1 (:turn @!board)))
-          (handle {:player-id "joe" :content {:type :submit-bids
-                                              :bids {:merchant  {:blackmail 1
-                                                                 :force     1}
-                                                     :mercenary {:gold      2}
-                                                     :printer   {:gold      1}}}})
-          (is (= [{:content :bids-accepted}] @!transmit-responses))
-          (is (= 2 (:turn @!board)))
-          (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
-          (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
-          (is (= 6 (get-support @!board (->Player "rob"))))
-          (is (= 13 (get-support @!board (->Player "joe"))))))
+        (handle {:player-id "rob" :content {:type :signup}})
+        (handle {:player-id "joe" :content {:type :signup}})
+        (handle {:player-id "rob" :content {:type :start-game}})
+        (handle {:player-id "rob" :content {:type :submit-bids
+                                            :bids {:priest {:gold      3
+                                                            :blackmail 1
+                                                            :force     1}}}})
+        (is (= [{:content :bids-accepted}] @!transmit-responses))
+        (handle {:player-id "rob" :content {:type :submit-bids
+                                            :bids {:printer {:gold      3
+                                                             :blackmail 1
+                                                             :force     1}}}})
+        (is (= [{:content :bids-already-submitted}] @!transmit-responses))
+        (is (= 1 (:turn @!board)))
+        (handle {:player-id "joe" :content {:type :submit-bids
+                                            :bids {:merchant  {:blackmail 1
+                                                               :force     1}
+                                                   :mercenary {:gold      2}
+                                                   :printer   {:gold      1}}}})
+        (is (= [{:content :bids-accepted}] @!transmit-responses))
+        (is (= 2 (:turn @!board)))
+        (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
+        (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
+        (is (= 6 (get-support @!board (->Player "rob"))))
+        (is (= 13 (get-support @!board (->Player "joe"))))))
+
+(defn location-by-id [board location-id] (by-id (:locations board) location-id))
+
+(defn read-player-*-map [board m]
+    (map-keys (partial player-by-id board) m))
+
+(defn read-location-player-*-map [board m]
+    (map-kv (partial location-by-id board) (partial read-player-*-map board) m))
+
+(deftest last-turn-scenario
+    (let [board (make-board [(->Player "rob") (->Player "joe")])
+          board (assoc board :influence (read-location-player-*-map board
+              {:tavern     {"rob" 3 "joe" 1}
+               :market     {"rob" 2 "joe" 3}
+               :plantation {"rob" 3 "joe" 3}
+               :cathedral  {"rob" 4 "joe" 3}
+               :harbor     {"rob" 6 "joe" 0}
+               :town-hall  {"rob" 3 "joe" 4}
+               :fortress   {"rob" 4 "joe" 4}
+               :palace     {"rob" 6 "joe" 2}}))
+          board (assoc board :banks (read-player-*-map board
+              {"rob" (->Bid 1 0 0)
+               "joe" (->Bid 1 0 0)}))
+          !board (atom board)
+          !bids (atom {})
+          !player-ids (atom #{})
+          !transmit-responses (atom [])
+          !broadcast-responses (atom [])
+          transmit (partial swap! !transmit-responses conj)
+          broadcast (partial swap! !broadcast-responses conj)
+          handle #(do (reset! !transmit-responses [])
+                      (reset! !broadcast-responses [])
+                      (handle-message % transmit broadcast !board !bids !player-ids))]
+        (handle {:player-id "rob" :content {:type :submit-bids
+                                            :bids {:printer {:gold 1}}}})
+        (handle {:player-id "joe" :content {:type :submit-bids
+                                            :bids {:printer {:gold 1}}}})
+        (is (= [{:content :bids-accepted}]
+               @!transmit-responses))
+        (is (= [{:content (board-status @!board)}
+                {:type :game-over
+                 :results {:rankings {"rob" 1   "joe" 2}
+                           :scores   {"rob" 155 "joe" 75}}}]
+               @!broadcast-responses))))

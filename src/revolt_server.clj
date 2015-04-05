@@ -34,6 +34,27 @@
      :figures   (vec (map figure-setup figures))
      :locations locations})
 
+(defn game-results [board]
+    {:scores   (map-keys :id (revolt/get-scores board))
+     :rankings (map-keys :id (revolt/get-rankings board))})
+
+(defn by-id [coll id] (first (filter #(= id (:id %)) coll)))
+
+(defn player-by-id [board player-id] (by-id (:players board) player-id))
+
+(defn figure-by-id [board figure-id] (by-id (:figures board) figure-id))
+
+(defn read-bid [{:keys [gold blackmail force]}]
+    (revolt/->Bid (or gold      0)
+                  (or blackmail 0)
+                  (or force     0)))
+
+(defn read-figure-bid-map [board bids]
+    (map-kv (partial figure-by-id board) read-bid bids))
+
+(defn read-player-figure-bid-map [board bids]
+    (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
+
 (defn handle-signup [transmit broadcast player-id !board !player-ids]
     (if @!board
         (transmit {:content :game-already-started})
@@ -46,23 +67,6 @@
         (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
             (broadcast {:content (board-setup @!board)})
             (broadcast {:content (board-status @!board)}))))
-
-(defn player-by-id [board player-id]
-    (first (filter #(= player-id (:id %)) (:players board))))
-
-(defn figure-by-id [board figure-id]
-    (first (filter #(= figure-id (:id %)) (:figures board))))
-
-(defn read-bid [{:keys [gold blackmail force]}]
-    (revolt/->Bid (or gold      0)
-                  (or blackmail 0)
-                  (or force     0)))
-
-(defn read-figure-bid-map [board bids]
-    (map-kv (partial figure-by-id board) read-bid bids))
-
-(defn read-player-figure-bid-map [board bids]
-    (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
 
 (defn handle-turn [!board !bids]
     (swap! !board revolt/run-turn
@@ -81,7 +85,10 @@
                 (if (= (count (:players @!board)) (count @!bids))
                     (do (handle-turn !board !bids)
                         (reset! !bids {})
-                        (broadcast {:content (board-status @!board)}))))
+                        (broadcast {:content (board-status @!board)})
+                        (if (revolt/game-over? @!board)
+                            (broadcast {:type :game-over
+                                        :results (game-results @!board)})))))
             (transmit {:content :invalid-bid}))))
 
 (defn handle-message [{:keys [player-id content] :as message} transmit broadcast !board !bids !player-ids]
