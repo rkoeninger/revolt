@@ -22,17 +22,19 @@
      :banks     (map-keys :id banks)
      :influence (map-kv :id (partial map-keys :id) influence)})
 
-(defn figure-setup [{:keys [id support bank immunities location]}]
+(defn figure-setup [{:keys [id support bank immunities location special]}]
     {:id          id
      :support     support
      :bank        bank
      :immunities  immunities
-     :location-id (:id location)})
+     :location-id (:id location)
+     :special-id  (:id special)})
 
 (defn board-setup [{:keys [players figures locations]}]
     {:players   players
      :figures   (vec (map figure-setup figures))
-     :locations locations})
+     :locations locations
+     :specials  (vec (filter identity (map :special figures)))})
 
 (defn game-results [board]
     {:scores   (map-keys :id (revolt/get-scores board))

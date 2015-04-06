@@ -2,7 +2,7 @@
     (:use revolt)
     (:use clojure.test))
 
-(defn dummy-callback [player params] params)
+(def dummy-callback (constantly {}))
 
 (def rob (->Player "Rob"))
 (def joe (->Player "Joe"))

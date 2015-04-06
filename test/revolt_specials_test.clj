@@ -12,7 +12,7 @@
 (def locs [hideout courtroom])
 
 (def clear-spot
-    (->Special {:location "Location" :player "Player"}
+    (->Special :clear-spot
         (fn [board winner]
             (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
         (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
@@ -32,6 +32,8 @@
     (zipmap locs (repeat (zipmap players (repeat 0))))
     (zipmap players (repeat 0))))
 
+(defn just-special [special] (->Figure nil nil nil nil nil special))
+
 (deftest simple-special
     (let [callback (constantly {:location courtroom :player joe})
           board (-> board
@@ -39,7 +41,7 @@
                     (add-influence courtroom rob)
                     (add-influence courtroom joe)
                     (add-influence courtroom joe)
-                    (run-special clear-spot rob callback))]
+                    (run-special assassin rob callback))]
         (is (= 1 (get-influence board hideout rob)))
         (is (= 0 (get-influence board hideout joe)))
         (is (= 1 (get-influence board courtroom rob)))
@@ -85,12 +87,12 @@
         (is (doable board joe))
         (is (check board rob rob-choice))
         (is (check board joe joe-choice))
-        (let [board (run-special board steal-spot rob (constantly rob-choice))]
+        (let [board (run-special board (just-special steal-spot) rob (constantly rob-choice))]
             (is (= 1 (get-influence board hideout rob)))
             (is (= 0 (get-influence board hideout joe)))
             (is (= 2 (get-influence board courtroom rob)))
             (is (= 1 (get-influence board courtroom joe))))
-        (let [board (run-special board steal-spot joe (constantly joe-choice))]
+        (let [board (run-special board (just-special steal-spot) joe (constantly joe-choice))]
             (is (= 0 (get-influence board hideout rob)))
             (is (= 1 (get-influence board hideout joe)))
             (is (= 1 (get-influence board courtroom rob)))
@@ -118,7 +120,7 @@
         (is (doable board rob))
         (is (doable board joe))
         (is (check board rob choice))
-        (let [board (run-special board swap-spots rob (constantly choice))]
+        (let [board (run-special board (just-special swap-spots) rob (constantly choice))]
             (is (= 0 (get-influence board hideout rob)))
             (is (= 1 (get-influence board hideout joe)))
             (is (= 2 (get-influence board courtroom rob)))
@@ -341,7 +343,7 @@
 
 (deftest scenario-reassign
     (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
-          callback (fn [player params] {:reassignments [[loc1 loc2] [loc3 loc2]]})
+          callback (fn [player _] {:reassignments [[loc1 loc2] [loc3 loc2]]})
           board (-> reassign-board
                     (add-bank rob (->Bid 1 0 0))
                     (add-influence loc1 rob)
@@ -358,7 +360,7 @@
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
                 judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
-          callback (fn [player params]
+          callback (fn [player _]
                        (cond
                            (= player rob) {:location courtroom :player joe}
                            (= player joe) {:location hideout   :player rob}))

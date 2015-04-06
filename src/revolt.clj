@@ -18,8 +18,7 @@
     java.lang.Object
     (toString [_] (name id)))
 
-(defrecord Special [params   ; Map Keyword String
-                             ;     Description of arguments needed by special
+(defrecord Special [id
                     doable   ; [Board  Player] -> Boolean
                              ;     Returns true if winner can meaningfully perform special
                     check    ; [Board  Player  (Map Keyword Object)] -> Boolean
@@ -152,13 +151,19 @@
         (if-not (or (nil? max-score) (zero? max-score))
             (inverted-get scores max-score))))
 (defn inc-turn [board] (update-in board [:turn] inc))
-(defn run-special [board {:keys [params doable check effect]} player callback]
+(defn run-special [board
+                   {{:keys [doable check effect]} :special :as figure}
+                   player
+                   callback]
     (if-not (doable board player)
         board
-        (let [args (if (seq params) (callback player params))]
+        (let [args (callback player figure)]
             (assert (check board player args))
             (effect board player args))))
-(defn reward-winner [board {:keys [support bank location special]} winner callback]
+(defn reward-winner [board
+                     {:keys [support bank location special] :as figure}
+                     winner
+                     callback]
     (let [eval-support (fn [board] (add-support board winner support))
           eval-bank (fn [board] (add-bank board winner bank))
           eval-influence
@@ -166,13 +171,13 @@
                   (add-influence board location winner)))
           eval-special
               (fn [board] (if (nil? special) board
-                  (run-special board special winner callback)))]
+                  (run-special board figure winner callback)))]
         (-> board eval-support eval-bank eval-influence eval-special)))
 (defn eval-bids
     ([board bids callback] (eval-bids board bids callback (:figures board)))
     ([board        ; Board
       bids         ; Map Figure (Map Player Bid)
-      callback     ; [Player  (Map Keyword String)] -> Map Keyword Object
+      callback     ; [Player Figure] -> Map Keyword Any
       figure-list] ; Vector Figure
         (if (empty? figure-list)
             board
