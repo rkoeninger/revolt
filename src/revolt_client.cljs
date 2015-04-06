@@ -8,11 +8,11 @@
 
 (enable-console-print!)
 
-(def !user-name (atom nil))
+(def !player-id (atom nil))
 (def !input-value (atom nil))
 
 (defn read-message []
-  {:user-name @!user-name
+  {:player-id @!player-id
    :content   (edn/read-string @!input-value)})
 
 (defn message-box [new-msg-ch]
@@ -45,8 +45,8 @@
      [:input {:type      "text"
               :size      20
               :autofocus true
-              :value     (<< !user-name)
-              ::f/on     {:keyup (f/bind-value! !user-name)}}]]))
+              :value     (<< !player-id)
+              ::f/on     {:keyup (f/bind-value! !player-id)}}]]))
 
 (defn message-component [!msgs new-msg-ch]
   (f/el

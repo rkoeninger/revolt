@@ -19,6 +19,7 @@
 (defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
 (defn map-vals [f m] (map-kv identity f m))
 (defn map-keys [f m] (map-kv f identity m))
+(defn map-entries [f m] (into {} (map (partial apply f) m)))
 
 ; [Map a (Map b c), b] -> Map a c
 (defn sub-map [outer-map inner-key]
