@@ -22,13 +22,14 @@
 (deftest signup-rejected-after-game-has-started
     (let [!board (atom nil)
           !player-ids (atom #{})
+          !transmitters (atom {})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit broadcast !board nil !player-ids))]
+                      (handle-message % transmit broadcast !board nil !player-ids !transmitters))]
         (handle {:player-id "rob" :content {:type :signup}})
         (is (= #{"rob"} @!player-ids))
         (is (= [{:content :signup-accepted :player-id "rob"}] @!broadcast-responses))
@@ -47,13 +48,14 @@
     (let [!board (atom nil)
           !bids (atom {})
           !player-ids (atom #{})
+          !transmitters (atom {})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit broadcast !board !bids !player-ids))]
+                      (handle-message % transmit broadcast !board !bids !player-ids !transmitters))]
         (handle {:player-id "rob" :content {:type :signup}})
         (handle {:player-id "joe" :content {:type :signup}})
         (handle {:player-id "rob" :content {:type :start-game}})
@@ -105,13 +107,14 @@
           !board (atom board)
           !bids (atom {})
           !player-ids (atom #{})
+          !transmitters (atom {})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit broadcast !board !bids !player-ids))]
+                      (handle-message % transmit broadcast !board !bids !player-ids !transmitters))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
         (handle {:player-id "joe" :content {:type :submit-bids

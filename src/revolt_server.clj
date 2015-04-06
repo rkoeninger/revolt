@@ -57,10 +57,11 @@
 (defn read-player-figure-bid-map [board bids]
     (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
 
-(defn handle-signup [transmit broadcast player-id !board !player-ids]
+(defn handle-signup [transmit broadcast player-id !board !player-ids !transmitters]
     (if @!board
         (transmit {:content :game-already-started})
         (do (swap! !player-ids conj player-id)
+            (swap! !transmitters assoc player-id transmit)
             (broadcast {:content :signup-accepted :player-id player-id}))))
 
 (defn handle-start-game [transmit broadcast !board !player-ids]
@@ -70,12 +71,14 @@
             (broadcast {:content (board-setup @!board)})
             (broadcast {:content (board-status @!board)}))))
 
-(defn handle-turn [!board !bids]
+(defn handle-turn [!board !bids !transmitters]
     (swap! !board revolt/run-turn
                   (revolt/relevel (read-player-figure-bid-map @!board @!bids))
-                  (constantly {})))
+                  (fn [player figure]
+                      (go (>! (@!transmitters (:id player))
+                              {:special (get-in [:special :id] figure)})))))
 
-(defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids]
+(defn handle-submit-bids [transmit broadcast user-name player-bids !board !bids !transmitters]
     (if (contains? @!bids user-name)
         (transmit {:content :bids-already-submitted})
         (if (and player-bids
@@ -85,7 +88,7 @@
             (do (swap! !bids assoc user-name player-bids)
                 (transmit {:content :bids-accepted})
                 (if (= (count (:players @!board)) (count @!bids))
-                    (do (handle-turn !board !bids)
+                    (do (handle-turn !board !bids !transmitters)
                         (reset! !bids {})
                         (broadcast {:content (board-status @!board)})
                         (if (revolt/game-over? @!board)
@@ -93,14 +96,16 @@
                                         :results (game-results @!board)})))))
             (transmit {:content :invalid-bid}))))
 
-(defn handle-message [{:keys [player-id content] :as message} transmit broadcast !board !bids !player-ids]
+(defn handle-message [{:keys [player-id content] :as message} transmit broadcast !board !bids !player-ids !transmitters]
     (case (:type content)
-        :signup (handle-signup transmit broadcast player-id !board !player-ids)
+        :signup (handle-signup transmit broadcast player-id !board !player-ids !transmitters)
         :start-game (handle-start-game transmit broadcast !board !player-ids)
-        :submit-bids (handle-submit-bids transmit broadcast player-id (:bids content) !board !bids)
+        :submit-bids (handle-submit-bids transmit broadcast player-id (:bids content) !board !bids !transmitters)
         (transmit {:received (format "Unrecognized message: '%s' at %s."
                                      (pr-str message)
                                      (java.util.Date.))})))
+
+(def transmitters (atom {}))
 
 (def channels (atom #{}))
 
@@ -123,7 +128,8 @@
                             (fn [message] (go (doseq [ch @channels] (>! ch message))))
                             board
                             bids
-                            player-ids)
+                            player-ids
+                            transmitters)
             (recur))))
 
 (defroutes app-routes
