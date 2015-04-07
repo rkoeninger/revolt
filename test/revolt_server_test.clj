@@ -4,20 +4,28 @@
     (:use clojure.test))
 
 (deftest read-functions
-    (let [f1 (->Figure :f1 0 zero-bid #{} nil nil)
+    (let [l1 (->Location :l1 0 0)
+          l2 (->Location :l2 0 0)
+          l3 (->Location :l3 0 0)
+          f1 (->Figure :f1 0 zero-bid #{} nil nil)
           f2 (->Figure :f2 0 zero-bid #{} nil nil)
           f3 (->Figure :f3 0 zero-bid #{} nil nil)
           p1 (->Player :p1)
           p2 (->Player :p2)
-          board (->Board nil nil [f1 f2 f3] [p1 p2] nil nil nil)]
+          board (->Board nil [l1 l2 l3] [f1 f2 f3] [p1 p2] nil nil nil)]
         (is (= {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
                (read-figure-bid-map board {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}})))
         (is (= {p1 {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
                 p2 {f1 (->Bid 1 0 0) f2 (->Bid 1 1 0) f3 (->Bid 1 0 1)}}
-               (read-player-figure-bid-map
-                   board
+               (read-player-figure-bid-map board
                    {:p1 {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}
-                    :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}})))))
+                    :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}})))
+        (is (= {:player p1 :location l1}
+               (read-nested-structure board
+                   {:player :p1 :location :l1})))
+        (is (= {:player0 p1 :location0 l1 :player1 p2 :location1 l2}
+               (read-nested-structure board
+                   {:player0 :p1 :location0 :l1 :player1 :p2 :location1 :l2})))))
 
 (deftest signup-rejected-after-game-has-started
     (let [!board (atom nil)
@@ -82,7 +90,9 @@
         (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
         (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
         (is (= 6 (get-support @!board (->Player "rob"))))
-        (is (= 13 (get-support @!board (->Player "joe"))))))
+        (is (= 13 (get-support @!board (->Player "joe"))))
+        (is (= 1 (get-influence @!board (location-by-id @!board :cathedral) (->Player "rob"))))
+        (is (= 1 (get-influence @!board (location-by-id @!board :market) (->Player "joe"))))))
 
 (defn read-player-*-map [board m]
     (map-keys (partial player-by-id board) m))

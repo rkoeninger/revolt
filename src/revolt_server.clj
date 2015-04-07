@@ -68,6 +68,8 @@
                 (player-by-id board v)
             (and (.contains (name k) "location") (keyword-or-string? v))
                 (location-by-id board v)
+            (and (.contains (name k) "figure") (keyword-or-string? v))
+                (figure-by-id board v)
             (vector? v)
                 (vec (map read-nested-structure v))
             (map? v)
