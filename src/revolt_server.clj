@@ -96,8 +96,8 @@
                   (fn [player figure]
                       (let [query (@!queries (:id player))]
                           (read-nested-structure @!board
-                              (query {:special (:id (:special figure))
-                                      :figure  (:id figure)}))))))
+                              (:content (query {:special (:id (:special figure))
+                                                :figure  (:id figure)})))))))
 
 (defn handle-submit-bids [transmit query broadcast user-name player-bids !board !bids !queries]
     (if (contains? @!bids user-name)
