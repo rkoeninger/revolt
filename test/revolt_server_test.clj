@@ -144,7 +144,7 @@
           !player-ids (atom #{"rob" "joe"})
           !queries (atom {"joe" (fn [message]
                                     (is (= {:special :steal-spot :figure :spy} message))
-                                    {:player "rob" :location :cathedral})})
+                                    {:content {:player "rob" :location :cathedral}})})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
