@@ -21,11 +21,14 @@
                    {:p1 {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}
                     :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}})))
         (is (= {:player p1 :location l1}
-               (read-nested-structure board
+               (read-special-response board :steal-spot
                    {:player :p1 :location :l1})))
         (is (= {:player0 p1 :location0 l1 :player1 p2 :location1 l2}
-               (read-nested-structure board
-                   {:player0 :p1 :location0 :l1 :player1 :p2 :location1 :l2})))))
+               (read-special-response board :swap-spots
+                   {:player0 :p1 :location0 :l1 :player1 :p2 :location1 :l2})))
+        (is (= {:reassignments [[l1 l2] [l1 l3]]}
+               (read-special-response board :reassign-spots
+                   {:reassignments [[:l1 :l2] [:l1 :l3]]})))))
 
 (deftest signup-rejected-after-game-has-started
     (let [!board (atom nil)

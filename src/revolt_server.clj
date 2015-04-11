@@ -61,19 +61,25 @@
 
 (defn keyword-or-string? [x] (or (string? x) (keyword? x)))
 
-(defn read-nested-structure [board m]
-    (map-entries
-        (fn [k v] [k (cond
-            (and (.contains (name k) "player") (keyword-or-string? v))
-                (player-by-id board v)
-            (and (.contains (name k) "location") (keyword-or-string? v))
-                (location-by-id board v)
-            (and (.contains (name k) "figure") (keyword-or-string? v))
-                (figure-by-id board v)
-            (vector? v)
-                (vec (map read-nested-structure v))
-            (map? v)
-                (read-nested-structure board v))])
+(defn read-special-response [board special-id m]
+    (case special-id
+        :take-open-spot
+            {:location (location-by-id board (:location m))}
+
+        :steal-spot
+            {:location (location-by-id board (:location m))
+             :player (player-by-id board (:player m))}
+
+        :swap-spots
+            {:location0 (location-by-id board (:location0 m))
+             :player0   (player-by-id board (:player0 m))
+             :location1 (location-by-id board (:location1 m))
+             :player1   (player-by-id board (:player1 m))}
+
+        :reassign-spots
+            {:reassignments
+             (vec (map (fn [l-ids] (vec (map (partial location-by-id board) l-ids)))
+                       (:reassignments m)))}
         m))
 
 (defn handle-signup [transmit query broadcast player-id !board !player-ids !queries]
@@ -90,14 +96,18 @@
             (broadcast {:content (board-setup @!board)})
             (broadcast {:content (board-status @!board)}))))
 
+(defn special-fn [!board !queries]
+    (fn [player figure]
+        (let [query (@!queries (:id player))
+              special-id (:id (:special figure))]
+            (read-special-response @!board special-id
+                (:content (query {:special special-id
+                                  :figure  (:id figure)}))))))
+
 (defn handle-turn [!board !bids !queries]
     (swap! !board revolt/run-turn
                   (revolt/relevel (read-player-figure-bid-map @!board @!bids))
-                  (fn [player figure]
-                      (let [query (@!queries (:id player))]
-                          (read-nested-structure @!board
-                              (:content (query {:special (:id (:special figure))
-                                                :figure  (:id figure)})))))))
+                  (special-fn !board !queries)))
 
 (defn handle-submit-bids [transmit query broadcast user-name player-bids !board !bids !queries]
     (if (contains? @!bids user-name)
