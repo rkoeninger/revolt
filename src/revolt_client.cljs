@@ -71,7 +71,7 @@
 (defn receive-msgs! [!msgs server-ch]
   (go-loop []
     (when-let [msg (<! server-ch)]
-      (swap! !msgs conj msg)
+      (swap! !msgs (partial concat [msg]))
       (recur))))
 
 (defn send-msgs! [new-msg-ch server-ch]
