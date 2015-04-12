@@ -57,6 +57,7 @@
 (def plus-bid (partial merge-with +))
 (def zero-bid (->Bid 0 0 0))
 (def zero-bid? (partial = zero-bid))
+(def pos-bid? (comp (partial some pos?) vals))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
 (defn get-support-value [{:keys [gold blackmail force]}]
@@ -68,15 +69,16 @@
 (def has-special? (comp not nil? :special))
 (def blackmail-immune? (comp boolean :blackmail :immunities))
 (def force-immune? (comp boolean :force :immunities))
-(defn validate-bid [fig bid]
-    (nor (and (has-blackmail? bid) (blackmail-immune? fig))
-         (and (has-force? bid) (force-immune? fig))))
+(defn validate-bid [figure bid]
+    (nor (and (has-blackmail? bid) (blackmail-immune? figure))
+         (and (has-force? bid) (force-immune? figure))))
 (defn validate-bids [bank  ; Bid
                      bids] ; Map Figure Bid
-    (and (> (count bids) 0)
-         (<= (count bids) 6)
-         (= bank (reduce plus-bid (vals bids)))
-         (every? (partial apply validate-bid) bids)))
+    (let [bid-count (count (filter pos-bid? (vals bids)))]
+        (and (> bid-count 0)
+             (<= bid-count 6)
+             (= bank (reduce plus-bid (vals bids)))
+             (every? (partial apply validate-bid) bids))))
 (defn set-guard-house [board player] (assoc board :guard-house player))
 (defn touchable? [board winner player]
     (or (= winner player) (not= player (:guard-house board))))
