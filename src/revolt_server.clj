@@ -16,11 +16,12 @@
         [:body
             [:div#content]]))
 
-(defn board-status [{:keys [turn support banks influence]}]
-    {:turn      turn
-     :support   (map-keys :id support)
-     :banks     (map-keys :id banks)
-     :influence (map-kv :id (partial map-keys :id) influence)})
+(defn board-status [{:keys [turn support banks influence guard-house]}]
+    {:turn        turn
+     :support     (map-keys :id support)
+     :banks       (map-keys :id banks)
+     :influence   (map-kv :id (partial map-keys :id) influence)
+     :guard-house guard-house})
 
 (defn figure-setup [{:keys [id support bank immunities location special]}]
     {:id          id
@@ -100,9 +101,11 @@
     (fn [player figure]
         (let [query (@!queries (:id player))
               special-id (:id (:special figure))]
-            (read-special-response @!board special-id
-                (:content (query {:special special-id
-                                  :figure  (:id figure)}))))))
+            (if (= special-id :occupy-guard-house)
+                {}
+                (read-special-response @!board special-id
+                    (:content (query {:special special-id
+                                      :figure  (:id figure)})))))))
 
 (defn handle-turn [!board !bids !queries]
     (swap! !board revolt/run-turn

@@ -48,24 +48,104 @@
               :autofocus true
               :value     (<< !player-id)
               ::f/on     {:keyup (f/bind-value! !player-id)}}]
-     [:input {:type "button" :id "signup-button" :value "Signup"
+     [:input {:type  "button"
+              :id    "signup-button"
+              :value "Signup"
               ::f/on {:click
                       (fn [_]
                           (put! @!message-channel
                                 {:player-id @!player-id
                                  :content {:type :signup}}))}}]
-     [:input {:type "button" :id "start-game-button" :value "Start Game"
+     [:input {:type  "button"
+              :id    "start-game-button"
+              :value "Start Game"
               ::f/on {:click
                       (fn [_]
                           (put! @!message-channel
                                 {:player-id @!player-id
                                  :content {:type :start-game}}))}}]]))
 
+(defn figure-input [id]
+  (f/el
+    [:tr
+     [:td [:span (str id)]]
+     [:td [:input {:type "text" :size 2 :id (str (name id) "-gold")}]]
+     [:td [:input {:type "text" :size 2 :id (str (name id) "-blackmail")}]]
+     [:td [:input {:type "text" :size 2 :id (str (name id) "-force")}]]]))
+
+(def figure-ids
+  [:general
+   :captain
+   :innkeeper
+   :magistrate
+   :viceroy
+   :priest
+   :aristocrat
+   :merchant
+   :printer
+   :spy
+   :apothecary
+   :messenger
+   :mayor
+   :constable
+   :rogue
+   :mercenary])
+
+(defn parse-or-nil [x] (let [n (js/parseInt x)] (if (js/isNaN n) 0 n)))
+
+(defn get-val [id suffix]
+  (parse-or-nil (.-value (.getElementById js/document (str (name id) "-" suffix)))))
+
+(def zero-bid {:gold 0 :blackmail 0 :force 0})
+
+(defn get-bid [id]
+  {:gold      (get-val id "gold")
+   :blackmail (get-val id "blackmail")
+   :force     (get-val id "force")})
+
+(defn get-bids []
+  (apply hash-map
+    (apply concat
+      (filter (fn [[id bid]] (not= bid zero-bid))
+        (map (fn [id] [id (get-bid id)]) figure-ids)))))
+
+(defn figure-grid []
+  (f/el
+    [:div
+     [:table
+      [figure-input :general]
+      [figure-input :captain]
+      [figure-input :innkeeper]
+      [figure-input :magistrate]
+      [figure-input :viceroy]
+      [figure-input :priest]
+      [figure-input :aristocrat]
+      [figure-input :merchant]
+      [figure-input :printer]
+      [figure-input :spy]
+      [figure-input :apothecary]
+      [figure-input :messenger]
+      [figure-input :mayor]
+      [figure-input :constable]
+      [figure-input :rogue]
+      [figure-input :mercenary]]
+     [:input {:type  "button"
+              :id    "submit-bids-button"
+              :value "Submit Bids"
+              ::f/on {:click
+                      (fn [_]
+                          (put! @!message-channel
+                                {:player-id @!player-id
+                                 :content {:type :submit-bids
+                                           :bids (let [b (get-bids)]
+                                                     (.log js/console b) b)}}))}}]]))
+
 (defn message-component [!msgs new-msg-ch]
   (f/el
     [:div
      [user-name-box]
      [message-box new-msg-ch]
+     [figure-grid]
      [message-list !msgs]]))
 
 (defn receive-msgs! [!msgs server-ch]
