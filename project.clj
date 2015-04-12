@@ -12,8 +12,9 @@
                                      :pretty-print true}}]}
     :aliases {"server" ["do"
                         ["shell" "mkdir" "-p" "target/resources"]
-                        ["cljsbuild" "once"]
-                        "frodo"]}
+                        ["pdo"
+                         ["cljsbuild" "auto"]
+                         "frodo"]]}
     :plugins [[lein-pdo "0.1.1"]
               [jarohen/lein-frodo "0.4.1"]
               [lein-cljsbuild "1.0.3"]

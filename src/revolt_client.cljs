@@ -10,6 +10,7 @@
 
 (def !player-id (atom nil))
 (def !input-value (atom nil))
+(def !message-channel (atom nil))
 
 (defn read-message []
   {:player-id @!player-id
@@ -46,7 +47,19 @@
               :size      20
               :autofocus true
               :value     (<< !player-id)
-              ::f/on     {:keyup (f/bind-value! !player-id)}}]]))
+              ::f/on     {:keyup (f/bind-value! !player-id)}}]
+     [:input {:type "button" :id "signup-button" :value "Signup"
+              ::f/on {:click
+                      (fn [_]
+                          (put! @!message-channel
+                                {:player-id @!player-id
+                                 :content {:type :signup}}))}}]
+     [:input {:type "button" :id "start-game-button" :value "Start Game"
+              ::f/on {:click
+                      (fn [_]
+                          (put! @!message-channel
+                                {:player-id @!player-id
+                                 :content {:type :start-game}}))}}]]))
 
 (defn message-component [!msgs new-msg-ch]
   (f/el
@@ -79,6 +92,7 @@
 (defn send-receive [ws-channel]
   (let [!msgs (doto (atom []) (receive-msgs! ws-channel))
         new-msg-ch (doto (chan) (send-msgs! ws-channel))]
+    (reset! !message-channel new-msg-ch)
     (f/root js/document.body
             (f/el [message-component !msgs new-msg-ch]))))
 
