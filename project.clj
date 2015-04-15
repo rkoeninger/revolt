@@ -2,11 +2,11 @@
     :description "Revolt server"
     :url "http://github.com/rkoeninger/revolt"
     :main revolt
-    :source-paths ["src"]
+    :source-paths ["src/server"]
     :test-paths ["test"]
     :resource-paths ["resources" "target/resources"]
     :frodo/config-resource "revolt_server.edn"
-    :cljsbuild {:builds [{:source-paths ["src"]
+    :cljsbuild {:builds [{:source-paths ["src/client"]
                           :compiler {:output-to "target/resources/js/revolt_client.js"
                                      :optimizations :whitespace
                                      :pretty-print true}}]}
