@@ -8,26 +8,26 @@
 
 (enable-console-print!)
 
-(def !player-id (atom nil))
-(def !input-value (atom nil))
 (def !message-channel (atom nil))
 
+(defn element [id] (.getElementById js/document id))
+(defn value [id] (aget (element id) "value"))
+(defn set-value [id x] (aset (element id) "value" x))
+
 (defn read-message []
-  {:player-id @!player-id
-   :content   (edn/read-string @!input-value)})
+  {:player-id (value "player-id")
+   :content   (edn/read-string (value "input-box"))})
 
 (defn message-box [new-msg-ch]
   (f/el
     [:div
      [:h3 "Send a message to the server: (either EDN or raw string)"]
      [:input {:type  "text"
+              :id    "input-box"
               :size  50
-              :value (<< !input-value)
-              ::f/on {:keyup (juxt (f/bind-value! !input-value)
-                                   (fn [e]
-                                     (when (= 13 (.-keyCode e))
-                                       (put! new-msg-ch (read-message))
-                                       (reset! !input-value ""))))}}]]))
+              ::f/on {:keyup (fn [e] (when (= 13 (.-keyCode e))
+                               (put! new-msg-ch (read-message))
+                               (set-value "input-box" "")))}}]]))
 
 (defn message-list [!msgs]
   (f/el
@@ -44,17 +44,16 @@
     [:div
      [:h3 "User name:"]
      [:input {:type      "text"
+              :id        "player-id"
               :size      20
-              :autofocus true
-              :value     (<< !player-id)
-              ::f/on     {:keyup (f/bind-value! !player-id)}}]
+              :autofocus true}]
      [:input {:type  "button"
               :id    "signup-button"
               :value "Signup"
               ::f/on {:click
                       (fn [_]
                           (put! @!message-channel
-                                {:player-id @!player-id
+                                {:player-id (value "player-id")
                                  :content {:type :signup}}))}}]
      [:input {:type  "button"
               :id    "start-game-button"
@@ -62,7 +61,7 @@
               ::f/on {:click
                       (fn [_]
                           (put! @!message-channel
-                                {:player-id @!player-id
+                                {:player-id (value "player-id")
                                  :content {:type :start-game}}))}}]]))
 
 (defn figure-input [id]
@@ -93,8 +92,7 @@
 
 (defn parse-or-nil [x] (let [n (js/parseInt x)] (if (js/isNaN n) 0 n)))
 
-(defn get-val [id suffix]
-  (parse-or-nil (.-value (.getElementById js/document (str (name id) "-" suffix)))))
+(defn get-val [id suffix] (parse-or-nil (value (str (name id) "-" suffix))))
 
 (def zero-bid {:gold 0 :blackmail 0 :force 0})
 
@@ -135,7 +133,7 @@
               ::f/on {:click
                       (fn [_]
                           (put! @!message-channel
-                                {:player-id @!player-id
+                                {:player-id (value "player-id")
                                  :content {:type :submit-bids
                                            :bids (let [b (get-bids)]
                                                      (.log js/console b) b)}}))}}]]))
