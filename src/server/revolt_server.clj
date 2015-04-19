@@ -98,14 +98,17 @@
             (broadcast {:content (board-status @!board)}))))
 
 (defn special-fn [!board !queries]
-    (fn [player figure]
+    (fn [board player figure]
         (let [query (@!queries (:id player))
               special-id (:id (:special figure))]
             (if (= special-id :occupy-guard-house)
                 {}
-                (read-special-response @!board special-id
-                    (:content (query {:special special-id
-                                      :figure  (:id figure)})))))))
+                (read-special-response board special-id
+                    (let [query-result (query {:board (board-status board)
+                                      :special special-id
+                                      :figure  (:id figure)})]
+                        (println "query-result " query-result)
+                        (:content query-result)))))))
 
 (defn handle-turn [!board !bids !queries]
     (swap! !board revolt/run-turn
@@ -134,6 +137,8 @@
     (case (:type content)
         :signup (handle-signup transmit query broadcast player-id !board !player-ids !queries)
         :start-game (handle-start-game transmit query broadcast !board !player-ids)
+        :bids (transmit {:content @!bids})
+        :status (transmit {:content (board-status @!board)})
         :submit-bids (handle-submit-bids transmit query broadcast player-id (:bids content) !board !bids !queries)
         (transmit {:received (format "Unrecognized message: '%s' at %s."
                                      (pr-str message)
@@ -153,7 +158,8 @@
                 (prn "Message received:" packet)
                 (handle-message message
                                 (fn [message] (go (>! ws-channel message)))
-                                (fn [message] (do (>!! ws-channel message) (<!! ws-channel)))
+                                (fn [message] (do (>!! ws-channel message)
+                                                  (:message (<!! ws-channel))))
                                 (fn [message] (go (doseq [ch @channels] (>! ch message))))
                                 board
                                 bids

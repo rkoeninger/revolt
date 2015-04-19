@@ -159,9 +159,14 @@
                    callback]
     (if-not (doable board player)
         board
-        (let [args (callback player figure)]
-            (assert (check board player args))
-            (effect board player args))))
+        (let [args (callback board player figure)]
+            (if (check board player args)
+                (effect board player args)
+                (do
+                    (println "Board " board)
+                    (println "Player " player)
+                    (println "Args " args)
+                    (throw (Exception. "Invalid special arguments")))))))
 (defn reward-winner [board
                      {:keys [support bank location special] :as figure}
                      winner
@@ -179,7 +184,7 @@
     ([board bids callback] (eval-bids board bids callback (:figures board)))
     ([board        ; Board
       bids         ; Map Figure (Map Player Bid)
-      callback     ; [Player Figure] -> Map Keyword Any
+      callback     ; [Board Player Figure] -> Map Keyword Any
       figure-list] ; Vector Figure
         (if (empty? figure-list)
             board

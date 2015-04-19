@@ -145,8 +145,9 @@
     (let [!board (atom (make-board [(->Player "rob") (->Player "joe")]))
           !bids (atom {})
           !player-ids (atom #{"rob" "joe"})
-          !queries (atom {"joe" (fn [message]
-                                    (is (= {:special :steal-spot :figure :spy} message))
+          !queries (atom {"joe" (fn [{:keys [special figure] :as message}]
+                                    (is (= special :steal-spot))
+                                    (is (= figure :spy))
                                     {:content {:player "rob" :location :cathedral}})})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])

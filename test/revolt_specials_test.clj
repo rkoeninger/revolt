@@ -343,7 +343,7 @@
 
 (deftest scenario-reassign
     (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
-          callback (fn [player _] {:reassignments [[loc1 loc2] [loc3 loc2]]})
+          callback (fn [_ player _] {:reassignments [[loc1 loc2] [loc3 loc2]]})
           board (-> reassign-board
                     (add-bank rob (->Bid 1 0 0))
                     (add-influence loc1 rob)
@@ -360,7 +360,7 @@
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
                 judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
-          callback (fn [player _]
+          callback (fn [_ player _]
                        (cond
                            (= player rob) {:location courtroom :player joe}
                            (= player joe) {:location hideout   :player rob}))
