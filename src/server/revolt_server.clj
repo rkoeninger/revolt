@@ -107,7 +107,6 @@
                     (let [query-result (query {:board (board-status board)
                                       :special special-id
                                       :figure  (:id figure)})]
-                        (println "query-result " query-result)
                         (:content query-result)))))))
 
 (defn handle-turn [!board !bids !queries]
