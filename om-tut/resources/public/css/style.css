@@ -1,0 +1,37 @@
+.immunity-none {
+	color: black;
+	background-color: #eeddaa;
+}
+.immunity-blackmail {
+	color: white;
+	background-color: black;
+}
+.immunity-force {
+	color: white;
+	background-color: red;
+}
+.immunity-both {
+	color: white;
+	background: linear-gradient(135deg, black 50%, red 50%);
+}
+.figure-name {
+	padding: 0.2em;
+	font-weight: bold;
+}
+.error-label {
+	font-weight: bold;
+	color: red;
+}
+.invisible {
+	visibility: hidden;
+}
+.hide {
+	display: none;
+}
+.selected {
+	background-color: #77ff77;
+}
+.language-flag {
+	margin: 0.2em;
+	cursor: pointer;
+}
