@@ -1,0 +1,356 @@
+Figwheel: focusing on build-ids (dev)
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 0.463 seconds.[0m
+notifying browser that file changed:  resources/public/js/compiled/out/goog/deps.js
+notifying browser that file changed:  resources/public/js/compiled/out/cljs_deps.js
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\dev.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.079 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.246 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.979 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.584 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.919 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.97 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.882 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.896 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.41 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.006 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.913 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.046 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Use of undeclared Var om-tut.core/messenger-selection-1 at line 483 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/messenger-selection-1 at line 483 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/messenger-selection-2 at line 483 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/messenger-selection-2 at line 483 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.017 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.841 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[31mCompiling "resources/public/js/compiled/om_tut.js" failed.[0m
+clojure.lang.ExceptionInfo: failed compiling file:src\om_tut\core.cljs
+ at clojure.core$ex_info.invoke (core.clj:4403)
+    cljs.compiler$compile_file$fn__2831.invoke (compiler.clj:1054)
+    cljs.compiler$compile_file.invoke (compiler.clj:1034)
+    cljs.compiler$compile_root.invoke (compiler.clj:1084)
+    cljs.closure$compile_dir.invoke (closure.clj:350)
+    cljs.closure$eval3170$fn__3171.invoke (closure.clj:390)
+    cljs.closure$eval3106$fn__3107$G__3097__3114.invoke (closure.clj:298)
+    cljs.closure$eval3157$fn__3158.invoke (closure.clj:404)
+    cljs.closure$eval3106$fn__3107$G__3097__3114.invoke (closure.clj:298)
+    clojurescript_build.core.CompilableSourcePaths/fn (core.clj:18)
+    clojure.core$map$fn__4245.invoke (core.clj:2557)
+    clojure.lang.LazySeq.sval (LazySeq.java:40)
+    clojure.lang.LazySeq.seq (LazySeq.java:49)
+    clojure.lang.RT.seq (RT.java:484)
+    clojure.core$seq.invoke (core.clj:133)
+    clojure.core$apply.invoke (core.clj:624)
+    clojure.core$mapcat.doInvoke (core.clj:2586)
+    clojure.lang.RestFn.invoke (RestFn.java:423)
+    clojurescript_build.core.CompilableSourcePaths._compile (core.clj:18)
+    cljs.closure$build.invoke (closure.clj:1087)
+    clojurescript_build.core$build_source_paths_STAR_.invoke (core.clj:150)
+    figwheel_sidecar.auto_builder$default_build_options$fn__15656.invoke (auto_builder.clj:66)
+    figwheel_sidecar.auto_builder$warning$fn__15653.invoke (auto_builder.clj:61)
+    clojurescript_build.auto$time_build$fn__15466.invoke (auto.clj:55)
+    clojurescript_build.auto$after$fn__15472.invoke (auto.clj:64)
+    clojurescript_build.auto$after$fn__15472.invoke (auto.clj:64)
+    clojurescript_build.auto$after$fn__15472.invoke (auto.clj:64)
+    clojurescript_build.auto$error$fn__15475.invoke (auto.clj:71)
+    clojurescript_build.auto$before$fn__15469.invoke (auto.clj:60)
+    clojurescript_build.auto$make_conditional_builder$fn__15487.invoke (auto.clj:103)
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.95 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 0.742 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+sending changed CSS file: resources/public/css/style.css
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.267 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.106 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.662 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.106 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Wrong number of args (4) passed to cljs.core/flatten at line 290 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.125 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Wrong number of args (4) passed to cljs.core/flatten at line 290 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.03 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.957 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.99 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.887 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.436 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.985 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.038 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.914 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.952 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.945 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.018 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.637 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.963 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.84 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.872 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.886 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.03 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.15 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.281 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.397 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.189 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.0 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.952 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.247 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 455 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 456 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 457 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 460 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.027 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 451 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 455 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 456 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 457 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 460 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.359 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.205 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.837 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.025 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.184 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Use of undeclared Var om-tut.core/Exception at line 174 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/Exception at line 174 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.383 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.927 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+WARNING: Use of undeclared Var om-tut.core/location at line 408 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 411 src\om_tut\core.cljs
+WARNING: Use of undeclared Var om-tut.core/location at line 420 src\om_tut\core.cljs
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.812 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.806 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.884 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.638 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.187 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.108 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.098 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.463 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.013 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 1.752 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.023 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.023 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.022 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.036 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.125 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js
+[0mCompiling "resources/public/js/compiled/om_tut.js" from ["src" "dev_src"]...
+[32mSuccessfully compiled "resources/public/js/compiled/om_tut.js" in 2.071 seconds.[0m
+notifying browser that file changed:  \om_tut\core.js
+notifying browser that file changed:  \om_tut\core.js

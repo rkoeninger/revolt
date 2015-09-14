@@ -39,6 +39,8 @@
        :signup     "Sign Up"
        :start-game "Start Game"
        :player     "Player"
+       :location   "Location"
+       :cap        "Cap"
        :support    "Support"
        :figure     "Figure"
        :gold       "Gold"
@@ -50,18 +52,18 @@
   :mx {:general    "General"
        :captain    "Capitán"
        :innkeeper  "Posadero"
-       :magistrate "Magistrado"
+       :magistrate "Juez"
        :viceroy    "Virrey"
        :priest     "Sacerdote"
        :aristocrat "Aristócrata"
-       :merchant   "Comerciante"
+       :merchant   "Mercader"
        :printer    "Impresor"
        :spy        "Espía"
        :apothecary "Boticario"
        :messenger  "Mensajero"
        :mayor      "Alcalde"
        :constable  "Alguacil"
-       :rogue      "Pícaro"
+       :rogue      "Maleante"
        :mercenary  "Mercenario"
        :tavern     "Taberna"
        :market     "Mercado"
@@ -75,7 +77,10 @@
        :clear      "Despejar"
        :add        "Añadir"
        :signup     "Contratar"
+       :start-game "Empezar Juego"
        :player     "Jugador"
+       :location   "Localización"
+       :cap        "Límite"
        :support    "Apoyo"
        :figure     "Persona"
        :gold       "Oro"
@@ -112,7 +117,10 @@
        :clear      "Débarrasser"
        :add        "Ajouter"
        :signup     "Signer"
+       :start-game "Démarrer le Jeu"
        :player     "Joueur"
+       :location   "Emplacement"
+       :cap        "Limite"
        :support    "Appui"
        :figure     "Personnage"
        :gold       "Or"
@@ -144,14 +152,14 @@
 (def ps ["Rob" "Joe" "Moe"])
 
 (def locs
-  [:tavern
-   :market
-   :town-hall
-   :fortress
-   :harbor
-   :cathedral
-   :plantation
-   :palace])
+  [{:id :tavern :cap 4}
+   {:id :market :cap 5}
+   {:id :town-hall :cap 7}
+   {:id :fortress :cap 8}
+   {:id :harbor :cap 6}
+   {:id :cathedral :cap 7}
+   {:id :plantation :cap 6}
+   {:id :palace :cap 6}])
 
 (defonce app-state
   (atom
@@ -160,17 +168,16 @@
      :reassignments []
      :bids (zipmap (map :id figures) (repeat bid0))
      :players ps
-     :support (zipmap ps (repeat 0))
+     :support (zipmap ps (repeatedly #(rand-int 50)))
      :locations locs
-     :influence (zipmap locs (repeat (zipmap ps (repeat 0))))
+     :influence (zipmap (map :id locs) (repeatedly (fn [] (zipmap ps (repeatedly (fn [] (rand-int 4)))))))
      :original-bank {:gold 5 :blackmail 1 :force 1}
      :bank {:gold 5 :blackmail 1 :force 1}}))
 
 (defn localize [data key]
   (or
     (get-in languages [(:lang data) key])
-    (get-in languages [:us key])
-    (name key)))
+    (js/console.error (str key " is not in " (:lang data) " dictionary"))))
 
 (defn adjust-bid [data id denomination adj]
   (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
@@ -200,18 +207,22 @@
         amount (get-in data [:bids id denomination])]
     (dom/td
       nil
-      (dom/button
-        #js {:disabled (or immune
-                           (not (denomination-remaining? data denomination))
-                           (and (nothing-on-figure? data id) (figure-limit-reached? data)))
-             :onClick #(adjust-bid data id denomination 1)}
-        "\u2191")
-      (dom/button
-        #js {:disabled (or immune
+      (let [disabled (or immune
+                         (not (denomination-remaining? data denomination))
+                         (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
+        (dom/button
+          #js {:disabled disabled
+               :className (if disabled "adjust disabled" "adjust enabled")
+               :onClick #(adjust-bid data id denomination 1)}
+          "\u2191"))
+      (let [disabled (or immune
                            (= 0 (get-in data [:bids id denomination]))
-                           (and (nothing-on-figure? data id) (figure-limit-reached? data)))
-             :onClick #(adjust-bid data id denomination -1)}
-        "\u2193")
+                           (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
+        (dom/button
+          #js {:disabled disabled
+               :className (if disabled "adjust disabled" "adjust enabled")
+               :onClick #(adjust-bid data id denomination -1)}
+          "\u2193"))
       (dom/input
         #js {:type "text"
              :disabled immune
@@ -253,12 +264,14 @@
 (defn bank-denomination [data denomination]
   (let [remaining (get-in data [:bank denomination])
         total     (get-in data [:original-bank denomination])]
-    (dom/input
-      #js {:type "text"
-           :readOnly true
-           :size 1
-           :id (str "bank-" (name denomination))
-           :value (str remaining "/" total)})))
+    (dom/span nil
+      (dom/span nil (localize data denomination))
+      (dom/input
+        #js {:type "text"
+             :readOnly true
+             :size 1
+             :id (str "bank-" (name denomination))
+             :value (str remaining "/" total)}))))
 
 (defn tokens-remaining? [data]
   (pos-bid? (:bank data)))
@@ -270,36 +283,20 @@
   (reify
     om/IRender
     (render [this]
-      (dom/button
+       (dom/button
         #js {:disabled (or (tokens-remaining? data) (too-many-figures? data))
              :onClick #(println "submitting...")}
         (localize data :submit)))))
-
-(defn error-label [data owner]
-  (reify
-    om/IRender
-    (render [this]
-      (dom/span
-        #js {:className (if (or (tokens-remaining? data) (too-many-figures? data))
-                            "error-label"
-                            "hide")}
-        (cond (tokens-remaining? data) (localize data :all-tokens-must-be-used)
-              (too-many-figures? data) (localize data :no-more-than-six-figures)
-              :else "")))))
 
 (defn bank-area [data owner]
   (reify
     om/IRender
     (render [this]
       (dom/div nil
-        (localize data :gold)
         (bank-denomination data :gold)
-        (localize data :blackmail)
         (bank-denomination data :blackmail)
-        (localize data :force)
         (bank-denomination data :force)
-        (om/build submit-button data)
-        (om/build error-label data)))))
+        (om/build submit-button data)))))
 
 (defn map-area [data owner]
   (reify
@@ -307,16 +304,18 @@
     (render [this]
       (apply dom/table nil
         (apply dom/tr nil
-          (dom/td nil)
+          (dom/td nil (localize data :location))
+          (dom/td nil (localize data :cap))
           (map
             (partial dom/td nil)
             (:players data)))
         (map
           (fn [location]
             (apply dom/tr nil
-              (dom/td nil (localize data location))
+              (dom/td nil (localize data (:id location)))
+              (dom/td nil (:cap location))
               (map
-                (fn [p] (dom/td nil (get-in data [:influence location p])))
+                (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
                 (:players data))))
           (:locations data))))))
 
@@ -369,24 +368,25 @@
         (dom/div nil
           (apply dom/table nil
             (apply dom/tr nil
-              (dom/td nil)
+              (dom/td nil (localize data :location))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [location]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr nil
-                  (dom/td nil (localize data location))
+                  (dom/td nil (localize data id))
+                  (dom/td nil cap)
                   (map
                     (fn [p]
-                      (let [combo [location p]
+                      (let [combo [id p]
                             selected (= combo selection)]
                         (dom/td 
                           #js {:className (if selected "selected")}
                           (dom/button
-                            #js {:onClick
-                                 #(om/update! data :spy-selection combo)}
-                            (get-in data [:influence location p])))))
+                            #js {:onClick #(om/update! data :spy-selection combo)}
+                            (get-in data [:influence id p])))))
                     (:players data))))
               (:locations data)))
           (dom/button
@@ -405,17 +405,19 @@
         (dom/div nil
           (apply dom/table nil
             (apply dom/tr nil
-              (dom/td nil)
+              (dom/td nil (localize data :location))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [location]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr nil
-                  (dom/td nil (localize data location))
+                  (dom/td nil (localize data id))
+                  (dom/td nil cap)
                   (map
                     (fn [p]
-                      (let [combo [location p]
+                      (let [combo [id p]
                             selected (or (= combo selection-1) (= combo selection-2))]
                         (dom/td
                           #js {:className (if selected "selected")}
@@ -424,7 +426,7 @@
                                  #(if selection-1
                                       (om/update! data :apothecary-selection-2 combo)
                                       (om/update! data :apothecary-selection-1 combo))}
-                            (get-in data [:influence location p])))))
+                            (get-in data [:influence id p])))))
                     (:players data))))
               (:locations data)))
           (dom/button
@@ -447,23 +449,27 @@
         (dom/div nil
           (apply dom/table nil
             (apply dom/tr nil
-              (dom/td nil)
+              (dom/td nil (localize data :location))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [location]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr
-                  #js {:className (if (or (= location selection-1) (= location selection-2)) "selected")}
+                  #js {:className (if (or (= id selection-1) (= id selection-2)) "selected")}
                   (dom/td nil
                     (dom/button
                       #js {:onClick #(if selection-1
-                                         (om/update! data :messenger-selection-2 location )
-                                         (om/update! data :messenger-selection-1 location))}
-                      (localize data location)))
+                                         (om/update! data :messenger-selection-2 id)
+                                         (om/update! data :messenger-selection-1 id))
+                           :disabled (or (and (not selection-1) (= 0 (get-in data [:influence id "Rob"])))
+                                         (and selection-1 (<= cap (reduce + (vals (get-in data [:influence id]))))))}
+                      (localize data id)))
+                  (dom/td nil cap)
                   (map
                     (fn [player]
-                      (dom/td nil (get-in data [:influence location player])))
+                      (dom/td nil (get-in data [:influence id player])))
                     (:players data))))
               (:locations data)))
           (if any-reassignments
@@ -478,7 +484,7 @@
                                (om/update! data :messenger-selection-1 nil)
                                (om/update! data :messenger-selection-2 nil))}
             (localize data :clear))
-          (if (> 2 (count reassignments))
+          (if (and selection-1 selection-2 (> 2 (count reassignments)))
             (dom/button
               #js {:onClick #(do (om/transact! data :reassignments (fn [rs] (conj rs [selection-1 selection-2])))
                                  (om/update! data :messenger-selection-1 nil)
@@ -493,7 +499,8 @@
     (render [this]
       (apply dom/table nil
         (apply dom/tr nil
-          (dom/td nil)
+          (dom/td nil (localize data :location))
+          (dom/td nil (localize data :cap))
           (map
             (partial dom/td nil)
             (:players data)))
@@ -502,10 +509,12 @@
             (apply dom/tr nil
               (dom/td nil
                 (dom/button
-                  #js {:onClick #(om/update! data :mode :take-bids)}
-                  (localize data location)))
+                  #js {:onClick #(om/update! data :mode :take-bids)
+                       :disabled (>= (reduce + (vals (get-in data [:influence (:id location)]))) (:cap location))}
+                  (localize data (:id location))))
+              (dom/td nil (:cap location))
               (map
-                (fn [p] (dom/td nil (get-in data [:influence location p])))
+                (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
                 (:players data))))
           (:locations data))))))
 
