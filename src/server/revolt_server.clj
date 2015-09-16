@@ -5,14 +5,15 @@
               [compojure.route :refer [resources]]
               [chord.http-kit :refer [wrap-websocket-handler]]
               [clojure.core.async :refer [<! >! <!! >!! go go-loop]]
-              [hiccup.page :refer [html5 include-js]]
+              [hiccup.page :refer [html5 include-js include-css]]
               [ring.middleware.format :refer [wrap-restful-format]]))
 
 (defn page-frame []
     (html5
         [:head
             [:title "Revolt Server"]
-            (include-js "/js/revolt_client.js")]
+            (include-css "css/style.css")
+            (include-js "js/compiled/revolt_client.js")]
         [:body
             [:div#content]]))
 
@@ -168,7 +169,6 @@
 
 (defroutes app-routes
     (GET "/"     [] (response (page-frame)))
-    (GET "/ws"   [] (wrap-websocket-handler ws-handler {:format :transit-json}))
-    (resources "/js" {:root "js"}))
+    (GET "/ws"   [] (wrap-websocket-handler ws-handler {:format :transit-json})))
 
 (def app #'app-routes)

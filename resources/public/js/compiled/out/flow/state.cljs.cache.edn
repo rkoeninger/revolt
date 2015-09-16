@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-2850
+{:defs {*state* {:file "resources\\public\\js\\compiled\\out\\flow\\state.cljs", :end-column 23, :end-line 3, :column 1, :line 3, :dynamic true, :test true, :name flow.state/*state*}}, :name flow.state, :doc nil, :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}
