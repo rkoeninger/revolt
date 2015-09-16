@@ -44,17 +44,17 @@
                       (handle-message % transmit query broadcast !board nil !player-ids !queries))]
         (handle {:player-id "rob" :content {:type :signup}})
         (is (= #{"rob"} @!player-ids))
-        (is (= [{:content :signup-accepted :player-id "rob"}] @!broadcast-responses))
+        (is (= [{:type :signup :player-id "rob"}] @!broadcast-responses))
         (handle {:player-id "joe" :content {:type :signup}})
         (is (= #{"rob" "joe"} @!player-ids))
-        (is (= [{:content :signup-accepted :player-id "joe"}] @!broadcast-responses))
+        (is (= [{:type :signup :player-id "joe"}] @!broadcast-responses))
         (handle {:player-id "rob" :content {:type :start-game}})
         (is @!board)
         (handle {:player-id "moe" :content {:type :signup}})
         (is (= #{"rob" "joe"} @!player-ids))
-        (is (= [{:content :game-already-started}] @!transmit-responses))
+        (is (= [{:type :game-already-started}] @!transmit-responses))
         (handle {:player-id "moe" :content {:type :start-game}})
-        (is (= [{:content :game-already-started}] @!transmit-responses))))
+        (is (= [{:type :game-already-started}] @!transmit-responses))))
 
 (deftest simple-bid-validation-first-turn-scenario
     (let [!board (atom nil)
