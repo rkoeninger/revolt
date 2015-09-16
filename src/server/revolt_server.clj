@@ -86,17 +86,17 @@
 
 (defn handle-signup [transmit query broadcast player-id !board !player-ids !queries]
     (if @!board
-        (transmit {:content :game-already-started})
+        (transmit {:type :game-already-started})
         (do (swap! !player-ids conj player-id)
             (swap! !queries assoc player-id query)
-            (broadcast {:content :signup-accepted :player-id player-id}))))
+            (broadcast {:type :signup :player-id player-id}))))
 
 (defn handle-start-game [transmit query broadcast !board !player-ids]
     (if @!board
-        (transmit {:content :game-already-started})
+        (transmit {:type :game-already-started})
         (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
-            (broadcast {:content (board-setup @!board)})
-            (broadcast {:content (board-status @!board)}))))
+            (broadcast {:type :start-game :content (board-setup @!board)})
+            (broadcast {:type :take-bids  :content (board-status @!board)}))))
 
 (defn special-fn [!board !queries]
     (fn [board player figure]

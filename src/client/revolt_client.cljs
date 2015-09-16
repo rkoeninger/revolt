@@ -47,7 +47,8 @@
        :blackmail  "Blackmail"
        :force      "Force"
        :all-tokens-must-be-used  "All tokens must be used."
-       :no-more-than-six-figures "No more than six figures can be bid on."}
+       :no-more-than-six-figures "No more than six figures can be bid on."
+       :game-already-started     "The game has already started."}
 
   :mx {:general    "General"
        :captain    "Capitán"
@@ -87,7 +88,8 @@
        :blackmail  "Chantaje"
        :force      "Fuerza"
        :all-tokens-must-be-used  "Todas las fichas deben utilizarse."
-       :no-more-than-six-figures "No más de seis cifras pueden pujar por."}
+       :no-more-than-six-figures "No más de seis cifras pueden pujar por."
+       :game-already-started     "El juego ya ha comenzado."}
 
   :fr {:general    "Général"
        :captain    "Capitaine"
@@ -127,7 +129,8 @@
        :blackmail  "Chantage"
        :force      "Force"
        :all-tokens-must-be-used  "Tous les jetons doivent être utilisés."
-       :no-more-than-six-figures "Pas plus de six chiffres peuvent être enchérir sur."}})
+       :no-more-than-six-figures "Pas plus de six chiffres peuvent être enchérir sur."
+       :game-already-started     "Le jeu a déjà commencé."}})
 
 (def bid0 {:gold 0 :blackmail 0 :force 0})
 
@@ -149,8 +152,6 @@
    {:id :rogue      :immunities #{:blackmail :force}}
    {:id :mercenary  :immunities #{:blackmail :force}}])
 
-(def ps ["Rob" "Joe" "Moe"])
-
 (def locs
   [{:id :tavern :cap 4}
    {:id :market :cap 5}
@@ -164,7 +165,41 @@
 (defn localize [data key]
   (or
     (get-in languages [(:lang data) key])
-    (js/console.error (str key " is not in " (:lang data) " dictionary"))))
+    (do
+      (js/console.error (str key " is not in " (:lang data) " dictionary"))
+      "TRANSLATION MISSING" - (str key))))
+
+(defonce message-channel (atom nil))
+
+(defn send-signup [player-id]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:type :signup}}))
+
+(defn send-start-game [player-id]
+  (put! @message-channel
+    {:content {:type :start-game :player-id player-id}}))
+
+(defn send-msgs! [new-msg-ch server-ch]
+  (go-loop []
+    ; forever repeatedly pipe messages from (:message-channel app-state) to websocket
+    (when-let [msg (<! new-msg-ch)]
+      (>! server-ch msg)
+      (recur))))
+
+(defn receive-msgs! [app-state server-ch]
+  (go-loop []
+    (when-let [{:keys [message]} (<! server-ch)]
+      (case (:type message)
+        :start-game (swap! app-state assoc :mode :take-bids)
+        :signup (do
+          (swap! app-state update-in [:players] #(conj % (:player-id message)))
+          (if (= (:player-id @app-state) (:player-id message))
+            (swap! app-state assoc :mode :lobby)))
+        :game-already-started (js/alert (localize @app-state :game-already-started))
+        (js/console.warn "type not idendified"))
+      (js/console.log message)
+      (recur))))
 
 (defn adjust-bid [data id denomination adj]
   (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
@@ -342,9 +377,12 @@
     om/IRender
     (render [this]
       (dom/div nil
-        (dom/input nil)
+        (dom/input #js {:ref "player-id"})
         (dom/button
-          #js {:onClick #(om/update! data :mode :take-bids)}
+          #js {:onClick
+               #(let [player-id (.-value (om/get-node owner "player-id"))]
+                  (om/update! data :player-id player-id)
+                  (send-signup player-id))}
           (localize data :signup))))))
 
 (defn spy-select [data owner]
@@ -520,7 +558,7 @@
     (render [this]
       (dom/div nil
         (dom/button
-          #js {:onClick #(om/update! data :mode :take-bids)}
+          #js {:onClick #(send-start-game (:player-id data))}
           (localize data :start-game))
         (apply dom/ul nil
           (map (fn [p] (dom/li nil p)) (:players data)))))))
@@ -566,6 +604,8 @@
   (js/alert
     (str "Couldn't connect to websocket: " (pr-str error) " @ " ws-url)))
 
+(def ps [])
+
 (defonce app-state
   (atom
     {:lang :us
@@ -579,22 +619,6 @@
      :original-bank {:gold 5 :blackmail 1 :force 1}
      :bank {:gold 5 :blackmail 1 :force 1}}))
 
-(defonce message-channel (atom nil))
-
-(defn receive-msgs! [server-ch]
-  (go-loop []
-    (when-let [msg (<! server-ch)]
-      ; do something with this message
-      console.log(msg)
-      (recur))))
-
-(defn send-msgs! [new-msg-ch server-ch]
-  (go-loop []
-    ; forever repeatedly pipe messages from (:message-channel app-state) to websocket
-    (when-let [msg (<! new-msg-ch)]
-      (>! server-ch msg)
-      (recur))))
-
 (defn send-receive [ws-channel]
   (let [new-msg-ch (doto (chan) (send-msgs! ws-channel))]
     (reset! message-channel new-msg-ch)
@@ -602,7 +626,7 @@
       root-view
       app-state
       {:target (. js/document (getElementById "content"))})
-    (receive-msgs! ws-channel)))
+    (receive-msgs! app-state ws-channel)))
 
 (set!
   (.-onload js/window)
