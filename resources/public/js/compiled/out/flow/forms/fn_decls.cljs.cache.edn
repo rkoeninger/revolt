@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 0.0-2850
-{:name flow.forms.fn-decls, :doc nil, :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {set clojure.set, clojure.set clojure.set, flow.state flow.state, fs flow.state}, :imports nil}

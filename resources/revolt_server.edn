@@ -1,3 +1,0 @@
-{:frodo/config
-    {:web {:port 3000
-           :handler revolt-server/app}}}
