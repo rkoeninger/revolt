@@ -178,27 +178,47 @@
 
 (defn send-start-game [player-id]
   (put! @message-channel
-    {:content {:type :start-game :player-id player-id}}))
+    {:player-id player-id
+     :content {:type :start-game}}))
+
+(defn send-bids [player-id bids]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:type :submit-bids
+               :bids bids}}))
 
 (defn send-msgs! [new-msg-ch server-ch]
   (go-loop []
-    ; forever repeatedly pipe messages from (:message-channel app-state) to websocket
+    ; forever repeatedly pipe messages from message-channel to websocket
     (when-let [msg (<! new-msg-ch)]
+      (println "sending message...")
+      (println msg)
       (>! server-ch msg)
       (recur))))
 
 (defn receive-msgs! [app-state server-ch]
   (go-loop []
-    (when-let [{:keys [message]} (<! server-ch)]
+    (when-let [{:keys [message] :as raw} (<! server-ch)]
       (case (:type message)
-        :start-game (swap! app-state assoc :mode :take-bids)
+        :start-game (let [{:keys [figures locations]} (:setup message)]
+          (swap! app-state assoc :figures figures)
+          (swap! app-state assoc :locations locations)
+          (swap! app-state assoc :mode :take-bids))
+        :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)]
+          (swap! app-state assoc :banks banks)
+          (swap! app-state assoc :support support)
+          (swap! app-state assoc :influence influence)
+          (swap! app-state assoc :turn turn)
+          (swap! app-state assoc :guard-house guard-house))
         :signup (do
           (swap! app-state update-in [:players] #(conj % (:player-id message)))
-          (if (= (:player-id @app-state) (:player-id message))
+          (when (= (:player-id @app-state) (:player-id message))
             (swap! app-state assoc :mode :lobby)))
         :game-already-started (js/alert (localize @app-state :game-already-started))
+        
         (js/console.warn "type not idendified"))
-      (js/console.log message)
+      (js/console.log "raw websocket message:")
+      (js/console.log (str raw))
       (recur))))
 
 (defn adjust-bid [data id denomination adj]
@@ -250,8 +270,9 @@
              :disabled immune
              :readOnly true
              :size 1
-             :id (str (name id) "-" (name denomination))
-             :value (dont-show-zero amount)}))))
+             :value (dont-show-zero amount)
+             :onChange (fn [e] (om/transact! data :bids
+                         (fn [bids] (assoc-in bids [id denomination] (.-value e)))))}))))
 
 (def immunity-class
   {#{}                  "immunity-none"
@@ -292,7 +313,6 @@
         #js {:type "text"
              :readOnly true
              :size 1
-             :id (str "bank-" (name denomination))
              :value (str remaining "/" total)}))))
 
 (defn tokens-remaining? [data]
@@ -307,7 +327,7 @@
     (render [this]
        (dom/button
         #js {:disabled (or (tokens-remaining? data) (too-many-figures? data))
-             :onClick #(println "submitting...")}
+             :onClick #(send-bids (:player-id data) (:bids data))}
         (localize data :submit)))))
 
 (defn bank-area [data owner]
@@ -632,7 +652,7 @@
   (.-onload js/window)
   (fn []
     (go
-      (let [{:keys [ws-channel error]} (<! (ws-ch ws-url {:format :transit-json}))]
+      (let [{:keys [ws-channel error]} (<! (ws-ch ws-url))]
         (if error
           (show-error error)
           (send-receive ws-channel))))))

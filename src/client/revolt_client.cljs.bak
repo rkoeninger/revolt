@@ -179,7 +179,7 @@
 (set! (.-onload js/window)
       (fn []
         (go
-          (let [{:keys [ws-channel error]} (<! (ws-ch ws-url {:format :transit-json}))]
+          (let [{:keys [ws-channel error]} (<! (ws-ch ws-url))]
             (if error
                 (show-error error)
                 (send-receive ws-channel))))))

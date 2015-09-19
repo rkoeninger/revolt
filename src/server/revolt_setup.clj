@@ -99,15 +99,20 @@
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
+(defn loc [id support influence-limit]
+    {:id id
+     :support support
+     :influence-limit influence-limit})
+
 (def locations
-    [(->Location :tavern     20 4)
-     (->Location :market     25 5)
-     (->Location :plantation 30 6)
-     (->Location :cathedral  35 7)
-     (->Location :harbor     40 6)
-     (->Location :town-hall  45 7)
-     (->Location :fortress   50 8)
-     (->Location :palace     55 8)])
+    [(loc :tavern     20 4)
+     (loc :market     25 5)
+     (loc :plantation 30 6)
+     (loc :cathedral  35 7)
+     (loc :harbor     40 6)
+     (loc :town-hall  45 7)
+     (loc :fortress   50 8)
+     (loc :palace     55 8)])
 
 (defn- influences [id] (first (filter #(= id (:id %)) locations)))
 

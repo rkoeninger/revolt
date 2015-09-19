@@ -17,23 +17,28 @@
         [:body
             [:div#content]]))
 
+(defn bank-setup [{:keys [gold blackmail force]}]
+  {:gold gold
+   :blackmail blackmail
+   :force force})
+
 (defn board-status [{:keys [turn support banks influence guard-house]}]
     {:turn        turn
      :support     (map-keys :id support)
-     :banks       (map-keys :id banks)
+     :banks       (map-kv :id bank-setup banks)
      :influence   (map-kv :id (partial map-keys :id) influence)
      :guard-house guard-house})
 
 (defn figure-setup [{:keys [id support bank immunities location special]}]
     {:id          id
      :support     support
-     :bank        bank
+     :bank        {:gold (:gold bank) :blackmail (:blackmail bank) :force (:force bank)}
      :immunities  immunities
      :location-id (:id location)
      :special-id  (:id special)})
 
 (defn board-setup [{:keys [players figures locations]}]
-    {:players   players
+    {:players   (vec (map :id players))
      :figures   (vec (map figure-setup figures))
      :locations locations
      :specials  (vec (filter identity (map (comp :id :special) figures)))})
@@ -89,14 +94,17 @@
         (transmit {:type :game-already-started})
         (do (swap! !player-ids conj player-id)
             (swap! !queries assoc player-id query)
-            (broadcast {:type :signup :player-id player-id}))))
+            (broadcast {:type :signup
+                        :player-id player-id}))))
 
 (defn handle-start-game [transmit query broadcast !board !player-ids]
     (if @!board
         (transmit {:type :game-already-started})
         (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
-            (broadcast {:type :start-game :content (board-setup @!board)})
-            (broadcast {:type :take-bids  :content (board-status @!board)}))))
+            (broadcast {:type :start-game
+                        :setup (board-setup @!board)})
+            (broadcast {:type :take-bids
+                        :status (board-status @!board)}))))
 
 (defn special-fn [!board !queries]
     (fn [board player figure]
@@ -117,28 +125,31 @@
 
 (defn handle-submit-bids [transmit query broadcast user-name player-bids !board !bids !queries]
     (if (contains? @!bids user-name)
-        (transmit {:content :bids-already-submitted})
+        (transmit {:type :bids-already-submitted})
         (if (and player-bids
                  (revolt/validate-bids
                      (revolt/get-bank @!board (player-by-id @!board user-name))
                      (read-figure-bid-map @!board player-bids)))
             (do (swap! !bids assoc user-name player-bids)
-                (transmit {:content :bids-accepted})
+                (transmit {:type :bids-accepted})
                 (if (= (count (:players @!board)) (count @!bids))
                     (do (handle-turn !board !bids !queries)
                         (reset! !bids {})
-                        (broadcast {:content (board-status @!board)})
+                        (broadcast {:type :take-bids
+                                    :content (board-status @!board)})
                         (if (revolt/game-over? @!board)
                             (broadcast {:type :game-over
                                         :results (game-results @!board)})))))
-            (transmit {:content :invalid-bid}))))
+            (transmit {:type :invalid-bid}))))
 
 (defn handle-message [{:keys [player-id content] :as message} transmit query broadcast !board !bids !player-ids !queries]
     (case (:type content)
         :signup (handle-signup transmit query broadcast player-id !board !player-ids !queries)
         :start-game (handle-start-game transmit query broadcast !board !player-ids)
-        :bids (transmit {:content @!bids})
-        :status (transmit {:content (board-status @!board)})
+        :bids (transmit {:type :bid-status
+                         :bids @!bids})
+        :status (transmit {:type :status
+                           :status (board-status @!board)})
         :submit-bids (handle-submit-bids transmit query broadcast player-id (:bids content) !board !bids !queries)
         (transmit {:received (format "Unrecognized message: '%s' at %s."
                                      (pr-str message)
@@ -156,19 +167,26 @@
         (go-loop []
             (when-let [{:keys [message error] :as packet} (<! ws-channel)]
                 (prn "Message received:" packet)
-                (handle-message message
-                                (fn [message] (go (>! ws-channel message)))
-                                (fn [message] (do (>!! ws-channel message)
-                                                  (:message (<!! ws-channel))))
-                                (fn [message] (go (doseq [ch @channels] (>! ch message))))
-                                board
-                                bids
-                                player-ids
-                                queries)
+                (handle-message
+                  message
+                  (fn [message] (do (println "transmitting...")
+                                    (println message)
+                                    (go (>! ws-channel message))))
+                  (fn [message] (do (println "querying...")
+                                    (println message)
+                                    (>!! ws-channel message)
+                                    (:message (<!! ws-channel))))
+                  (fn [message] (do (println "broadcasting...")
+                                    (println message)
+                                    (go (doseq [ch @channels] (>! ch message)))))
+                  board
+                  bids
+                  player-ids
+                  queries)
                 (recur)))))
 
 (defroutes app-routes
     (GET "/"     [] (response (page-frame)))
-    (GET "/ws"   [] (wrap-websocket-handler ws-handler {:format :transit-json})))
+    (GET "/ws"   [] (wrap-websocket-handler ws-handler)))
 
 (def app #'app-routes)
