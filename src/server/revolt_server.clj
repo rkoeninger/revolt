@@ -32,7 +32,7 @@
      :support     (map-keys :id support)
      :banks       (map-kv :id bank-setup banks)
      :influence   (map-kv :id (partial map-keys :id) influence)
-     :guard-house guard-house})
+     :guard-house (:id guard-house)})
 
 (defn figure-setup [{:keys [id support bank immunities location special]}]
     {:id          id

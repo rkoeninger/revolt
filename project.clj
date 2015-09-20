@@ -11,7 +11,7 @@
                 :compiler {:output-to "resources/public/js/compiled/revolt_client.js"
                            :output-dir "resources/public/js/compiled/out"
                            :optimizations :none
-                           :main revolt.client
+                           :main revolt.client.dev
                            :asset-path "js/compiled/out"
                            :source-map true
                            :source-map-timestamp true

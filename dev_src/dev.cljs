@@ -1,6 +1,5 @@
 (ns revolt.client.dev
-    (:require
-     [revolt.client]
-     [figwheel.client :as fw]))
+    (:require [figwheel.client :as fw]
+              [revolt.client]))
 
 (fw/start {:websocket-url "ws://localhost:3449/figwheel-ws"})
