@@ -4,11 +4,19 @@
 
 (load "revolt_helpers")
 
-(defrecord Player [id])
+(defrecord Player [id]
+    java.lang.Object
+    (toString [_] (str "Player " (name id))))
 
 (defrecord Bid [gold blackmail force]
     java.lang.Comparable
-    (compareTo [x y] (serial-compare x y [:force :blackmail :gold])))
+    (compareTo [x y] (serial-compare x y [:force :blackmail :gold]))
+    java.lang.Object
+    (toString [_] (str "(Bid " gold "g " blackmail "b " force "f)")))
+
+(defrecord Location [id support influence-limit]
+    java.lang.Object
+    (toString [_] (name id)))
 
 (defrecord Special [id
                     doable   ; [Board  Player] -> Boolean
@@ -23,7 +31,9 @@
                    bank       ; Bid
                    immunities ; Set Keyword
                    location   ; Location | nil
-                   special])  ; Special | nil
+                   special]   ; Special | nil
+    java.lang.Object
+    (toString [_] (name id)))
 
 (defrecord Board [turn      ; Nat
                   locations ; Collection Location
@@ -31,19 +41,19 @@
                   players   ; Collection Player
                   banks     ; Map Player Bid
                   influence ; Map Location (Map Player Nat)
-                  support]) ; Map Player Nat
-(comment
-(defmethod print-method Bid [{:keys [gold blackmail force]} ^java.io.Writer w]
-  (.write w (str "<Bid " gold "g " blackmail "b " force "f>")))
-(defmethod print-method Figure [{:keys [id]} ^java.io.Writer w] (.write w (name id)))
-(defmethod print-method Player [{:keys [id]} ^java.io.Writer w] (.write w (name id)))
-(defmethod print-method Board [{:keys [support influence banks turn guard-house]} ^java.io.Writer w]
-  (.write w (str "(Board support:" support
-                     " influence:" influence
-                         " banks:" banks
-                          " turn:" turn
-                   " guard-house:" guard-house ")")))
-)
+                  support]  ; Map Player Nat
+    java.lang.Object
+    (toString [_] (str "(Board support:" support
+                           " influence:" influence
+                               " banks:" banks
+                                " turn:" turn ")")))
+
+(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
+(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
+
 (def plus-bid (partial merge-with +))
 (def zero-bid (->Bid 0 0 0))
 (def zero-bid? (partial = zero-bid))

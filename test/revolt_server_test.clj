@@ -76,19 +76,19 @@
                                             :bids {:priest {:gold      3
                                                             :blackmail 1
                                                             :force     1}}}})
-        (is (= [{:content :bids-accepted}] @!transmit-responses))
+        (is (= [{:type :bids-accepted}] @!transmit-responses))
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold      3
                                                              :blackmail 1
                                                              :force     1}}}})
-        (is (= [{:content :bids-already-submitted}] @!transmit-responses))
+        (is (= [{:type :bids-already-submitted}] @!transmit-responses))
         (is (= 1 (:turn @!board)))
         (handle {:player-id "joe" :content {:type :submit-bids
                                             :bids {:merchant  {:blackmail 1
                                                                :force     1}
                                                    :mercenary {:gold      2}
                                                    :printer   {:gold      1}}}})
-        (is (= [{:content :bids-accepted}] @!transmit-responses))
+        (is (= [{:type :bids-accepted}] @!transmit-responses))
         (is (= 2 (:turn @!board)))
         (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
         (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
@@ -133,9 +133,10 @@
                                             :bids {:printer {:gold 1}}}})
         (handle {:player-id "joe" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
-        (is (= [{:content :bids-accepted}]
+        (is (= [{:type :bids-accepted}]
                @!transmit-responses))
-        (is (= [{:content (board-status @!board)}
+        (is (= [{:type :take-bids
+                 :content (board-status @!board)}
                 {:type :game-over
                  :results {:rankings {"rob" 1   "joe" 2}
                            :scores   {"rob" 155 "joe" 75}}}]

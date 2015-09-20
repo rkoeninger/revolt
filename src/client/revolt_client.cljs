@@ -200,16 +200,23 @@
   (go-loop []
     (when-let [{:keys [message] :as raw} (<! server-ch)]
       (case (:type message)
-        :start-game (let [{:keys [figures locations]} (:setup message)]
+        :start-game (let [{:keys [players figures locations]} (:setup message)]
           (swap! app-state assoc :figures figures)
           (swap! app-state assoc :locations locations)
+          (swap! app-state assoc :players players)
           (swap! app-state assoc :mode :take-bids))
-        :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)]
+        :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)
+                         my-bank (get banks (:player-id @app-state))
+                         figures (:figures @app-state)]
+          (swap! app-state assoc :bids (zipmap (map :id figures) (repeat bid0)))
+          (swap! app-state assoc :bank my-bank)
+          (swap! app-state assoc :original-bank my-bank)
           (swap! app-state assoc :banks banks)
           (swap! app-state assoc :support support)
           (swap! app-state assoc :influence influence)
           (swap! app-state assoc :turn turn)
           (swap! app-state assoc :guard-house guard-house))
+        :bids-accepted nil
         :signup (do
           (swap! app-state update-in [:players] #(conj % (:player-id message)))
           (when (= (:player-id @app-state) (:player-id message))
@@ -624,20 +631,13 @@
   (js/alert
     (str "Couldn't connect to websocket: " (pr-str error) " @ " ws-url)))
 
-(def ps [])
-
 (defonce app-state
   (atom
     {:lang :us
      :mode :signup
      :reassignments []
-     :bids (zipmap (map :id figures) (repeat bid0))
-     :players ps
-     :support (zipmap ps (repeatedly #(rand-int 50)))
-     :locations locs
-     :influence (zipmap (map :id locs) (repeatedly (fn [] (zipmap ps (repeatedly (fn [] (rand-int 4)))))))
-     :original-bank {:gold 5 :blackmail 1 :force 1}
-     :bank {:gold 5 :blackmail 1 :force 1}}))
+     :players []
+     :bids (zipmap (map :id figures) (repeat bid0))}))
 
 (defn send-receive [ws-channel]
   (let [new-msg-ch (doto (chan) (send-msgs! ws-channel))]

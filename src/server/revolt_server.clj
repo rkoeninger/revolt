@@ -22,6 +22,11 @@
    :blackmail blackmail
    :force force})
 
+(defn location-setup [{:keys [id support influence-limit]}]
+  {:id id
+   :support support
+   :influence-limit influence-limit})
+
 (defn board-status [{:keys [turn support banks influence guard-house]}]
     {:turn        turn
      :support     (map-keys :id support)
@@ -32,7 +37,7 @@
 (defn figure-setup [{:keys [id support bank immunities location special]}]
     {:id          id
      :support     support
-     :bank        {:gold (:gold bank) :blackmail (:blackmail bank) :force (:force bank)}
+     :bank        (bank-setup bank)
      :immunities  immunities
      :location-id (:id location)
      :special-id  (:id special)})
@@ -40,7 +45,7 @@
 (defn board-setup [{:keys [players figures locations]}]
     {:players   (vec (map :id players))
      :figures   (vec (map figure-setup figures))
-     :locations locations
+     :locations (vec (map location-setup locations))
      :specials  (vec (filter identity (map (comp :id :special) figures)))})
 
 (defn game-results [board]
@@ -136,7 +141,7 @@
                     (do (handle-turn !board !bids !queries)
                         (reset! !bids {})
                         (broadcast {:type :take-bids
-                                    :content (board-status @!board)})
+                                    :status (board-status @!board)})
                         (if (revolt/game-over? @!board)
                             (broadcast {:type :game-over
                                         :results (game-results @!board)})))))
