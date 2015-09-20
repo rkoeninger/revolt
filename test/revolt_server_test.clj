@@ -136,7 +136,7 @@
         (is (= [{:type :bids-accepted}]
                @!transmit-responses))
         (is (= [{:type :take-bids
-                 :content (board-status @!board)}
+                 :status (board-status @!board)}
                 {:type :game-over
                  :results {:rankings {"rob" 1   "joe" 2}
                            :scores   {"rob" 155 "joe" 75}}}]
