@@ -114,6 +114,14 @@
      (loc :fortress   50 8)
      (loc :palace     55 8)])
 
+; The Palace is part of the The Palace expansion
+
+; Anarchy! additional locations
+
+; :garden [:each 10] 6
+; :asylum [:winner -30] 5
+; :jail [:winner -30] 6
+
 (defn- influences [id] (first (filter #(= id (:id %)) locations)))
 
 (def figures
@@ -133,6 +141,25 @@
      (->Figure :constable  5  (->Bid 0 1 0) bf nil                      nil)
      (->Figure :rogue      0  (->Bid 0 2 0) bf nil                      nil)
      (->Figure :mercenary  0  (->Bid 0 0 1) bf nil                      nil)])
+
+; Mayor, Messenger, Constable and Viceroy are from The Palace expansion
+; as is the concept of the Guard Post (:guard-post board)
+
+; Anarchy! additional figures
+
+; "Four support. Reclaim one token.
+; Place an opponent's cube to jail, replacing a cube if building is full."
+; :warden     4  (->Bid 0 0 0) -- (and reclaim-one-token place-opponent-in-jail :replace)
+
+; "One Force. One Blackmail. Influence Asylum, replacing a cube if building is full."
+; :heretic    0  (->Bid 0 1 1) -- (influences :replace :asylum) nil
+
+; "Influence any open space. Add any opponent's cube to any open space.
+; Immune to blackmail and to force."
+; :governor   0  (->Bid 0 0 0) bf nil   (and take-open-spot place-opponent-anywhere)
+
+; "Gain the reward in any other space."
+; :anarchist  0  (->Bid 0 0 0) bf nil    mimic-other-figure
 
 (defn make-board [players]
     (->Board 1

@@ -42,6 +42,7 @@
        :location                 "Location"
        :influence-limit          "Cap"
        :support                  "Support"
+       :bids-submitted           "Bids Submitted"
        :figure                   "Figure"
        :gold                     "Gold"
        :blackmail                "Blackmail"
@@ -83,6 +84,7 @@
        :location                 "Localización"
        :influence-limit          "Límite"
        :support                  "Apoyo"
+       :bids-submitted           "Presentan ofertas"
        :figure                   "Persona"
        :gold                     "Oro"
        :blackmail                "Chantaje"
@@ -124,6 +126,7 @@
        :location                 "Emplacement"
        :influence-limit          "Limite"
        :support                  "Appui"
+       :bids-submitted           "Soumissions Présentées"
        :figure                   "Personnage"
        :gold                     "Or"
        :blackmail                "Chantage"
@@ -181,7 +184,7 @@
                          my-bank (get banks (:player-id @app-state))
                          figures (:figures @app-state)]
           (swap! app-state assoc :bids (zipmap (map :id figures) (repeat bid0)))
-          (swap! app-state assoc :bids-accepted false)
+          (swap! app-state assoc :bids-submitted {})
           (swap! app-state assoc :bank my-bank)
           (swap! app-state assoc :original-bank my-bank)
           (swap! app-state assoc :banks banks)
@@ -189,8 +192,8 @@
           (swap! app-state assoc :influence influence)
           (swap! app-state assoc :turn turn)
           (swap! app-state assoc :guard-house guard-house))
-        :bids-accepted (do
-          (swap! app-state assoc :bids-accepted true))
+        :bids-submitted (let [player (:player message)]
+          (swap! app-state assoc-in [:bids-submitted player] true))
         :signup (do
           (swap! app-state update-in [:players] #(conj % (:player-id message)))
           (when (= (:player-id @app-state) (:player-id message))
@@ -201,6 +204,9 @@
       (js/console.log "raw websocket message:")
       (js/console.log (str raw))
       (recur))))
+
+(defn my-bids-submitted? [data]
+  (true? (get-in data [:bids-submitted (:player-id data)])))
 
 (defn adjust-bid [data id denomination adj]
   (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
@@ -229,20 +235,28 @@
   (let [immune (contains? immunities denomination)
         amount (get-in data [:bids id denomination])
         figure-disabled (or immune
-                            (:bids-accepted data)
+                            (my-bids-submitted? data)
                             (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
     (dom/td
       nil
-      (let [disabled (or figure-disabled (not (denomination-remaining? data denomination)))]
+      (let [disabled (or figure-disabled (not (denomination-remaining? data denomination)))
+            className (clojure.string/join " "
+                        ["adjust"
+                         (if disabled "disabled" "enabled")
+                         (if (my-bids-submitted? data) "invisible")])]
         (dom/button
           #js {:disabled disabled
-               :className (str "adjust " (if disabled "disabled" "enabled"))
+               :className className
                :onClick #(adjust-bid data id denomination 1)}
           "\u2191"))
-      (let [disabled (or figure-disabled (= 0 (get-in data [:bids id denomination])))]
+      (let [disabled (or figure-disabled (= 0 (get-in data [:bids id denomination])))
+            className (clojure.string/join " "
+                        ["adjust"
+                         (if disabled "disabled" "enabled")
+                         (if (my-bids-submitted? data) "invisible")])]
         (dom/button
           #js {:disabled disabled
-               :className (str "adjust " (if disabled "disabled" "enabled"))
+               :className className
                :onClick #(adjust-bid data id denomination -1)}
           "\u2193"))
       (dom/input
@@ -250,9 +264,7 @@
              :disabled immune
              :readOnly true
              :size 1
-             :value (dont-show-zero amount)
-             :onChange (fn [e] (om/transact! data :bids
-                         (fn [bids] (assoc-in bids [id denomination] (.-value e)))))}))))
+             :value (dont-show-zero amount)}))))
 
 (def immunity-class
   {#{}                  "immunity-none"
@@ -303,7 +315,7 @@
     om/IRender
     (render [this]
        (dom/button
-        #js {:disabled (or (tokens-remaining? data) (:bids-accepted data))
+        #js {:disabled (or (tokens-remaining? data) (my-bids-submitted? data))
              :onClick #(send-bids (:player-id data) (:bids data))}
         (localize data :submit)))))
 
@@ -316,7 +328,7 @@
         (bank-denomination data :blackmail)
         (bank-denomination data :force)
         (om/build submit-button data)
-        (if (:bids-accepted data)
+        (if (my-bids-submitted? data)
           (dom/span nil "bids accepted"))))))
 
 (defn map-area [data owner]
@@ -347,12 +359,14 @@
       (apply dom/table nil
         (dom/tr nil
           (dom/td nil (localize data :player))
-          (dom/td nil (localize data :support)))
+          (dom/td nil (localize data :support))
+          (dom/td nil (localize data :bids-submitted)))
         (map
           (fn [p]
             (dom/tr nil
               (dom/td nil p)
-              (dom/td nil (get-in data [:support p]))))
+              (dom/td nil (get-in data [:support p]))
+              (dom/td nil (if (get-in data [:bids-submitted p]) "X"))))
           (:players data))))))
 
 (defn language-flag [data title key]
@@ -371,6 +385,10 @@
         (language-flag data "Spanish" :mx)
         (language-flag data "French"  :fr)))))
 
+(defn player-list [data]
+  (apply dom/ul nil
+    (map (fn [p] (dom/li nil p)) (:players data))))
+
 (defn signup-area [data owner]
   (reify
     om/IRender
@@ -382,7 +400,8 @@
                #(let [player-id (.-value (om/get-node owner "player-id"))]
                   (om/update! data :player-id player-id)
                   (send-signup player-id))}
-          (localize data :signup))))))
+          (localize data :signup))
+        (player-list data)))))
 
 (defn spy-select [data owner]
   (reify
@@ -556,11 +575,10 @@
     om/IRender
     (render [this]
       (dom/div nil
+        (player-list data)
         (dom/button
           #js {:onClick #(send-start-game (:player-id data))}
-          (localize data :start-game))
-        (apply dom/ul nil
-          (map (fn [p] (dom/li nil p)) (:players data)))))))
+          (localize data :start-game))))))
 
 (defn root-view [data owner]
   (reify
@@ -609,7 +627,7 @@
      :mode :signup
      :reassignments []
      :players []
-     :bids-accepted false
+     :bids-submitted {}
      :bids {}}))
 
 (defn send-receive [ws-channel]

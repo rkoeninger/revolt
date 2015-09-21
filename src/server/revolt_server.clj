@@ -136,7 +136,7 @@
                      (revolt/get-bank @!board (player-by-id @!board user-name))
                      (read-figure-bid-map @!board player-bids)))
             (do (swap! !bids assoc user-name player-bids)
-                (transmit {:type :bids-accepted})
+                (broadcast {:type :bids-submitted :player user-name})
                 (if (= (count (:players @!board)) (count @!bids))
                     (do (handle-turn !board !bids !queries)
                         (reset! !bids {})
