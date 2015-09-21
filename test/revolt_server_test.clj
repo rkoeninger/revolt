@@ -76,7 +76,7 @@
                                             :bids {:priest {:gold      3
                                                             :blackmail 1
                                                             :force     1}}}})
-        (is (= [{:type :bids-accepted}] @!transmit-responses))
+        (is (= [{:type :bids-submitted :player "rob"}] @!broadcast-responses))
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold      3
                                                              :blackmail 1
@@ -88,7 +88,7 @@
                                                                :force     1}
                                                    :mercenary {:gold      2}
                                                    :printer   {:gold      1}}}})
-        (is (= [{:type :bids-accepted}] @!transmit-responses))
+        (is (in? {:type :bids-submitted :player "joe"} @!broadcast-responses))
         (is (= 2 (:turn @!board)))
         (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
         (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
@@ -131,16 +131,19 @@
                       (handle-message % transmit query broadcast !board !bids !player-ids !queries))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
+        (is (in? {:type :bids-submitted :player "rob"}
+                 @!broadcast-responses))
         (handle {:player-id "joe" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
-        (is (= [{:type :bids-accepted}]
-               @!transmit-responses))
-        (is (= [{:type :take-bids
-                 :status (board-status @!board)}
-                {:type :game-over
-                 :results {:rankings {"rob" 1   "joe" 2}
-                           :scores   {"rob" 155 "joe" 75}}}]
-               @!broadcast-responses))))
+        (is (in? {:type :bids-submitted :player "joe"}
+                 @!broadcast-responses))
+        (is (in? {:type :take-bids
+                  :status (board-status @!board)}
+                 @!broadcast-responses))
+        (is (in? {:type :game-over
+                  :results {:rankings {"rob" 1   "joe" 2}
+                            :scores   {"rob" 155 "joe" 75}}}
+                 @!broadcast-responses))))
 
 (deftest first-turn-special-scenario
     (let [!board (atom (make-board [(->Player "rob") (->Player "joe")]))

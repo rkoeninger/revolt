@@ -1,1 +1,3 @@
+notifications:
+  email: false
 language: clojure

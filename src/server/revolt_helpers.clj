@@ -1,5 +1,7 @@
 (in-ns 'revolt)
 
+(defn in? [x coll] (some #(= x %) coll))
+
 ; (Ord b) => (a, a, [a -> b]) -> 0 | 1 | -1
 (defn serial-compare [x y fs]
     (let [f (first fs)]
