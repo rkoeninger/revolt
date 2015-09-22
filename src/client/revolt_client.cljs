@@ -4,7 +4,8 @@
             [om.dom :as dom :include-macros true]
             [cljs.core.async :refer [put! chan <!]]
             [chord.client :refer [ws-ch]]
-            [cemerick.url :refer [url]]))
+            [cemerick.url :refer [url]]
+            [revolt-shared :as r]))
 
 (enable-console-print!)
 
@@ -135,8 +136,6 @@
        :no-more-than-six-figures "Pas plus de six chiffres peuvent être enchérir sur."
        :game-already-started     "Le jeu a déjà commencé."}})
 
-(def bid0 {:gold 0 :blackmail 0 :force 0})
-
 (defn localize [data key]
   (or
     (get-in languages [(:lang data) key])
@@ -183,7 +182,7 @@
         :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)
                          my-bank (get banks (:player-id @app-state))
                          figures (:figures @app-state)]
-          (swap! app-state assoc :bids (zipmap (map :id figures) (repeat bid0)))
+          (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/bid0)))
           (swap! app-state assoc :bids-submitted {})
           (swap! app-state assoc :bank my-bank)
           (swap! app-state assoc :original-bank my-bank)
