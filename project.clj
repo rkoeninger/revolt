@@ -2,13 +2,13 @@
   :description "Revolt"
   :url "http://github.com/rkoeninger/revolt"
   :main revolt
-  :source-paths ["src/server"]
+  :source-paths ["src/shared" "src/server"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled"]
   :test-paths ["test"]
   :cljsbuild {
     :builds [{
       :id "dev"
-      :source-paths ["src/client" "dev_src"]
+      :source-paths ["src/shared" "src/client" "src/client_dev"]
       :compiler {
         :output-to "resources/public/js/compiled/revolt_client.js"
         :output-dir "resources/public/js/compiled/out"
@@ -19,7 +19,7 @@
         :source-map-timestamp true
         :cache-analysis true}} {
       :id "min"
-      :source-paths ["src/client"]
+      :source-paths ["src/shared" "src/client"]
       :compiler {
         :output-to "resources/public/js/compiled/revolt_client.js"
         :main revolt.client
