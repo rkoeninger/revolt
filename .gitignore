@@ -1,6 +1,6 @@
 target/
+logs/
 resources/public/js/compiled
 .nrepl-port
 .lein-failures
 .lein-repl-history
-*.log
