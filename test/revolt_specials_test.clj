@@ -1,6 +1,7 @@
 (ns revolt-specials-test
     (:use revolt)
-    (:use clojure.test))
+    (:use clojure.test)
+    (:use revolt-shared))
 
 (def rob (->Player "Rob"))
 (def joe (->Player "Joe"))

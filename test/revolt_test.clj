@@ -1,5 +1,6 @@
 (ns revolt-test
     (:use revolt)
+    (:use revolt-shared)
     (:use clojure.test))
 
 (def dummy-callback (constantly {}))

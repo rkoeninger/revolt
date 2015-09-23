@@ -182,7 +182,7 @@
         :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)
                          my-bank (get banks (:player-id @app-state))
                          figures (:figures @app-state)]
-          (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/bid0)))
+          (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/zero-bid)))
           (swap! app-state assoc :bids-submitted {})
           (swap! app-state assoc :bank my-bank)
           (swap! app-state assoc :original-bank my-bank)

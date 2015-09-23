@@ -1,6 +1,7 @@
 (ns revolt
     (:use [clojure.set :only [map-invert]])
-    (:use [clojure.math.combinatorics :only [cartesian-product]]))
+    (:use [clojure.math.combinatorics :only [cartesian-product]])
+    (:use [revolt-shared]))
 
 (load "revolt_helpers")
 
@@ -58,9 +59,6 @@
           (< gx gy) false
           :else false)))
 (def bid-comparator (comparator (complement compare-bids)))
-(def plus-bid (partial merge-with +))
-(def zero-bid (->Bid 0 0 0))
-(def zero-bid? (partial = zero-bid))
 (def pos-bid? (comp (partial some pos?) vals))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))

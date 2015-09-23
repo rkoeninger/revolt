@@ -1,3 +1,5 @@
 (ns revolt-shared)
 
-(def bid0 {:gold 0 :blackmail 0 :force 0})
+(def zero-bid (zipmap [:gold :blackmail :force] (repeat 0)))
+(def zero-bid? (partial = zero-bid))
+(def plus-bid (partial merge-with +))
