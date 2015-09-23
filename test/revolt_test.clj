@@ -34,8 +34,8 @@
     (zipmap players (repeat 0))))
 
 (deftest bid-operations
-    (is (= (->Bid 2 0 1) (unique-max [(->Bid 1 1 0) (->Bid 2 0 1)])))
-    (is (nil? (unique-max [(->Bid 3 1 0) (->Bid 3 1 0)])))
+    (is (= (->Bid 2 0 1) (unique-max bid-comparator [(->Bid 1 1 0) (->Bid 2 0 1)])))
+    (is (nil? (unique-max bid-comparator [(->Bid 3 1 0) (->Bid 3 1 0)])))
     (is (= (->Bid 1 4 2) (plus-bid (->Bid 0 2 1) (->Bid 1 2 1))))
     (is (= (->Bid 3 0 1) (plus-bid (->Bid 1 0 1) zero-bid (->Bid 2 0 0))))
     (is (= :c (get-winner {:a (->Bid 1 1 0) :b (->Bid 2 0 1) :c (->Bid 1 2 1) :d (->Bid 3 1 0)})))

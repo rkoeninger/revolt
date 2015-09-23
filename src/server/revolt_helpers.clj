@@ -1,22 +1,29 @@
 (in-ns 'revolt)
 
 (defn in? [x coll] (some #(= x %) coll))
+(defn nor [& coll] (not (some true? coll)))
 
 ; (Ord b) => (a, a, [a -> b]) -> 0 | 1 | -1
 (defn serial-compare [x y fs]
     (let [f (first fs)]
-        (cond (empty? fs)      0
-              (> (f x) (f y))  1
-              (< (f x) (f y)) -1
+        (cond (empty? fs)       0
+              (> (f x) (f y))   1
+              (< (f x) (f y))  -1
               :else            (recur x y (rest fs)))))
-(defn nor [& coll] (not (some true? coll)))
 (defn inverted-get [m v] ((map-invert m) v))
-(defn unique-max [coll]
+(defn unique-max
+    ([coll]
     (case (count coll)
         0 nil
         1 (first coll)
         (let [[x y] (take 2 (reverse (sort coll)))]
             (if (not= x y) x))))
+    ([cmp coll]
+    (case (count coll)
+        0 nil
+        1 (first coll)
+        (let [[x y] (take 2 (reverse (sort cmp coll)))]
+            (if (not= x y) x)))))
 (defn other-than [coll x] (filter (partial not= x) coll))
 (defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
 (defn map-vals [f m] (map-kv identity f m))

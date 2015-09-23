@@ -4,56 +4,60 @@
 
 (load "revolt_helpers")
 
-(defrecord Player [id]
-    java.lang.Object
-    (toString [_] (str "Player " (name id))))
+(defn ->Player [id] {:id id})
 
-(defrecord Bid [gold blackmail force]
-    java.lang.Comparable
-    (compareTo [x y] (serial-compare x y [:force :blackmail :gold]))
-    java.lang.Object
-    (toString [_] (str "(Bid " gold "g " blackmail "b " force "f)")))
+(defn ->Bid [gold blackmail force]
+  {:gold gold
+   :blackmail blackmail
+   :force force})
 
-(defrecord Location [id support influence-limit]
-    java.lang.Object
-    (toString [_] (name id)))
+(defn ->Location [id support influence-limit]
+  {:id id
+   :support support
+   :influence-limit influence-limit})
 
-(defrecord Special [id
-                    doable   ; [Board  Player] -> Boolean
-                             ;     Returns true if winner can meaningfully perform special
-                    check    ; [Board  Player  (Map Keyword Object)] -> Boolean
-                             ;     Returns true if provided args are valid
-                    effect]) ; [Board  Player  (Map Keyword Object)] -> Board
-                             ;     Returns altered board according to args
+(defn ->Special [id doable check effect]
+  {:id id           ; Keyword
+   :doable doable   ; [Board  Player] -> Boolean
+                    ;     Returns true if winner can meaningfully perform special
+   :check check     ; [Board  Player  (Map Keyword Object)] -> Boolean
+                    ;     Returns true if provided args are valid
+   :effect effect}) ; [Board  Player  (Map Keyword Object)] -> Board
+                    ;     Returns altered board according to args
 
-(defrecord Figure [id
-                   support    ; Nat
-                   bank       ; Bid
-                   immunities ; Set Keyword
-                   location   ; Location | nil
-                   special]   ; Special | nil
-    java.lang.Object
-    (toString [_] (name id)))
+(defn ->Figure [id support bank immunities location special]
+  {:id id                 ; Keyword
+   :support support       ; Nat
+   :bank bank             ; Bid
+   :immunities immunities ; Set Keyword
+   :location location     ; Location | nil
+   :special special})     ; Special | nil
 
-(defrecord Board [turn      ; Nat
-                  locations ; Collection Location
-                  figures   ; Vector Figure
-                  players   ; Collection Player
-                  banks     ; Map Player Bid
-                  influence ; Map Location (Map Player Nat)
-                  support]  ; Map Player Nat
-    java.lang.Object
-    (toString [_] (str "(Board support:" support
-                           " influence:" influence
-                               " banks:" banks
-                                " turn:" turn ")")))
+(defn ->Board [turn locations figures players banks influence support]
+  {:turn turn           ; Nat
+   :locations locations ; Collection Location
+   :figures figures     ; Vector Figure
+   :players players     ; Collection Player
+   :banks banks         ; Map Player Bid
+   :influence influence ; Map Location (Map Player Nat)
+   :support support})   ; Map Player Nat
 
-(defmethod print-method Bid [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Location [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Figure [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Player [x ^java.io.Writer w] (.write w (str x)))
-(defmethod print-method Board [x ^java.io.Writer w] (.write w (str x)))
-
+;(defn compare-bids [x y] (serial-compare x y [:force :blackmail :gold]))
+(defn compare-bids [x y]
+  (let [gx (or (:gold x) 0)
+        bx (or (:blackmail x) 0)
+        fx (or (:force x) 0)
+        gy (or (:gold y) 0)
+        by (or (:blackmail y) 0)
+        fy (or (:force y) 0)]
+    (cond (> fx fy) true
+          (< fx fy) false
+          (> bx by) true
+          (< bx by) false
+          (> gx gy) true
+          (< gx gy) false
+          :else false)))
+(def bid-comparator (comparator (complement compare-bids)))
 (def plus-bid (partial merge-with +))
 (def zero-bid (->Bid 0 0 0))
 (def zero-bid? (partial = zero-bid))
@@ -63,7 +67,7 @@
 (defn get-support-value [{:keys [gold blackmail force]}]
     (+ gold (* 3 blackmail) (* 5 force)))
 (defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
-    (let [winning-bid (unique-max (vals bid-map))]
+    (let [winning-bid (unique-max bid-comparator (vals bid-map))]
         (if-not (or (nil? winning-bid) (zero-bid? winning-bid))
             (inverted-get bid-map winning-bid))))
 (def has-special? (comp not nil? :special))
