@@ -1,12 +1,13 @@
 (ns revolt-server
-    (:require [revolt :refer [map-keys map-kv map-entries]]
-              [ring.util.response :refer [response]]
+    (:require [ring.util.response :refer [response]]
               [compojure.core :refer [defroutes GET ANY]]
               [compojure.route :refer [resources]]
               [chord.http-kit :refer [wrap-websocket-handler]]
               [clojure.core.async :refer [<! >! <!! >!! go go-loop]]
               [hiccup.page :refer [html5 include-js include-css]]
-              [ring.middleware.format :refer [wrap-restful-format]]))
+              [ring.middleware.format :refer [wrap-restful-format]])
+    (:use [revolt :only [make-board]])
+    (:use revolt-shared))
 
 (defn page-frame []
     (html5
@@ -49,8 +50,8 @@
      :specials  (vec (filter identity (map (comp :id :special) figures)))})
 
 (defn game-results [board]
-    {:scores   (map-keys :id (revolt/get-scores board))
-     :rankings (map-keys :id (revolt/get-rankings board))})
+    {:scores   (map-keys :id (get-scores board))
+     :rankings (map-keys :id (get-rankings board))})
 
 (defn by-id [coll id] (first (filter #(= id (:id %)) coll)))
 
@@ -61,9 +62,7 @@
 (defn location-by-id [board location-id] (by-id (:locations board) location-id))
 
 (defn read-bid [{:keys [gold blackmail force]}]
-    (revolt/->Bid (or gold      0)
-                  (or blackmail 0)
-                  (or force     0)))
+    (->Bid (or gold 0) (or blackmail 0) (or force 0)))
 
 (defn read-figure-bid-map [board bids]
     (map-kv (partial figure-by-id board) read-bid bids))
@@ -105,7 +104,7 @@
 (defn handle-start-game [transmit query broadcast !board !player-ids]
     (if @!board
         (transmit {:type :game-already-started})
-        (do (reset! !board (revolt/make-board (vec (map revolt/->Player @!player-ids))))
+        (do (reset! !board (make-board (vec (map ->Player @!player-ids))))
             (broadcast {:type :start-game
                         :setup (board-setup @!board)})
             (broadcast {:type :take-bids
@@ -124,16 +123,16 @@
                         (:content query-result)))))))
 
 (defn handle-turn [!board !bids !queries]
-    (swap! !board revolt/run-turn
-                  (revolt/relevel (read-player-figure-bid-map @!board @!bids))
+    (swap! !board run-turn
+                  (relevel (read-player-figure-bid-map @!board @!bids))
                   (special-fn !board !queries)))
 
 (defn handle-submit-bids [transmit query broadcast user-name player-bids !board !bids !queries]
     (if (contains? @!bids user-name)
         (transmit {:type :bids-already-submitted})
         (if (and player-bids
-                 (revolt/validate-bids
-                     (revolt/get-bank @!board (player-by-id @!board user-name))
+                 (validate-bids
+                     (get-bank @!board (player-by-id @!board user-name))
                      (read-figure-bid-map @!board player-bids)))
             (do (swap! !bids assoc user-name player-bids)
                 (broadcast {:type :bids-submitted :player user-name})
@@ -142,7 +141,7 @@
                         (reset! !bids {})
                         (broadcast {:type :take-bids
                                     :status (board-status @!board)})
-                        (if (revolt/game-over? @!board)
+                        (if (game-over? @!board)
                             (broadcast {:type :game-over
                                         :results (game-results @!board)})))))
             (transmit {:type :invalid-bid}))))

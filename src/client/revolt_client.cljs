@@ -221,14 +221,11 @@
 (defn denomination-remaining? [data denomination]
   (> (get-in data [:bank denomination]) 0))
 
-(defn pos-bid? [bid]
-  (or (pos? (:gold bid)) (pos? (:blackmail bid)) (pos? (:force bid))))
-
 (defn nothing-on-figure? [data id]
-  (not (pos-bid? (get-in data [:bids id]))))
+  (not (r/pos-bid? (get-in data [:bids id]))))
 
 (defn figure-limit-reached? [data]
-  (>= (count (filter pos-bid? (vals (:bids data)))) 6))
+  (>= (count (filter r/pos-bid? (vals (:bids data)))) 6))
 
 (defn denomination-input [data id immunities denomination]
   (let [immune (contains? immunities denomination)
@@ -307,7 +304,7 @@
              :value (str remaining "/" total)}))))
 
 (defn tokens-remaining? [data]
-  (pos-bid? (:bank data)))
+  (r/pos-bid? (:bank data)))
 
 (defn submit-button [data owner]
   (reify
