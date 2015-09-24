@@ -6,8 +6,8 @@
               [clojure.core.async :refer [<! >! <!! >!! go go-loop]]
               [hiccup.page :refer [html5 include-js include-css]]
               [ring.middleware.format :refer [wrap-restful-format]])
-    (:use [revolt :only [make-board]])
-    (:use revolt-shared))
+    (:use revolt)
+    (:use revolt-setup))
 
 (defn page-frame []
     (html5

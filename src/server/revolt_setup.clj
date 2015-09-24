@@ -1,4 +1,6 @@
-(in-ns 'revolt)
+(ns revolt-setup
+    (:use revolt)
+    (:use [clojure.math.combinatorics :only [cartesian-product]]))
 
 ; Offically, the guard house is like any other Influence Space in that
 ; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),

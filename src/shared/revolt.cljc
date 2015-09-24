@@ -1,4 +1,4 @@
-(ns revolt-shared
+(ns revolt
     (:use [clojure.set :only [map-invert]]))
 
 (defn in? [x coll] (some #(= x %) coll))
@@ -13,28 +13,23 @@
               :else            (recur x y (rest fs)))))
 (defn inverted-get [m v] ((map-invert m) v))
 (defn unique-max
-    ([coll]
-    (case (count coll)
-        0 nil
-        1 (first coll)
-        (let [[x y] (take 2 (reverse (sort coll)))]
-            (if (not= x y) x))))
+    ([coll] (unique-max nil coll))
     ([cmp coll]
-    (case (count coll)
-        0 nil
-        1 (first coll)
-        (let [[x y] (take 2 (reverse (sort cmp coll)))]
-            (if (not= x y) x)))))
+        (case (count coll)
+            0 nil
+            1 (first coll)
+            (let [[x y] (take 2 (reverse (if cmp (sort cmp coll) (sort coll))))]
+                (if (not= x y) x)))))
 (defn other-than [coll x] (filter (partial not= x) coll))
 (defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
 (defn map-vals [f m] (map-kv identity f m))
 (defn map-keys [f m] (map-kv f identity m))
 (defn map-entries [f m] (into {} (map (partial apply f) m)))
 
-; [Map a (Map b c), b] -> Map a c
+; ((Map a (Map b c)) b) -> (Map a c)
 (defn sub-map [outer-map inner-key]
     (reduce-kv
-        ; (Map a c, a, Map b c) -> Map a c
+        ; ((Map a c) a (Map b c)) -> (Map a c)
         (fn [result-map outer-key inner-map]
             (assoc result-map outer-key (inner-map inner-key)))
         {}
@@ -42,9 +37,9 @@
 
 (defn first-not-nil [x y] (if (nil? x) y x))
 
-; [Map a (Map b c)] -> Map b (Map a c)
-; [Map a (Map b c), c] -> Map b (Map a c)
-; [Map a (Map b c), c, Set a, Set b] -> Map b (Map a c)
+; (Map a (Map b c)) -> (Map b (Map a c))
+; ((Map a (Map b c)) c) -> (Map b (Map a c))
+; ((Map a (Map b c)) c (Set a) (Set b)) -> (Map b (Map a c))
 (defn relevel
     ([m] (relevel m nil))
     ([m default-val] (relevel m default-val (keys m) (set (mapcat keys (vals m)))))
@@ -146,7 +141,7 @@
 (defn board-full? [board] (every? (partial location-full? board) (:locations board)))
 (defn get-influence [board location player] (get-in board [:influence location player]))
 (defn has-influence? [board location player]
-    (not (zero? (get-influence board location player))))
+    (pos? (get-influence board location player)))
 (defn add-support [board player amount]
     (update-in board [:support player] (partial + amount)))
 (defn get-support [board player] (get-in board [:support player]))
@@ -220,7 +215,7 @@
                     (println "Player " player)
                     (println "Args " args)
                     (throw #?(:cljs (js/Error. "Oops!")
-                       :clj (Exception. "Invalid special arguments"))))))))
+                              :clj  (Exception. "Invalid special arguments"))))))))
 (defn reward-winner [board
                      {:keys [support bank location special] :as figure}
                      winner

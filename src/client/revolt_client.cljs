@@ -5,7 +5,7 @@
             [cljs.core.async :refer [put! chan <!]]
             [chord.client :refer [ws-ch]]
             [cemerick.url :refer [url]]
-            [revolt-shared :as r]))
+            [revolt :as r]))
 
 (enable-console-print!)
 

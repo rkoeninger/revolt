@@ -1,7 +1,7 @@
 (ns revolt-server-test
     (:use revolt)
+    (:use revolt-setup)
     (:use revolt-server)
-    (:use revolt-shared)
     (:use clojure.test))
 
 (deftest read-functions
