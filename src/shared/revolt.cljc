@@ -37,15 +37,19 @@
 
 (defn first-not-nil [x y] (if (nil? x) y x))
 
-; (Map a (Map b c)) -> (Map b (Map a c))
-; ((Map a (Map b c)) c) -> (Map b (Map a c))
-; ((Map a (Map b c)) c (Set a) (Set b)) -> (Map b (Map a c))
 (defn relevel
-    ([m] (relevel m nil))
-    ([m default-val] (relevel m default-val (keys m) (set (mapcat keys (vals m)))))
+    ; (Map a (Map b c)) -> (Map b (Map a c))
+    ([m]
+        (relevel m nil))
+    ; ((Map a (Map b c)) c) -> (Map b (Map a c))
+    ([m default-val]
+        (relevel m default-val (keys m) (set (mapcat keys (vals m)))))
+    ; ((Map a (Map b c)) c (Set a) (Set b)) -> (Map b (Map a c))
     ([m default-val all-outer-keys all-inner-keys]
-        (let [default-inner-map (zipmap all-outer-keys (repeat default-val))
-              or-default #(merge-with first-not-nil (sub-map m %) default-inner-map)]
+        (let [default-inner-map
+              (zipmap all-outer-keys (repeat default-val))
+              or-default
+              #(merge-with first-not-nil (sub-map m %) default-inner-map)]
             (into {} (map #(vector % (or-default %)) all-inner-keys)))))
 
 (defn ->Player [id] {:id id})
@@ -86,37 +90,27 @@
    :influence influence ; Map Location (Map Player Nat)
    :support support})   ; Map Player Nat
 
-;(defn compare-bids [x y] (serial-compare x y [:force :blackmail :gold]))
-(defn compare-bids [x y]
-  (let [gx (or (:gold x) 0)
-        bx (or (:blackmail x) 0)
-        fx (or (:force x) 0)
-        gy (or (:gold y) 0)
-        by (or (:blackmail y) 0)
-        fy (or (:force y) 0)]
-    (cond (> fx fy) true
-          (< fx fy) false
-          (> bx by) true
-          (< bx by) false
-          (> gx gy) true
-          (< gx gy) false
-          :else false)))
-(def bid-comparator (comparator (complement compare-bids)))
-(def zero-bid (zipmap [:gold :blackmail :force] (repeat 0)))
+(def zero-bid (->Bid 0 0 0))
 (def zero-bid? (partial = zero-bid))
 (def plus-bid (partial merge-with +))
 (def pos-bid? (comp (partial some pos?) vals))
+(defn compare-bids [x y]
+    (pos?
+        (serial-compare
+            (or x zero-bid)
+            (or y zero-bid)
+            (map #(fnil % 0) [:force :blackmail :gold]))))
+(def bid-comparator (comparator (complement compare-bids)))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
-(defn get-support-value [{:keys [gold blackmail force]}]
-    (+ gold (* 3 blackmail) (* 5 force)))
-(defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
-    (let [winning-bid (unique-max bid-comparator (vals bid-map))]
-        (if-not (or (nil? winning-bid) (zero-bid? winning-bid))
-            (inverted-get bid-map winning-bid))))
-(def has-special? (comp not nil? :special))
 (def blackmail-immune? (comp boolean :blackmail :immunities))
 (def force-immune? (comp boolean :force :immunities))
+(defn get-support-value [{:keys [gold blackmail force]}]
+    (reduce + (map * [1 3 5] [gold blackmail force])))
+(defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
+    (if-let [winning-bid (unique-max bid-comparator (vals bid-map))]
+        (if (pos-bid? winning-bid)
+            (inverted-get bid-map winning-bid))))
 (defn validate-bid [figure bid]
     (nor (and (has-blackmail? bid) (blackmail-immune? figure))
          (and (has-force? bid) (force-immune? figure))))
@@ -138,27 +132,33 @@
     (let [occupied (occupied-influence board location)
           limit (:influence-limit location)]
         (>= occupied limit)))
-(defn board-full? [board] (every? (partial location-full? board) (:locations board)))
-(defn get-influence [board location player] (get-in board [:influence location player]))
+(defn board-full? [board]
+    (every? (partial location-full? board) (:locations board)))
+(defn get-influence [board location player]
+    (get-in board [:influence location player]))
 (defn has-influence? [board location player]
     (pos? (get-influence board location player)))
 (defn add-support [board player amount]
-    (update-in board [:support player] (partial + amount)))
+    (update-in board [:support player] + amount))
 (defn get-support [board player] (get-in board [:support player]))
 (defn get-bank [board player] (get-in board [:banks player]))
 (defn add-bank [board player bank]
-    (update-in board [:banks player] (partial plus-bid bank)))
-(defn clear-banks [board] (assoc board :banks (zipmap (:players board) (repeat zero-bid))))
+    (update-in board [:banks player] plus-bid bank))
+(defn clear-banks [board]
+    (assoc board :banks (zipmap (:players board) (repeat zero-bid))))
 (defn fill-bank [bank]
     (let [token-count (reduce + (vals bank))
           extra-gold (max 0 (- 5 token-count))]
         (plus-bid bank (->Bid extra-gold 0 0))))
-(defn fill-banks [board] (update-in board [:banks] (partial map-vals fill-bank)))
+(defn fill-banks [board]
+    (update board :banks (partial map-vals fill-bank)))
 (defn add-influence [board location player]
-    (assert (not (location-full? board location)) (str location " already full"))
+    (assert (not (location-full? board location))
+        (str location " already full"))
     (update-in board [:influence location player] inc))
 (defn remove-influence [board location player]
-    (assert (has-influence? board location player) (str player " has no influence on " location))
+    (assert (has-influence? board location player)
+        (str player " has no influence on " location))
     (update-in board [:influence location player] (comp (partial max 0) dec)))
 (defn move-influence [board location0 location1 player]
     (-> board
@@ -173,11 +173,13 @@
         (replace-influence location0 player0 player1)
         (replace-influence location1 player1 player0)))
 (defn get-current-holder [board location]
-    (let [influence (get-in board [:influence location])
-          max-inf (unique-max (vals influence))]
-        (if-not (or (nil? max-inf) (zero? max-inf)) (inverted-get influence max-inf))))
+    (let [influence (get-in board [:influence location])]
+        (if-let [max-inf (unique-max (vals influence))]
+            (if (pos? max-inf)
+                (inverted-get influence max-inf)))))
 (defn get-holder [board location]
-    (if (location-full? board location) (get-current-holder board location)))
+    (if (location-full? board location)
+        (get-current-holder board location)))
 (defn get-holdings [board player]
     (filter #(= player (get-holder board %)) (:locations board)))
 (defn get-score [board player]
@@ -196,11 +198,11 @@
     (let [players (:players board)]
         (zipmap players (map (partial get-rank board) players))))
 (defn get-game-winner [board]
-    (let [scores (get-scores board)
-          max-score (unique-max (vals scores))]
-        (if-not (or (nil? max-score) (zero? max-score))
-            (inverted-get scores max-score))))
-(defn inc-turn [board] (update-in board [:turn] inc))
+    (let [scores (get-scores board)]
+        (if-let [max-score (unique-max (vals scores))]
+            (if (pos? max-score)
+                (inverted-get scores max-score)))))
+(defn inc-turn [board] (update board :turn inc))
 (defn run-special [board
                    {{:keys [doable check effect]} :special :as figure}
                    player
@@ -214,8 +216,8 @@
                     (println "Board " board)
                     (println "Player " player)
                     (println "Args " args)
-                    (throw #?(:cljs (js/Error. "Oops!")
-                              :clj  (Exception. "Invalid special arguments"))))))))
+                    (throw #?(:cljs (js/Error. "Invalid special arguments")
+                              :clj (Exception. "Invalid special arguments"))))))))
 (defn reward-winner [board
                      {:keys [support bank location special] :as figure}
                      winner
@@ -223,11 +225,15 @@
     (let [eval-support (fn [board] (add-support board winner support))
           eval-bank (fn [board] (add-bank board winner bank))
           eval-influence
-              (fn [board] (if (or (nil? location) (location-full? board location)) board
-                  (add-influence board location winner)))
+              (fn [board]
+                  (if (or (nil? location) (location-full? board location))
+                      board
+                      (add-influence board location winner)))
           eval-special
-              (fn [board] (if (nil? special) board
-                  (run-special board figure winner callback)))]
+              (fn [board]
+                  (if (nil? special)
+                      board
+                      (run-special board figure winner callback)))]
         (-> board eval-support eval-bank eval-influence eval-special)))
 (defn eval-bids
     ([board bids callback] (eval-bids board bids callback (:figures board)))
@@ -239,7 +245,9 @@
             board
             (let [figure (first figure-list)
                   winner (get-winner (bids figure))
-                  board (if (nil? winner) board (reward-winner board figure winner callback))]
+                  board (if (nil? winner)
+                            board
+                            (reward-winner board figure winner callback))]
                 (recur board bids callback (rest figure-list))))))
 (defn run-turn [board bids callback]
     (-> board
