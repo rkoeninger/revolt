@@ -200,8 +200,7 @@
 (defn get-game-winner [board]
     (let [scores (get-scores board)]
         (if-let [max-score (unique-max (vals scores))]
-            (if (pos? max-score)
-                (inverted-get scores max-score)))))
+              (inverted-get scores max-score))))
 (defn inc-turn [board] (update board :turn inc))
 (defn run-special [board
                    {{:keys [doable check effect]} :special :as figure}
