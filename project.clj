@@ -27,7 +27,7 @@
         :pretty-print false}}]}
   :plugins [
     [lein-cljsbuild "1.1.0"]
-    [lein-figwheel "0.4.0"]]
+    [lein-figwheel "0.4.0-SNAPSHOT"]]
   :dependencies [
     [org.clojure/clojure "1.7.0"]
     [org.clojure/clojurescript "1.7.122"]

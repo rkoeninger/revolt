@@ -48,6 +48,15 @@
        :gold                     "Gold"
        :blackmail                "Blackmail"
        :force                    "Force"
+       :immune-to-blackmail      "Immune to Blackmail"
+       :immune-to-force          "Immune to Force"
+       :immune-to-both           "Immune to Blackmail and Force"
+       :guard-house              "Guard House"
+       :occupy-guard-house       "Occupy Guard House"
+       :steal-spot               "Replace one unit of influence with one of your own"
+       :swap-spots               "Swap any two units of influence"
+       :reassign-spots           "Move up to two of your units of influence to empty spaces"
+       :take-open-spot           "Influence any open space"
        :all-tokens-must-be-used  "All tokens must be used."
        :no-more-than-six-figures "No more than six figures can be bid on."
        :game-already-started     "The game has already started."}
@@ -90,6 +99,15 @@
        :gold                     "Oro"
        :blackmail                "Chantaje"
        :force                    "Fuerza"
+       :immune-to-blackmail      "Inmune a Chantajear"
+       :immune-to-force          "Inmunológico para Forzar"
+       :immune-to-both           "Inmune al Chantaje y la Fuerza"
+       :guard-house              "Caseta de Vigilancia"
+       :occupy-guard-house       "Ocupar Caseta de Vigilancia"
+       :steal-spot               "Reemplazar una unidad de influencia con una propia"
+       :swap-spots               "Intercambiar dos unidades de influencia"
+       :reassign-spots           "Mover hasta dos de sus unidades de influencia a los espacios vacíos"
+       :take-open-spot           "Influir en cualquier espacio abierto"
        :all-tokens-must-be-used  "Todas las fichas deben utilizarse."
        :no-more-than-six-figures "No más de seis cifras pueden pujar por."
        :game-already-started     "El juego ya ha comenzado."}
@@ -132,6 +150,15 @@
        :gold                     "Or"
        :blackmail                "Chantage"
        :force                    "Force"
+       :immune-to-blackmail      "à l'abri du Chantage"
+       :immune-to-force          "Immunitaire pour Forcer"
+       :immune-to-both           "à l'abri du Chantage et de la Force"
+       :guard-house              "Corps de Garde"
+       :occupy-guard-house       "Cccuper la Maison de Garde"
+       :steal-spot               "Reemplazar una unidad de influencia con una propia"
+       :swap-spots               "Intercambiar dos unidades de influencia"
+       :reassign-spots           "Déplacer jusqu'à deux de vos parts d'influence pour les espaces vides"
+       :take-open-spot           "Influencer un espace ouvert"
        :all-tokens-must-be-used  "Tous les jetons doivent être utilisés."
        :no-more-than-six-figures "Pas plus de six chiffres peuvent être enchérir sur."
        :game-already-started     "Le jeu a déjà commencé."}})
@@ -141,7 +168,7 @@
     (get-in languages [(:lang data) key])
     (do
       (js/console.error (str key " is not in " (:lang data) " dictionary"))
-      "TRANSLATION MISSING" - (str key))))
+      (str "TRANSLATION MISSING - " (str key)))))
 
 (defonce message-channel (atom nil))
 
@@ -268,7 +295,26 @@
    #{:force}            "immunity-force"
    #{:blackmail :force} "immunity-both"})
 
-(defn bid-row [data owner {:keys [id immunities]}]
+(defn denom [data bank d]
+  (let [dval (get bank d)]
+    (if (and dval (pos? dval)) (str dval " " (localize data d)))))
+
+(defn figure-description [data {:keys [support bank immunities location-id special-id]}]
+  (clojure.string/join ", " (flatten (filter (comp not nil?) [
+    (if (and support (pos? support))
+      (str support " " (localize data :support)))
+    (denom data bank :gold)
+    (denom data bank :blackmail)
+    (denom data bank :force)
+    (if location-id (localize data location-id))
+    (case immunities
+      #{} nil
+      #{:blackmail}        (localize data :immune-to-blackmail)
+      #{:force}            (localize data :immune-to-force)
+      #{:blackmail :force} (localize data :immune-to-both))
+    (if special-id (localize data special-id))]))))
+
+(defn bid-row [data owner {:keys [id immunities] :as figure}]
   (reify
     om/IRender
     (render [this]
@@ -278,7 +324,8 @@
           (localize data id))
         (denomination-input data id immunities :gold)
         (denomination-input data id immunities :blackmail)
-        (denomination-input data id immunities :force)))))
+        (denomination-input data id immunities :force)
+        (dom/td nil (figure-description data figure))))))
 
 (defn bid-area [data owner]
   (reify
@@ -290,6 +337,7 @@
           (dom/td nil (localize data :gold))
           (dom/td nil (localize data :blackmail))
           (dom/td nil (localize data :force)))
+          (dom/td nil) ; figure description
         (map #(om/build bid-row data {:opts %1}) (:figures data))))))
 
 (defn bank-denomination [data denomination]
@@ -331,22 +379,25 @@
   (reify
     om/IRender
     (render [this]
-      (apply dom/table nil
-        (apply dom/tr nil
-          (dom/td nil (localize data :location))
-          (dom/td nil (localize data :influence-limit))
+      (dom/div nil
+        (dom/span nil (localize data :guard-house))
+        (dom/span nil (:guard-house data))
+        (apply dom/table nil
+          (apply dom/tr nil
+            (dom/td nil (localize data :location))
+            (dom/td nil (localize data :influence-limit))
+            (map
+              (partial dom/td nil)
+              (:players data)))
           (map
-            (partial dom/td nil)
-            (:players data)))
-        (map
-          (fn [location]
-            (apply dom/tr nil
-              (dom/td nil (localize data (:id location)))
-              (dom/td nil (:influence-limit location))
-              (map
-                (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
-                (:players data))))
-          (:locations data))))))
+            (fn [location]
+              (apply dom/tr nil
+                (dom/td nil (localize data (:id location)))
+                (dom/td nil (:influence-limit location))
+                (map
+                  (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
+                  (:players data))))
+            (:locations data)))))))
 
 (defn support-area [data owner]
   (reify
