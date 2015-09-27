@@ -188,6 +188,30 @@
      :content {:type :submit-bids
                :bids bids}}))
 
+(defn send-spy [player-id location-id target-id]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:location location-id
+               :player target-id}}))
+
+(defn send-apothecary [player-id location0-id target0-id location1-id target1-id]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:location0 location0-id
+               :player0 target0-id
+               :location1 location1-id
+               :player1 target1-id}}))
+
+(defn send-messenger [player-id reassignments]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:reassignments reassignments}}))
+
+(defn send-mayor [player-id location-id]
+  (put! @message-channel
+    {:player-id player-id
+     :content {:location location-id}}))
+
 (defn send-msgs! [new-msg-ch server-ch]
   (go-loop []
     ; forever repeatedly pipe messages from message-channel to websocket
@@ -201,14 +225,18 @@
   (go-loop []
     (when-let [{:keys [message] :as raw} (<! server-ch)]
       (case (:type message)
+        :signup (do
+          (swap! app-state update-in [:players] #(conj % (:player-id message)))
+          (when (= (:player-id @app-state) (:player-id message))
+            (swap! app-state assoc :mode :lobby)))
         :start-game (let [{:keys [players figures locations]} (:setup message)]
           (swap! app-state assoc :figures figures)
           (swap! app-state assoc :locations locations)
-          (swap! app-state assoc :players players)
-          (swap! app-state assoc :mode :take-bids))
+          (swap! app-state assoc :players players))
         :take-bids (let [{:keys [turn guard-house banks support influence]} (:status message)
                          my-bank (get banks (:player-id @app-state))
                          figures (:figures @app-state)]
+          (swap! app-state assoc :mode :take-bids)
           (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/zero-bid)))
           (swap! app-state assoc :bids-submitted {})
           (swap! app-state assoc :bank my-bank)
@@ -218,12 +246,16 @@
           (swap! app-state assoc :influence influence)
           (swap! app-state assoc :turn turn)
           (swap! app-state assoc :guard-house guard-house))
+        :steal-spot
+          (swap! app-state assoc :mode :spy)
+        :swap-spots
+          (swap! app-state assoc :mode :apothecary)
+        :reassign-spots
+          (swap! app-state assoc :mode :messenger)
+        :take-open-spot
+          (swap! app-state assoc :mode :mayor)
         :bids-submitted (let [player (:player message)]
           (swap! app-state assoc-in [:bids-submitted player] true))
-        :signup (do
-          (swap! app-state update-in [:players] #(conj % (:player-id message)))
-          (when (= (:player-id @app-state) (:player-id message))
-            (swap! app-state assoc :mode :lobby)))
         :game-already-started (js/alert (localize @app-state :game-already-started))
         
         (js/console.warn "type not idendified"))
@@ -483,7 +515,8 @@
             #js {:onClick #(om/update! data :spy-selection nil)}
             (localize data :clear))
           (if selection
-            (dom/button nil
+            (dom/button
+              #js {:onClick #(apply send-spy (:player-id data) (:spy-selection data))}
               (localize data :submit))))))))
 
 (defn apothecary-select [data owner]
@@ -525,7 +558,11 @@
                       (om/update! data :apothecary-selection-2 nil))}
             (localize data :clear))
           (if (and selection-1 selection-2)
-            (dom/button nil
+            (dom/button
+              #js {:onClick
+                   #(apply send-apothecary
+                     (:player-id data)
+                     (concat (:apothecary-selection-1 data) (:apothecary-selection-2 data)))}
               (localize data :submit))))))))
 
 (defn messenger-select [data owner]
@@ -580,7 +617,8 @@
                                  (om/update! data :messenger-selection-1 nil)
                                  (om/update! data :messenger-selection-2 nil))}
               (localize data :add)))
-          (dom/button nil
+          (dom/button
+              #js {:onClick #(send-messenger (:player-id data) (:reassignments data))}
             (localize data :submit)))))))
 
 (defn mayor-select [data owner]
@@ -599,7 +637,7 @@
             (apply dom/tr nil
               (dom/td nil
                 (dom/button
-                  #js {:onClick #(om/update! data :mode :take-bids)
+                  #js {:onClick #(send-mayor (:player-id data) location)
                        :disabled (>= (reduce + (vals (get-in data [:influence (:id location)]))) (:influence-limit location))}
                   (localize data (:id location))))
               (dom/td nil (:influence-limit location))

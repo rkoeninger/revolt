@@ -73,7 +73,7 @@
                            :d (->Bid 1 0 1)
                            :e (->Bid 4 1 0)})))))
 
-(deftest figure-holder
+(deftest location-holder
 
   (testing "There should be no holder if there are no influence units"
     (is (nil? (get-holder board hovel))))

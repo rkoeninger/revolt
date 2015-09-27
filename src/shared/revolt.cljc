@@ -203,7 +203,7 @@
               (inverted-get scores max-score))))
 (defn inc-turn [board] (update board :turn inc))
 (defn run-special [board
-                   {{:keys [doable check effect]} :special :as figure}
+                   {{:keys [id doable check effect]} :special :as figure}
                    player
                    callback]
     (if-not (doable board player)
@@ -212,6 +212,7 @@
             (if (check board player args)
                 (effect board player args)
                 (do
+                    (println "Evaluating special:" id)
                     (println "Board " board)
                     (println "Player " player)
                     (println "Args " args)

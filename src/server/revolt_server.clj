@@ -117,9 +117,10 @@
             (if (= special-id :occupy-guard-house)
                 {}
                 (read-special-response board special-id
-                    (let [query-result (query {:board (board-status board)
-                                      :special special-id
-                                      :figure  (:id figure)})]
+                    (let [query-result (query {:status (board-status board)
+                                               :special special-id
+                                               :figure (:id figure)
+                                               :type special-id})]
                         (:content query-result)))))))
 
 (defn handle-turn [!board !bids !queries]
@@ -179,7 +180,10 @@
                   (fn [message] (do (println "querying...")
                                     (println message)
                                     (>!! ws-channel message)
-                                    (:message (<!! ws-channel))))
+                                    (println "hanging on response...")
+                                    (let [result (:message (<!! ws-channel))]
+                                      (println "no longer hanging")
+                                      result)))
                   (fn [message] (do (println "broadcasting...")
                                     (println message)
                                     (go (doseq [ch @channels] (>! ch message)))))
