@@ -190,13 +190,15 @@
 
 (defn send-spy [player-id location-id target-id]
   (put! @message-channel
-    {:player-id player-id
+    {:type :steal-spot
+     :player-id player-id
      :content {:location location-id
                :player target-id}}))
 
 (defn send-apothecary [player-id location0-id target0-id location1-id target1-id]
   (put! @message-channel
-    {:player-id player-id
+    {:type :swap-spots
+     :player-id player-id
      :content {:location0 location0-id
                :player0 target0-id
                :location1 location1-id
@@ -204,12 +206,14 @@
 
 (defn send-messenger [player-id reassignments]
   (put! @message-channel
-    {:player-id player-id
+    {:type :reassign-spots
+     :player-id player-id
      :content {:reassignments reassignments}}))
 
 (defn send-mayor [player-id location-id]
   (put! @message-channel
-    {:player-id player-id
+    {:type :take-open-spot
+     :player-id player-id
      :content {:location location-id}}))
 
 (defn send-msgs! [new-msg-ch server-ch]

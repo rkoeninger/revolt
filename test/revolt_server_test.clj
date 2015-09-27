@@ -32,9 +32,12 @@
                    {:reassignments [[:l1 :l2] [:l1 :l3]]})))))
 
 (deftest signup-rejected-after-game-has-started
-    (let [!board (atom nil)
-          !player-ids (atom #{})
-          !queries (atom {})
+    (let [state (atom
+            {:queries {}
+             :channels #{}
+             :board nil
+             :player-ids #{}
+             :bids {}})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
@@ -42,26 +45,28 @@
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast !board nil !player-ids !queries))]
+                      (handle-message % transmit query broadcast state))]
         (handle {:player-id "rob" :content {:type :signup}})
-        (is (= #{"rob"} @!player-ids))
+        (is (= #{"rob"} (:player-ids @state)))
         (is (= [{:type :signup :player-id "rob"}] @!broadcast-responses))
         (handle {:player-id "joe" :content {:type :signup}})
-        (is (= #{"rob" "joe"} @!player-ids))
+        (is (= #{"rob" "joe"} (:player-ids @state)))
         (is (= [{:type :signup :player-id "joe"}] @!broadcast-responses))
         (handle {:player-id "rob" :content {:type :start-game}})
-        (is @!board)
+        (is (:board @state))
         (handle {:player-id "moe" :content {:type :signup}})
-        (is (= #{"rob" "joe"} @!player-ids))
+        (is (= #{"rob" "joe"} (:player-ids @state)))
         (is (= [{:type :game-already-started}] @!transmit-responses))
         (handle {:player-id "moe" :content {:type :start-game}})
         (is (= [{:type :game-already-started}] @!transmit-responses))))
 
 (deftest simple-bid-validation-first-turn-scenario
-    (let [!board (atom nil)
-          !bids (atom {})
-          !player-ids (atom #{})
-          !queries (atom {})
+    (let [state (atom
+            {:queries {}
+             :channels #{}
+             :board nil
+             :player-ids #{}
+             :bids {}})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
@@ -69,7 +74,7 @@
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast !board !bids !player-ids !queries))]
+                      (handle-message % transmit query broadcast state))]
         (handle {:player-id "rob" :content {:type :signup}})
         (handle {:player-id "joe" :content {:type :signup}})
         (handle {:player-id "rob" :content {:type :start-game}})
@@ -83,20 +88,20 @@
                                                              :blackmail 1
                                                              :force     1}}}})
         (is (= [{:type :bids-already-submitted}] @!transmit-responses))
-        (is (= 1 (:turn @!board)))
+        (is (= 1 (:turn (:board @state))))
         (handle {:player-id "joe" :content {:type :submit-bids
                                             :bids {:merchant  {:blackmail 1
                                                                :force     1}
                                                    :mercenary {:gold      2}
                                                    :printer   {:gold      1}}}})
         (is (in? {:type :bids-submitted :player "joe"} @!broadcast-responses))
-        (is (= 2 (:turn @!board)))
-        (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
-        (is (= (->Bid 5 0 1) (get-bank @!board (->Player "joe"))))
-        (is (= 6 (get-support @!board (->Player "rob"))))
-        (is (= 13 (get-support @!board (->Player "joe"))))
-        (is (= 1 (get-influence @!board (location-by-id @!board :cathedral) (->Player "rob"))))
-        (is (= 1 (get-influence @!board (location-by-id @!board :market) (->Player "joe"))))))
+        (is (= 2 (:turn (:board @state))))
+        (is (= (->Bid 5 0 0) (get-bank (:board @state) (->Player "rob"))))
+        (is (= (->Bid 5 0 1) (get-bank (:board @state) (->Player "joe"))))
+        (is (= 6 (get-support (:board @state) (->Player "rob"))))
+        (is (= 13 (get-support (:board @state) (->Player "joe"))))
+        (is (= 1 (get-influence (:board @state) (location-by-id (:board @state) :cathedral) (->Player "rob"))))
+        (is (= 1 (get-influence (:board @state) (location-by-id (:board @state) :market) (->Player "joe"))))))
 
 (defn read-player-*-map [board m]
     (map-keys (partial player-by-id board) m))
@@ -118,10 +123,12 @@
           board (assoc board :banks (read-player-*-map board
               {"rob" (->Bid 1 0 0)
                "joe" (->Bid 1 0 0)}))
-          !board (atom board)
-          !bids (atom {})
-          !player-ids (atom #{})
-          !queries (atom {})
+          state (atom
+            {:queries {}
+             :channels #{}
+             :board board
+             :player-ids #{}
+             :bids {}})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
@@ -129,7 +136,7 @@
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast !board !bids !player-ids !queries))]
+                      (handle-message % transmit query broadcast state))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
         (is (in? {:type :bids-submitted :player "rob"}
@@ -139,7 +146,7 @@
         (is (in? {:type :bids-submitted :player "joe"}
                  @!broadcast-responses))
         (is (in? {:type :take-bids
-                  :status (board-status @!board)}
+                  :status (board-status (:board @state))}
                  @!broadcast-responses))
         (is (in? {:type :game-over
                   :results {:rankings {"rob" 1   "joe" 2}
@@ -147,13 +154,14 @@
                  @!broadcast-responses))))
 
 (deftest first-turn-special-scenario
-    (let [!board (atom (make-board [(->Player "rob") (->Player "joe")]))
-          !bids (atom {})
-          !player-ids (atom #{"rob" "joe"})
-          !queries (atom {"joe" (fn [{:keys [special figure] :as message}]
+    (let [state (atom {:board (make-board [(->Player "rob") (->Player "joe")])
+                       :bids {}
+                       :player-ids #{"rob" "joe"}
+                       :queries {"joe"
+                                 (fn [{:keys [special figure] :as message}]
                                     (is (= special :steal-spot))
                                     (is (= figure :spy))
-                                    {:content {:player "rob" :location :cathedral}})})
+                                    {:content {:player "rob" :location :cathedral}})}})
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
@@ -161,7 +169,7 @@
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast !board !bids !player-ids !queries))]
+                      (handle-message % transmit query broadcast state))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:priest {:gold      3
                                                             :blackmail 1
@@ -169,10 +177,10 @@
         (handle {:player-id "joe" :content {:type :submit-bids
                                             :bids {:spy {:gold 3 :force 1}
                                                    :printer {:blackmail 1}}}})
-        (is (= 2 (:turn @!board)))
-        (is (= (->Bid 5 0 0) (get-bank @!board (->Player "rob"))))
-        (is (= (->Bid 5 0 0) (get-bank @!board (->Player "joe"))))
-        (is (= 6 (get-support @!board (->Player "rob"))))
-        (is (= 10 (get-support @!board (->Player "joe"))))
-        (is (= 0 (get-influence @!board (location-by-id @!board :cathedral) (->Player "rob"))))
-        (is (= 1 (get-influence @!board (location-by-id @!board :cathedral) (->Player "joe"))))))
+        (is (= 2 (:turn (:board @state))))
+        (is (= (->Bid 5 0 0) (get-bank (:board @state) (->Player "rob"))))
+        (is (= (->Bid 5 0 0) (get-bank (:board @state) (->Player "joe"))))
+        (is (= 6 (get-support (:board @state) (->Player "rob"))))
+        (is (= 10 (get-support (:board @state) (->Player "joe"))))
+        (is (= 0 (get-influence (:board @state) (location-by-id (:board @state) :cathedral) (->Player "rob"))))
+        (is (= 1 (get-influence (:board @state) (location-by-id (:board @state) :cathedral) (->Player "joe"))))))
