@@ -6,7 +6,7 @@
             [chord.client :refer [ws-ch]]
             [cemerick.url :refer [url]]
             [revolt :as r]
-            [revolt.lang :refer [languages]]))
+            [revolt-lang :refer [languages]]))
 
 (enable-console-print!)
 
