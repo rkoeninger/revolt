@@ -40,7 +40,7 @@
     [hiccup "1.0.5"]
     [ring/ring-core "1.4.0"]
     [ring-middleware-format "0.6.0"]
-    [compojure "1.1.5"]
+    [compojure "1.4.0"]
     [com.cemerick/url "0.1.1"]
     [figwheel "0.4.0"]
     [org.omcljs/om "0.9.0"]]
