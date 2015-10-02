@@ -324,9 +324,11 @@
     om/IRender
     (render [this]
       (dom/div nil
-        (dom/input #js {:ref "player-id"})
+        (dom/input #js {:id "signup-input"
+                        :ref "player-id"})
         (dom/button
-          #js {:onClick
+          #js {:id "signup-button"
+               :onClick
                #(let [player-id (.-value (om/get-node owner "player-id"))]
                   (om/update! data :player-id player-id)
                   (send-signup player-id))}
@@ -513,7 +515,8 @@
       (dom/div nil
         (player-list data)
         (dom/button
-          #js {:onClick #(send-start-game (:player-id data))}
+          #js {:id "start-game-button"
+               :onClick #(send-start-game (:player-id data))}
           (localize data :start-game))))))
 
 (defn root-view [data owner]

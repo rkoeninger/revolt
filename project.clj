@@ -3,7 +3,10 @@
   :url "http://github.com/rkoeninger/revolt"
   :main revolt
   :source-paths ["src/shared" "src/server"]
-  :clean-targets ^{:protect false} ["resources/public/js/compiled"]
+  :clean-targets ^{:protect false} [
+    "target"
+    "logs"
+    "resources/public/js/compiled"]
   :test-paths ["test"]
   :cljsbuild {
     :builds [{
@@ -12,9 +15,9 @@
       :compiler {
         :output-to "resources/public/js/compiled/revolt_client.js"
         :output-dir "resources/public/js/compiled/out"
+        :asset-path "js/compiled/out"
         :optimizations :none
         :main revolt.client.dev
-        :asset-path "js/compiled/out"
         :source-map true
         :source-map-timestamp true
         :cache-analysis true}} {
@@ -27,7 +30,7 @@
         :pretty-print false}}]}
   :plugins [
     [lein-cljsbuild "1.1.0"]
-    [lein-figwheel "0.4.0-SNAPSHOT"]]
+    [lein-figwheel "0.4.0"]]
   :dependencies [
     [org.clojure/clojure "1.7.0"]
     [org.clojure/clojurescript "1.7.122"]
