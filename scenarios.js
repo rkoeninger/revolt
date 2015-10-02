@@ -3,6 +3,10 @@
 /*jslint node: true, browser: true, indent: 4*/
 /*global phantom*/
 
+var url = "http://localhost:3449/";
+var jqueryUrl = "https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.4/jquery.min.js";
+var helpersUrl = "scenario_helpers.js";
+
 var webpage = require("webpage"),
     page1 = webpage.create(),
     page2 = webpage.create();
@@ -13,48 +17,43 @@ page1.onConsoleMessage = function (msg) {
 page2.onConsoleMessage = function (msg) {
     console.log(msg);
 };
+page1.onInitialized = function () {
+    page1.injectJs(jqueryUrl);
+    page1.injectJs(helpersUrl);
+};
+page2.onInitialized = function () {
+    page2.injectJs(jqueryUrl);
+    page2.injectJs(helpersUrl);
+};
 
-page1.open("http://localhost:3449/", function (status) {
+page1.open(url, function (status) {
     if (status !== "success") {
         console.log("Unable to access test site");
         phantom.exit(1);
     } else {
-        page2.open("http://localhost:3449/", function (status) {
-            if (status !== "success") {
-                console.log("Unable to access test site");
-                phantom.exit(1);
-            } else {
+        setTimeout(function () {
+            page1.evaluate(function () {
                 setTimeout(function () {
-                    page1.evaluate(function () {
-                        var signupInput = document.body.querySelector("#signup-input"),
-                            signupButton = document.body.querySelector("#signup-button");
-                        if (signupInput) {
-                            if (signupButton) {
-                                signupInput.value = "rob";
-                                signupButton.click();
-                            } else {
-                                console.error("Couldn't find #signup-button");
-                            }
-                        } else {
-                            console.error("Couldn't find #signup-input");
-                        }
-                    });
-                    page2.evaluate(function () {
-                        var signupInput = document.body.querySelector("#signup-input"),
-                            signupButton = document.body.querySelector("#signup-button");
-                        if (signupInput) {
-                            if (signupButton) {
-                                signupInput.value = "joe";
-                                signupButton.click();
-                            } else {
-                                console.error("Couldn't find #signup-button");
-                            }
-                        } else {
-                            console.error("Couldn't find #signup-input");
-                        }
-                    });
+                    signup("emma");
                 }, 500);
-            }
-        });
+            });
+        }, 500);
+    }
+});
+page2.open(url, function (status) {
+    if (status !== "success") {
+        console.log("Unable to access test site");
+        phantom.exit(1);
+    } else {
+        setTimeout(function () {
+            page2.evaluate(function () {
+                setTimeout(function () {
+                    signup("noah");
+                    setTimeout(function () {
+                        startGame();
+                    }, 2000);
+                }, 500);
+            });
+        }, 500);
     }
 });
