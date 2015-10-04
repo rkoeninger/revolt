@@ -29,13 +29,11 @@ page1.open(url, function (status) {
         console.log("Unable to access test site");
         phantom.exit(1);
     } else {
-        setTimeout(function () {
-            page1.evaluate(function () {
-                setTimeout(function () {
-                    signup("emma");
-                }, 2000);
-            });
-        }, 2000);
+        page1.evaluate(function () {
+            sequence(2000, [
+                defer(signup, ["emma"])
+            ]);
+        });
     }
 });
 page2.open(url, function (status) {
@@ -43,15 +41,11 @@ page2.open(url, function (status) {
         console.log("Unable to access test site");
         phantom.exit(1);
     } else {
-        setTimeout(function () {
-            page2.evaluate(function () {
-                setTimeout(function () {
-                    signup("noah");
-                    setTimeout(function () {
-                        startGame();
-                    }, 2000);
-                }, 2000);
-            });
-        }, 2000);
+        page2.evaluate(function () {
+            sequence(2000, [
+                defer(signup, ["noah"]),
+                startGame
+            ]);
+        });
     }
 });
