@@ -51,5 +51,5 @@
     :server-port 3449
     ; :nrepl-port 7888
     :css-dirs ["resources/public/css"]
-    :ring-handler revolt-server/app
+    :ring-handler revolt.server/app
     :server-logfile "logs/figwheel_server.log"})

@@ -1,6 +1,6 @@
 (ns revolt-specials-test
-    (:use revolt)
-    (:use revolt-setup)
+    (:use revolt.core)
+    (:use revolt.setup)
     (:use clojure.test))
 
 (def rob (->Player "Rob"))

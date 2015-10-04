@@ -1,5 +1,5 @@
 (ns revolt-helpers-test
-    (:use revolt)
+    (:use revolt.core)
     (:use clojure.test))
 
 (deftest relevel-provides-default-values

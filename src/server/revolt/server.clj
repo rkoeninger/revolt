@@ -1,4 +1,4 @@
-(ns revolt-server
+(ns revolt.server
     (:require [ring.util.response :refer [response]]
               [compojure.core :refer [defroutes GET ANY]]
               [compojure.route :refer [resources]]
@@ -6,8 +6,8 @@
               [clojure.core.async :refer [<! >! <!! >!! go go-loop]]
               [hiccup.page :refer [html5 include-js include-css]]
               [ring.middleware.format :refer [wrap-restful-format]])
-    (:use revolt)
-    (:use revolt-setup))
+    (:use revolt.core)
+    (:use revolt.setup))
 
 (defn page-frame []
     (html5

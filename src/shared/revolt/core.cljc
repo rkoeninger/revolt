@@ -1,4 +1,4 @@
-(ns revolt
+(ns revolt.core
     (:use [clojure.set :only [map-invert]]))
 
 (defn in? [x coll] (some #(= x %) coll))

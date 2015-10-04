@@ -1,5 +1,5 @@
-(ns revolt-setup
-    (:use revolt)
+(ns revolt.setup
+    (:use revolt.core)
     (:use [clojure.math.combinatorics :only [cartesian-product]]))
 
 ; Offically, the guard house is like any other Influence Space in that

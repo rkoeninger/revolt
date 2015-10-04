@@ -1,4 +1,4 @@
-(ns ^:figwheel-always revolt-lang)
+(ns ^:figwheel-always revolt.lang)
 
 (def languages {
   :us {:general                  "General"
