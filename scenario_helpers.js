@@ -1,14 +1,20 @@
 
-function sequence(delay, functions) {
-    if (functions && functions.length > 0) {
+function step(delay, func) {
+    return {
+        delay: delay,
+        func: func
+    };
+}
+
+function sequence(steps) {
+    var current, rest;
+    if (steps && steps.length > 0) {
+        current = steps[0];
+        rest = steps.slice(1, steps.length);
         setTimeout(function () {
-            var current = functions[0],
-                rest = functions.slice(1, functions.length);
-            current();
-            if (rest && rest.length > 0) {
-                sequence(delay, rest);
-            }
-        }, delay);
+            current.func();
+            sequence(rest);
+        }, current.delay);
     }
 }
 
@@ -16,6 +22,13 @@ function defer(f, args) {
     return function () {
         return f.apply(this, args || []);
     };
+}
+
+function repeatAction(n, f) {
+    var i;
+    for (i = 0; i < n; ++i) {
+        f();
+    }
 }
 
 function signup(username) {
@@ -42,6 +55,40 @@ function startGame() {
     }
 }
 
+function incBid(figure, denomination) {
+    var incButtonId = "bid-" + figure + "-" + denomination + "-up",
+        incButton = document.body.querySelector("#" + incButtonId);
+    if (incButton) {
+        incButton.click();
+    } else {
+        console.error("Couldn't find #" + incButtonId);
+    }
+}
+
+function bid(figure, gold, blackmail, force) {
+    return {
+        figure: figure,
+        gold: gold,
+        blackmail: blackmail,
+        force: force
+    };
+}
+
 function placeBids(bids) {
-    
+    var i, j, current;
+    for (i = 0; i < bids.length; ++i) {
+        current = bids[i];
+        repeatAction(current.gold, defer(incBid, [current.figure, "gold"]));
+        repeatAction(current.blackmail, defer(incBid, [current.figure, "blackmail"]));
+        repeatAction(current.force, defer(incBid, [current.figure, "force"]));
+    }
+}
+
+function submitBids() {
+    var submitButton = document.body.querySelector("#submit-button");
+    if (submitButton) {
+        submitButton.click();
+    } else {
+        console.error("Couldn't find #submit-button");
+    }
 }

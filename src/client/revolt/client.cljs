@@ -140,6 +140,7 @@
 (defn denomination-input [data id immunities denomination]
   (let [immune (contains? immunities denomination)
         amount (get-in data [:bids id denomination])
+        button-id-prefix (clojure.string/join "-" ["bid" (name id) (name denomination)])
         figure-disabled (or immune
                             (my-bids-submitted? data)
                             (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
@@ -153,6 +154,7 @@
         (dom/button
           #js {:disabled disabled
                :className className
+               :id (str button-id-prefix "-up")
                :onClick #(adjust-bid data id denomination 1)}
           "\u2191"))
       (let [disabled (or figure-disabled (= 0 (get-in data [:bids id denomination])))
@@ -163,6 +165,7 @@
         (dom/button
           #js {:disabled disabled
                :className className
+               :id (str button-id-prefix "-down")
                :onClick #(adjust-bid data id denomination -1)}
           "\u2193"))
       (dom/input
@@ -242,7 +245,8 @@
     om/IRender
     (render [this]
        (dom/button
-        #js {:disabled (or (tokens-remaining? data) (my-bids-submitted? data))
+        #js {:id "submit-button"
+             :disabled (or (tokens-remaining? data) (my-bids-submitted? data))
              :onClick #(send-bids (:player-id data) (:bids data))}
         (localize data :submit)))))
 

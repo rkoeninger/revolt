@@ -30,8 +30,11 @@ page1.open(url, function (status) {
         phantom.exit(1);
     } else {
         page1.evaluate(function () {
-            sequence(2000, [
-                defer(signup, ["emma"])
+            sequence([
+                step(4000, defer(signup, ["emma"])),
+                step(8000, defer(placeBids, [[
+                    bid("printer", 3, 1, 1)]])),
+                step(1000, defer(submitBids))
             ]);
         });
     }
@@ -42,9 +45,14 @@ page2.open(url, function (status) {
         phantom.exit(1);
     } else {
         page2.evaluate(function () {
-            sequence(2000, [
-                defer(signup, ["noah"]),
-                startGame
+            sequence([
+                step(4000, defer(signup, ["noah"])),
+                step(4000, defer(startGame)),
+                step(4000, defer(placeBids, [[
+                    bid("general",   3, 0, 0),
+                    bid("captain",   0, 1, 0),
+                    bid("innkeeper", 0, 0, 1)]])),
+                step(1000, defer(submitBids))
             ]);
         });
     }
