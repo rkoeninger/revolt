@@ -33,7 +33,10 @@ page1.open(url, function (status) {
             sequence([
                 step(4000, defer(signup, ["emma"])),
                 step(8000, defer(placeBids, [[
-                    bid("printer", 3, 1, 1)]])),
+                    bid("priest",     1, 0, 0),
+                    bid("aristocrat", 0, 1, 0),
+                    bid("merchant",   1, 0, 0),
+                    bid("viceroy",    1, 0, 1)]])),
                 step(1000, defer(submitBids))
             ]);
         });
@@ -49,9 +52,10 @@ page2.open(url, function (status) {
                 step(4000, defer(signup, ["noah"])),
                 step(4000, defer(startGame)),
                 step(4000, defer(placeBids, [[
-                    bid("general",   3, 0, 0),
-                    bid("captain",   0, 1, 0),
-                    bid("innkeeper", 0, 0, 1)]])),
+                    bid("general",    2, 0, 0),
+                    bid("captain",    0, 1, 0),
+                    bid("innkeeper",  0, 0, 1),
+                    bid("magistrate", 1, 0, 0)]])),
                 step(1000, defer(submitBids))
             ]);
         });
