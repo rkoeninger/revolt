@@ -9,25 +9,26 @@
     "resources/public/js/compiled"]
   :test-paths ["test"]
   :cljsbuild {
-    :builds [{
-      :id "dev"
-      :source-paths ["src/shared" "src/client" "src/client_dev"]
-      :compiler {
-        :output-to "resources/public/js/compiled/revolt_client.js"
-        :output-dir "resources/public/js/compiled/out"
-        :asset-path "js/compiled/out"
-        :optimizations :none
-        :main revolt.client.dev
-        :source-map true
-        :source-map-timestamp true
-        :cache-analysis true}} {
-      :id "min"
-      :source-paths ["src/shared" "src/client"]
-      :compiler {
-        :output-to "resources/public/js/compiled/revolt_client.js"
-        :main revolt.client
-        :optimizations :advanced
-        :pretty-print false}}]}
+    :builds {
+      :dev {
+        :source-paths ["src/shared" "src/client" "src/client_dev"]
+        :compiler {
+          :output-to "resources/public/js/compiled/revolt_client.js"
+          :output-dir "resources/public/js/compiled/out"
+          :asset-path "js/compiled/out"
+          :optimizations :none
+          :main revolt.client.dev
+          :source-map true
+          :source-map-timestamp true
+          :cache-analysis true}}
+      :min {
+        :source-paths ["src/shared" "src/client"]
+        :compiler {
+          :output-to "resources/public/js/compiled/revolt_client.js"
+          :main revolt.client
+          :optimizations :advanced
+          :pretty-print false}}}
+    :test-commands {"test" ["phantomjs" "scenarios.js"]}}
   :plugins [
     [lein-cljsbuild "1.1.0"]
     [lein-figwheel "0.4.0"]]
