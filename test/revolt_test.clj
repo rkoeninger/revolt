@@ -163,6 +163,7 @@
                                            smithy (->Bid 1 0 0)})))))
 
 (deftest influence
+
   (testing "AssertionError should be thrown when adding to full location"
     (is (thrown-with-msg? AssertionError #"already full"
       (-> board
@@ -175,44 +176,16 @@
       (remove-influence board hovel rob)))))
 
 (deftest rewards
+
+  (testing "The winner of a figure receives that figure's reward"
     (let [board (-> (clear-banks board)
                     (reward-winner farmer rob dummy-callback)
                     (reward-winner prince joe dummy-callback))]
-        (is (= 0 (get-support board joe)))
-        (is (= 1 (get-support board rob)))
-        (is (= (->Bid 2 0 0) (get-bank board rob)))
-        (is (= (->Bid 5 0 0) (get-bank board joe)))
-        (is (= 1 (get-influence board farm rob)))
-        (is (= 1 (get-influence board castle joe)))
-        (is (= 3 (get-score board rob)))
-        (is (= 5 (get-score board joe)))))
-
-(deftest scenario-first-turn
-    (let [bids {prince {rob (->Bid 0 1 0) joe (->Bid 0 0 0)}
-                beggar {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
-                barber {rob (->Bid 0 0 1) joe (->Bid 0 1 0)}
-                farmer {rob (->Bid 0 0 0) joe (->Bid 0 0 1)}
-                axeman {rob (->Bid 2 0 0) joe (->Bid 3 0 0)}
-                doctor {rob (->Bid 0 0 0) joe (->Bid 0 0 0)}}
-          board (run-turn board bids dummy-callback)]
-        (is (= rob (get-current-holder board castle)))
-        (is (= rob (get-current-holder board hovel)))
-        (is (= rob (get-current-holder board saloon)))
-        (is (= joe (get-current-holder board farm)))
-        (is (= 1 (get-influence board castle rob)))
-        (is (= 1 (get-influence board hovel rob)))
-        (is (= 1 (get-influence board saloon rob)))
-        (is (= 0 (get-influence board farm rob)))
-        (is (= 0 (get-influence board castle joe)))
-        (is (= 0 (get-influence board hovel joe)))
-        (is (= 0 (get-influence board saloon joe)))
-        (is (= 1 (get-influence board farm joe)))
-        (is (not (location-full? board saloon)))
-        (is (not (location-full? board farm)))
-        (is (not (location-full? board castle)))
-        (is (not (location-full? board hovel)))
-        (is (= 9 (get-support board rob)))
-        (is (= 4 (get-support board joe)))
-        (is (= (->Bid 5 0 0) (get-bank board rob)))
-        (is (= (->Bid 4 0 1) (get-bank board joe))) ; joe gets 2 extra gold in (fill-banks)
-        (is (not (game-over? board)))))
+      (is (= 0 (get-support board joe)))
+      (is (= 1 (get-support board rob)))
+      (is (= (->Bid 2 0 0) (get-bank board rob)))
+      (is (= (->Bid 5 0 0) (get-bank board joe)))
+      (is (= 1 (get-influence board farm rob)))
+      (is (= 1 (get-influence board castle joe)))
+      (is (= 3 (get-score board rob)))
+      (is (= 5 (get-score board joe))))))
