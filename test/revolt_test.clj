@@ -45,6 +45,20 @@
 (defn with-support [board & more]
   (reduce (fn [b [p n]] (add-support b p n)) board (partition 2 more)))
 
+(deftest bids
+
+  (testing "One blackmail is worth more than any amount of gold"
+    (is (compare-bids (->Bid 0 1 0) (->Bid 5 0 0)))
+    (is (compare-bids (->Bid 1 1 0) (->Bid 5 0 0)))
+    (is (compare-bids (->Bid 0 1 0) (->Bid 5 0 0)))
+    (is (compare-bids (->Bid 2 2 0) (->Bid 1 2 0))))
+
+  (testing "One force is worth more than any amount of blackmail or gold"
+    (is (compare-bids (->Bid 0 0 1) (->Bid 5 5 0)))
+    (is (compare-bids (->Bid 0 2 1) (->Bid 5 4 0)))
+    (is (compare-bids (->Bid 1 0 1) (->Bid 1 5 0)))
+    (is (compare-bids (->Bid 5 5 2) (->Bid 5 5 1)))))
+
 (deftest bid-winner
 
   (testing "There should be no winner if there are no bids"
