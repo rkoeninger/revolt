@@ -35,6 +35,29 @@ function repeatAction(n, f) {
   }
 }
 
+function waitFor(testFx, onReady, timeOutMillis) {
+  var maxtimeOutMillis = timeOutMillis || 10000,
+      start = new Date().getTime(),
+      condition = false,
+      interval = setInterval(function () {
+        if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
+          condition = testFx();
+        } else if (!condition) {
+          console.log("Timeout waiting for test results after " + maxtimeOutMillis + "ms.");
+          phantom.exit(1);
+        } else {
+          console.log("Tests finished in " + (new Date().getTime() - start) + "ms.");
+          onReady();
+          clearInterval(interval);
+        }
+      }, 100);
+}
+
+function waitForMode(mode) {
+  var modeKeyword = new cljs.core.Keyword(null, "mode", "mode", 654403691);
+      // cljs.core.deref.call(null, revolt.client.app_state);
+}
+
 function signup(username) {
   var signupInput = document.body.querySelector("#signup-input"),
       signupButton = document.body.querySelector("#signup-button");
