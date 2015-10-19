@@ -40,22 +40,27 @@ function waitFor(testFx, onReady, timeOutMillis) {
       start = new Date().getTime(),
       condition = false,
       interval = setInterval(function () {
-        if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
-          condition = testFx();
-        } else if (!condition) {
-          console.log("Timeout waiting for test results after " + maxtimeOutMillis + "ms.");
-          phantom.exit(1);
+        if (!condition) {
+          if (new Date().getTime() - start < maxtimeOutMillis) {
+            condition = testFx();
+          } else {
+            console.warn("Timeout waiting after " + maxtimeOutMillis + "ms.");
+          }
         } else {
-          console.log("Tests finished in " + (new Date().getTime() - start) + "ms.");
-          onReady();
           clearInterval(interval);
+          onReady();
         }
       }, 100);
 }
 
-function waitForMode(mode) {
-  var modeKeyword = new cljs.core.Keyword(null, "mode", "mode", 654403691);
-      // cljs.core.deref.call(null, revolt.client.app_state);
+var modeKeyword = new cljs.core.Keyword(null, "mode", "mode", 654403691);
+var lobbyKeyword = new cljs.core.Keyword(null, "lobby", "lobby", 1193995861);
+
+function waitForMode(mode, onReady) {
+  waitFor(function () {
+    var data = cljs.core.deref.call(null, revolt.client.app_state);
+    return mode === cljs.core.get_in.call(null, data, modeKeyword);
+  }, onReady);
 }
 
 function signup(username) {

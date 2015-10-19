@@ -30,6 +30,9 @@ page1.open(url, function (status) {
     phantom.exit(1);
   } else {
     page1.evaluate(function () {
+      waitForMode(lobbyKeyword, function () {
+        console.log("          !!!!!!!!!!!!IN THE LOBBY!!!!!!!");
+      });
       sequence([
         step(4000, defer(signup, ["emma"])),
         step(8000, defer(placeBids, [[
