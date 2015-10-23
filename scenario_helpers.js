@@ -53,13 +53,15 @@ function waitFor(testFx, onReady, timeOutMillis) {
       }, 100);
 }
 
-var modeKeyword = new cljs.core.Keyword(null, "mode", "mode", 654403691);
-var lobbyKeyword = new cljs.core.Keyword(null, "lobby", "lobby", 1193995861);
+function keyword(s) {
+  return new cljs.core.Keyword(null, s, s, cljs.core.hash(cljs.core.keyword(s)));
+}
 
-function waitForMode(mode, onReady) {
+function waitForMode(modeString, onReady) {
   waitFor(function () {
-    var data = cljs.core.deref.call(null, revolt.client.app_state);
-    return mode === cljs.core.get_in.call(null, data, modeKeyword);
+    var data = cljs.core.deref.call(null, revolt.client.app_state),
+        currentModeKw = cljs.core.get.call(null, data, keyword("mode"));
+    return cljs.core._EQ_.call(null, keyword(modeString), currentModeKw);
   }, onReady);
 }
 

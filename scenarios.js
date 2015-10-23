@@ -30,18 +30,19 @@ page1.open(url, function (status) {
     phantom.exit(1);
   } else {
     page1.evaluate(function () {
-      waitForMode(lobbyKeyword, function () {
-        console.log("          !!!!!!!!!!!!IN THE LOBBY!!!!!!!");
-      });
-      sequence([
-        step(4000, defer(signup, ["emma"])),
-        step(8000, defer(placeBids, [[
-          bid("priest",     1, 0, 0),
-          bid("aristocrat", 0, 1, 0),
-          bid("merchant",   1, 0, 0),
-          bid("viceroy",    1, 0, 1)]])),
-        step(2000, defer(submitBids))
-      ]);
+      setTimeout(function () {
+        waitForMode("signup", function () {
+          signup("emma");
+          waitForMode("take-bids", function () {
+            placeBids([
+              bid("priest",     1, 0, 0),
+              bid("aristocrat", 0, 1, 0),
+              bid("merchant",   1, 0, 0),
+              bid("viceroy",    1, 0, 1)]);
+            setTimeout(defer(submitBids), 2000);
+          });
+        });
+      }, 2000);
     });
   }
 });
@@ -51,16 +52,22 @@ page2.open(url, function (status) {
     phantom.exit(1);
   } else {
     page2.evaluate(function () {
-      sequence([
-        step(4000, defer(signup, ["noah"])),
-        step(4000, defer(startGame)),
-        step(4000, defer(placeBids, [[
-          bid("general",    2, 0, 0),
-          bid("captain",    0, 1, 0),
-          bid("innkeeper",  0, 0, 1),
-          bid("magistrate", 1, 0, 0)]])),
-        step(2000, defer(submitBids))
-      ]);
+      setTimeout(function () {
+        waitForMode("signup", function () {
+          signup("noah");
+          waitForMode("lobby", function () {
+            startGame();
+              waitForMode("take-bids", function () {
+                placeBids([
+                  bid("general",    2, 0, 0),
+                  bid("captain",    0, 1, 0),
+                  bid("innkeeper",  0, 0, 1),
+                  bid("magistrate", 1, 0, 0)]);
+                setTimeout(defer(submitBids), 2000);
+              });
+          });
+        });
+      }, 2000);
     });
   }
 });
