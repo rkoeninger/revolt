@@ -90,13 +90,19 @@ function startGame() {
 }
 
 function incBid(figure, denomination) {
-  var incButtonId = "bid-" + figure + "-" + denomination + "-up",
-      incButton = document.body.querySelector("#" + incButtonId);
-  if (incButton) {
-    incButton.click();
-  } else {
-    console.error("Couldn't find #" + incButtonId);
-  }
+  waitFor(function () {
+    var incButtonId = "bid-" + figure + "-" + denomination + "-up",
+        incButton = document.body.querySelector("#" + incButtonId);
+    return typeof incButton !== "undefined";
+  }, function () {
+    var incButtonId = "bid-" + figure + "-" + denomination + "-up",
+        incButton = document.body.querySelector("#" + incButtonId);
+    if (incButton) {
+      incButton.click();
+    } else {
+      console.error("Couldn't find #" + incButtonId);
+    }
+  });
 }
 
 function bid(figure, gold, blackmail, force) {
