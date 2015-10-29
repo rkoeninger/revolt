@@ -2,7 +2,8 @@
     (:use revolt.core)
     (:use revolt.setup)
     (:use revolt.server)
-    (:use clojure.test))
+    (:use clojure.test)
+    (:use clojure.pprint))
 
 (deftest read-functions
     (let [l1 (->Location :l1 0 0)
@@ -41,11 +42,10 @@
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
-          query nil
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast state))]
+                      (handle-message % transmit broadcast state))]
         (handle {:player-id "rob" :content {:type :signup}})
         (is (= #{"rob"} (:player-ids @state)))
         (is (= [{:type :signup :player-id "rob"}] @!broadcast-responses))
@@ -70,11 +70,10 @@
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
-          query nil
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast state))]
+                      (handle-message % transmit broadcast state))]
         (handle {:player-id "rob" :content {:type :signup}})
         (handle {:player-id "joe" :content {:type :signup}})
         (handle {:player-id "rob" :content {:type :start-game}})
@@ -94,7 +93,11 @@
                                                                :force     1}
                                                    :mercenary {:gold      2}
                                                    :printer   {:gold      1}}}})
+        (Thread/sleep 500)
         (is (in? {:type :bids-submitted :player "joe"} @!broadcast-responses))
+        (println "STATE:")
+        (pprint (board-status (:board @state)))
+        (println)
         (is (= 2 (:turn (:board @state))))
         (is (= (->Bid 5 0 0) (get-bank (:board @state) (->Player "rob"))))
         (is (= (->Bid 5 0 1) (get-bank (:board @state) (->Player "joe"))))
@@ -132,11 +135,10 @@
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
-          query nil
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast state))]
+                      (handle-message % transmit broadcast state))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:printer {:gold 1}}}})
         (is (in? {:type :bids-submitted :player "rob"}
@@ -165,11 +167,10 @@
           !transmit-responses (atom [])
           !broadcast-responses (atom [])
           transmit (partial swap! !transmit-responses conj)
-          query nil
           broadcast (partial swap! !broadcast-responses conj)
           handle #(do (reset! !transmit-responses [])
                       (reset! !broadcast-responses [])
-                      (handle-message % transmit query broadcast state))]
+                      (handle-message % transmit broadcast state))]
         (handle {:player-id "rob" :content {:type :submit-bids
                                             :bids {:priest {:gold      3
                                                             :blackmail 1

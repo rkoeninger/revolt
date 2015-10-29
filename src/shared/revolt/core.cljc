@@ -202,56 +202,52 @@
         (if-let [max-score (unique-max (vals scores))]
               (inverted-get scores max-score))))
 (defn inc-turn [board] (update board :turn inc))
-(defn run-special [board
-                   {{:keys [id doable check effect]} :special :as figure}
-                   player
-                   callback]
-    (if-not (doable board player)
-        board
-        (let [args (callback board player figure)]
-            (if (check board player args)
-                (effect board player args)
-                (do
-                    (println "Evaluating special:" id)
-                    (println "Board " board)
-                    (println "Player " player)
-                    (println "Args " args)
-                    (throw #?(:cljs (js/Error. "Invalid special arguments")
-                              :clj (Exception. "Invalid special arguments"))))))))
 (defn reward-winner [board
-                     {:keys [support bank location special] :as figure}
-                     winner
-                     callback]
+                     {:keys [support bank location]}
+                     winner]
     (let [eval-support (fn [board] (add-support board winner support))
           eval-bank (fn [board] (add-bank board winner bank))
           eval-influence
               (fn [board]
                   (if (or (nil? location) (location-full? board location))
                       board
-                      (add-influence board location winner)))
-          eval-special
-              (fn [board]
-                  (if (nil? special)
-                      board
-                      (run-special board figure winner callback)))]
-        (-> board eval-support eval-bank eval-influence eval-special)))
-(defn eval-bids
-    ([board bids callback] (eval-bids board bids callback (:figures board)))
-    ([board        ; Board
-      bids         ; Map Figure (Map Player Bid)
-      callback     ; [Board Player Figure] -> Map Keyword Any
-      figure-list] ; Vector Figure
+                      (add-influence board location winner)))]
+        (-> board
+            eval-support
+            eval-bank
+            eval-influence)))
+(defn eval-bids [board
+                 bids
+                 figure-list
+                 {:keys [special player args] :as special-input}]
+                 ; {:special Special :player Player :args ?}
+    (if special-input
+        (let [{:keys [check effect]} special]
+            (if (check board player args)
+                (recur (effect board player args) bids figure-list nil)
+                (throw #?(:cljs (js/Error. "Invalid special arguments")
+                          :clj (Exception. "Invalid special arguments")))))
         (if (empty? figure-list)
-            board
+            {:mode :complete :board board}
             (let [figure (first figure-list)
                   winner (get-winner (bids figure))
-                  board (if (nil? winner)
+                  board (if-not winner
                             board
-                            (reward-winner board figure winner callback))]
-                (recur board bids callback (rest figure-list))))))
-(defn run-turn [board bids callback]
-    (-> board
-        clear-banks
-        (eval-bids bids callback)
-        fill-banks
-        inc-turn))
+                            (reward-winner board figure winner))
+                  special (:special figure)
+                  doable (:doable special)]
+                (if (and special (doable board winner))
+                ; TODO occupy-guard-house
+                    {:mode (:id special) :winner winner :figure-list (rest figure-list) :board board}
+                    (recur board bids (rest figure-list) nil))))))
+(defn resume-turn [board bids figure-list special-input]
+    (let [{:keys [mode board] :as result} (eval-bids board bids figure-list special-input)]
+        (assoc result
+            :board
+            (if (= :complete mode)
+                (-> board
+                    fill-banks
+                    inc-turn)
+                board))))
+(defn run-turn [board bids]
+    (resume-turn (clear-banks board) bids (:figures board) nil))

@@ -36,13 +36,12 @@
 (defn just-special [special] (->Figure nil nil nil nil nil special))
 
 (deftest simple-special
-    (let [callback (constantly {:location courtroom :player joe})
-          board (-> board
+    (let [board (-> board
                     (add-influence hideout rob)
                     (add-influence courtroom rob)
                     (add-influence courtroom joe)
                     (add-influence courtroom joe)
-                    (run-special assassin rob callback))]
+                    ((get-in assassin [:special :effect]) rob {:location courtroom :player joe}))]
         (is (= 1 (get-influence board hideout rob)))
         (is (= 0 (get-influence board hideout joe)))
         (is (= 1 (get-influence board courtroom rob)))
@@ -88,12 +87,12 @@
         (is (doable board joe))
         (is (check board rob rob-choice))
         (is (check board joe joe-choice))
-        (let [board (run-special board (just-special steal-spot) rob (constantly rob-choice))]
+        (let [board ((:effect steal-spot) board rob rob-choice)]
             (is (= 1 (get-influence board hideout rob)))
             (is (= 0 (get-influence board hideout joe)))
             (is (= 2 (get-influence board courtroom rob)))
             (is (= 1 (get-influence board courtroom joe))))
-        (let [board (run-special board (just-special steal-spot) joe (constantly joe-choice))]
+        (let [board ((:effect steal-spot) board joe joe-choice)]
             (is (= 0 (get-influence board hideout rob)))
             (is (= 1 (get-influence board hideout joe)))
             (is (= 1 (get-influence board courtroom rob)))
@@ -121,7 +120,7 @@
         (is (doable board rob))
         (is (doable board joe))
         (is (check board rob choice))
-        (let [board (run-special board (just-special swap-spots) rob (constantly choice))]
+        (let [board ((:effect swap-spots) board rob choice)]
             (is (= 0 (get-influence board hideout rob)))
             (is (= 1 (get-influence board hideout joe)))
             (is (= 2 (get-influence board courtroom rob)))
@@ -344,27 +343,32 @@
 
 (deftest scenario-reassign
     (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
-          callback (fn [_ player _] {:reassignments [[loc1 loc2] [loc3 loc2]]})
-          board (-> reassign-board
+          {:keys [mode board figure-list] :as result} (-> reassign-board
                     (add-bank rob (->Bid 1 0 0))
                     (add-influence loc1 rob)
                     (add-influence loc2 joe)
                     (add-influence loc3 rob)
-                    (run-turn bids callback))]
-        (is (= 0 (get-influence board loc1 rob)))
-        (is (= 0 (get-influence board loc1 joe)))
-        (is (= 2 (get-influence board loc2 rob)))
-        (is (= 1 (get-influence board loc2 joe)))
-        (is (= 0 (get-influence board loc3 rob)))
-        (is (= 0 (get-influence board loc3 joe)))))
+                    (run-turn bids))]
+        (is (= :reassign-spots mode))
+        (let [{:keys [mode board]}
+              (resume-turn
+                board
+                bids
+                figure-list
+                {:special reassign-spots
+                 :player rob
+                 :args {:reassignments [[loc1 loc2] [loc3 loc2]]}})]
+            (is (= :complete mode))
+            (is (= 0 (get-influence board loc1 rob)))
+            (is (= 0 (get-influence board loc1 joe)))
+            (is (= 2 (get-influence board loc2 rob)))
+            (is (= 1 (get-influence board loc2 joe)))
+            (is (= 0 (get-influence board loc3 rob)))
+            (is (= 0 (get-influence board loc3 joe))))))
 
 (deftest scenario-mid-game-with-specials
     (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
                 judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
-          callback (fn [_ player _]
-                       (cond
-                           (= player rob) {:location courtroom :player joe}
-                           (= player joe) {:location hideout   :player rob}))
           board (-> board
                     (add-influence hideout rob)
                     (add-influence courtroom rob)
@@ -376,10 +380,29 @@
         (is (= 2 (get-influence board courtroom joe)))
         (is (= 1 (get-influence board hideout rob)))
         (is (= 0 (get-influence board hideout joe)))
-        (let [board (run-turn board bids callback)]
-            (is (= 1 (get-influence board courtroom rob)))
-            (is (= 2 (get-influence board courtroom joe)))
-            (is (= 0 (get-influence board hideout rob)))
-            (is (= 1 (get-influence board hideout joe)))
-            (is (= (->Bid 3 0 2) (get-bank board rob)))
-            (is (= (->Bid 4 1 0) (get-bank board joe))))))
+        (let [{:keys [mode board figure-list] :as result} (run-turn board bids)]
+            (is (= :clear-spot mode))
+            (let [{:keys [mode board figure-list] :as result}
+                  (resume-turn
+                    board
+                    bids
+                    figure-list
+                    {:special clear-spot
+                     :player rob
+                     :args {:location courtroom :player joe}})]
+                (is (= :steal-spot mode))
+                (let [{:keys [mode board figure-list] :as result}
+                      (resume-turn
+                        board
+                        bids
+                        figure-list
+                        {:special steal-spot
+                         :player joe
+                         :args {:location hideout :player rob}})]
+                    (is (= :complete mode))
+                    (is (= 1 (get-influence board courtroom rob)))
+                    (is (= 2 (get-influence board courtroom joe)))
+                    (is (= 0 (get-influence board hideout rob)))
+                    (is (= 1 (get-influence board hideout joe)))
+                    (is (= (->Bid 3 0 2) (get-bank board rob)))
+                    (is (= (->Bid 4 1 0) (get-bank board joe))))))))

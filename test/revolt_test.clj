@@ -3,8 +3,6 @@
   (:use revolt.setup)
   (:use clojure.test))
 
-(def dummy-callback (constantly {}))
-
 (def rob (->Player "Rob"))
 (def joe (->Player "Joe"))
 (def moe (->Player "Moe"))
@@ -179,8 +177,8 @@
 
   (testing "The winner of a figure receives that figure's reward"
     (let [board (-> (clear-banks board)
-                    (reward-winner farmer rob dummy-callback)
-                    (reward-winner prince joe dummy-callback))]
+                    (reward-winner farmer rob)
+                    (reward-winner prince joe))]
       (is (= 0 (get-support board joe)))
       (is (= 1 (get-support board rob)))
       (is (= (->Bid 2 0 0) (get-bank board rob)))
@@ -189,3 +187,15 @@
       (is (= 1 (get-influence board castle joe)))
       (is (= 3 (get-score board rob)))
       (is (= 5 (get-score board joe))))))
+
+(deftest turn-resume
+
+  (testing "Turn should eval completely if no specials are won"
+    (let [{:keys [mode board]} (run-turn board {doctor {rob (->Bid 3 1 1)}
+                                                farmer {joe (->Bid 3 1 1)}
+                                                barber {moe (->Bid 3 1 1)}})]
+      (is (= :complete mode))
+      (is (= 2 (:turn board)))
+      (is (= 0 (get-support board rob)))
+      (is (= 1 (get-support board joe)))
+      (is (= 8 (get-support board moe))))))
