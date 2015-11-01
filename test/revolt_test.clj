@@ -3,9 +3,9 @@
   (:use revolt.setup)
   (:use clojure.test))
 
-(def rob (->Player "Rob"))
-(def joe (->Player "Joe"))
-(def moe (->Player "Moe"))
+(def rob (->Player 1 "Rob"))
+(def joe (->Player 2 "Joe"))
+(def moe (->Player 3 "Moe"))
 (def players [rob joe moe])
 
 (def hovel  (->Location :hovel  10 2))
@@ -191,11 +191,16 @@
 (deftest turn-resume
 
   (testing "Turn should eval completely if no specials are won"
-    (let [{:keys [mode board]} (run-turn board {doctor {rob (->Bid 3 1 1)}
-                                                farmer {joe (->Bid 3 1 1)}
-                                                barber {moe (->Bid 3 1 1)}})]
-      (is (= :complete mode))
+    (let [board (run-turn board {doctor {rob (->Bid 3 1 1)}
+                                 farmer {joe (->Bid 3 1 1)}
+                                 barber {moe (->Bid 3 1 1)}})]
+      (is (ready? board))
       (is (= 2 (:turn board)))
       (is (= 0 (get-support board rob)))
       (is (= 1 (get-support board joe)))
-      (is (= 8 (get-support board moe))))))
+      (is (= 8 (get-support board moe)))
+      (is (= (->Bid 3 2 0) (get-bank board rob)))
+      (is (= (->Bid 5 0 0) (get-bank board joe)))
+      (is (= (->Bid 5 0 0) (get-bank board moe)))
+      (is (= 1 (get-influence board farm joe)))
+      (is (= 1 (get-influence board saloon moe))))))

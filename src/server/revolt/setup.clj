@@ -10,6 +10,7 @@
 ; Occupant of the guard house is immue to rival's use of Spy and Apothecary
 (def occupy-guard-house
     (->Special :occupy-guard-house
+        false
         (constantly true)
         (constantly true)
         (fn [board winner _] (set-guard-house board winner))))
@@ -17,6 +18,7 @@
 ; Replace one Influence Cube with one of your own.
 (def steal-spot
     (->Special :steal-spot
+        true
         (fn [board winner]
             (let [pairs (cartesian-product (:locations board) (:players board))]
                 (some
@@ -50,6 +52,7 @@
 ; Swap the cubes in any two Influence Spaces.
 (def swap-spots
     (->Special :swap-spots
+        true
         any-swaps?
         (fn [board winner {:keys [location0 player0 location1 player1]}]
             (can-swap? board winner location0 player0 location1 player1))
@@ -59,6 +62,7 @@
 ; Reassign up to two of your cubes already on the board.
 (def reassign-spots
     (->Special :reassign-spots
+        true
         (fn [board winner]
             (some
                 (fn [location]
@@ -89,6 +93,7 @@
 ; Influence any open Influence Space.
 (def take-open-spot
     (->Special :take-open-spot
+        true
         (fn [board _]
             (not (board-full? board)))
         (fn [board _ {:keys [location]}]

@@ -3,8 +3,8 @@
     (:use revolt.setup)
     (:use clojure.test))
 
-(def rob (->Player "Rob"))
-(def joe (->Player "Joe"))
+(def rob (->Player 1 "Rob"))
+(def joe (->Player 2 "Joe"))
 (def players [rob joe])
 
 (def hideout   (->Location :hideout   20 1))
@@ -14,6 +14,7 @@
 
 (def clear-spot
     (->Special :clear-spot
+        true
         (fn [board winner]
             (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
         (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
@@ -343,22 +344,17 @@
 
 (deftest scenario-reassign
     (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
-          {:keys [mode board figure-list] :as result} (-> reassign-board
+          board (-> reassign-board
                     (add-bank rob (->Bid 1 0 0))
                     (add-influence loc1 rob)
                     (add-influence loc2 joe)
                     (add-influence loc3 rob)
                     (run-turn bids))]
-        (is (= :reassign-spots mode))
-        (let [{:keys [mode board]}
-              (resume-turn
-                board
-                bids
-                figure-list
-                {:special reassign-spots
-                 :player rob
-                 :args {:reassignments [[loc1 loc2] [loc3 loc2]]}})]
-            (is (= :complete mode))
+        (is (= reassign-spots (:special board)))
+        (let [board (run-turn board
+                              bids
+                              {:reassignments [[loc1 loc2] [loc3 loc2]]})]
+            (is (ready? board))
             (is (= 0 (get-influence board loc1 rob)))
             (is (= 0 (get-influence board loc1 joe)))
             (is (= 2 (get-influence board loc2 rob)))
@@ -380,29 +376,23 @@
         (is (= 2 (get-influence board courtroom joe)))
         (is (= 1 (get-influence board hideout rob)))
         (is (= 0 (get-influence board hideout joe)))
-        (let [{:keys [mode board figure-list] :as result} (run-turn board bids)]
-            (is (= :clear-spot mode))
-            (let [{:keys [mode board figure-list] :as result}
-                  (resume-turn
-                    board
-                    bids
-                    figure-list
-                    {:special clear-spot
-                     :player rob
-                     :args {:location courtroom :player joe}})]
-                (is (= :steal-spot mode))
-                (let [{:keys [mode board figure-list] :as result}
-                      (resume-turn
-                        board
-                        bids
-                        figure-list
-                        {:special steal-spot
-                         :player joe
-                         :args {:location hideout :player rob}})]
-                    (is (= :complete mode))
+        (let [board (run-turn board bids)]
+            (is (suspended? board))
+            (is (= clear-spot (:special board)))
+            (let [board (run-turn board
+                                  bids
+                                  {:location courtroom :player joe})]
+                (is (suspended? board))
+                (is (= steal-spot (:special board)))
+                (let [board (run-turn board
+                                      bids
+                                      {:location hideout :player rob})]
+                    (is (ready? board))
                     (is (= 1 (get-influence board courtroom rob)))
                     (is (= 2 (get-influence board courtroom joe)))
                     (is (= 0 (get-influence board hideout rob)))
                     (is (= 1 (get-influence board hideout joe)))
                     (is (= (->Bid 3 0 2) (get-bank board rob)))
                     (is (= (->Bid 4 1 0) (get-bank board joe))))))))
+
+; TODO board should not get suspended if no winner for figure with special

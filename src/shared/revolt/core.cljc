@@ -52,7 +52,7 @@
               #(merge-with first-not-nil (sub-map m %) default-inner-map)]
             (into {} (map #(vector % (or-default %)) all-inner-keys)))))
 
-(defn ->Player [id] {:id id})
+(defn ->Player [id name] {:id id :name name})
 
 (defn ->Bid [gold blackmail force]
   {:gold gold
@@ -64,8 +64,9 @@
    :support support
    :influence-limit influence-limit})
 
-(defn ->Special [id doable check effect]
+(defn ->Special [id requires-input doable check effect]
   {:id id           ; Keyword
+   :requires-input requires-input ; Boolean
    :doable doable   ; [Board  Player] -> Boolean
                     ;     Returns true if winner can meaningfully perform special
    :check check     ; [Board  Player  (Map Keyword Object)] -> Boolean
@@ -82,13 +83,18 @@
    :special special})     ; Special | nil
 
 (defn ->Board [turn locations figures players banks influence support]
-  {:turn turn           ; Nat
+  {:mode :ready
+   :turn turn           ; Nat
    :locations locations ; Collection Location
    :figures figures     ; Vector Figure
    :players players     ; Collection Player
    :banks banks         ; Map Player Bid
    :influence influence ; Map Location (Map Player Nat)
    :support support})   ; Map Player Nat
+
+(defn fail [message]
+  (throw #?(:cljs (js/Error. message)
+            :clj (Exception. message))))
 
 (def zero-bid (->Bid 0 0 0))
 (def zero-bid? (partial = zero-bid))
@@ -202,52 +208,59 @@
         (if-let [max-score (unique-max (vals scores))]
               (inverted-get scores max-score))))
 (defn inc-turn [board] (update board :turn inc))
-(defn reward-winner [board
-                     {:keys [support bank location]}
-                     winner]
-    (let [eval-support (fn [board] (add-support board winner support))
-          eval-bank (fn [board] (add-bank board winner bank))
-          eval-influence
-              (fn [board]
-                  (if (or (nil? location) (location-full? board location))
-                      board
-                      (add-influence board location winner)))]
+(defn ready-board [board]
+  (-> board
+      (dissoc :special-winner)
+      (dissoc :special)
+      (dissoc :figure-list)
+      (assoc :mode :ready)))
+(defn suspended-board [board special-winner special figure-list]
+  (-> board
+      (assoc :special-winner special-winner)
+      (assoc :special special)
+      (assoc :figure-list figure-list)
+      (assoc :mode :suspended)))
+(defn ready? [board] (= :ready (:mode board)))
+(defn suspended? [board] (= :suspended (:mode board)))
+(defn reward-winner [board {:keys [support bank location]} winner]
+  (let [board (-> board
+                  (add-support winner support)
+                  (add-bank winner bank))]
+    (if (or (nil? location) (location-full? board location))
+      board
+      (add-influence board location winner))))
+(defn eval-bids [board bids figure-list]
+  (if (empty? figure-list)
+    (ready-board board)
+    (let [[figure & figure-list] figure-list
+          winner (get-winner (bids figure))
+          board (if-not winner board (reward-winner board figure winner))
+          special (:special figure)
+          {:keys [id requires-input doable effect]} special]
+      (if (and winner special (doable board winner))
+        (if requires-input
+          (suspended-board board winner special figure-list)
+          (recur (ready-board (effect board winner nil)) bids figure-list))
+        (recur (ready-board board) bids figure-list)))))
+(defn finish [board]
+  (if (ready? board)
+    (-> board fill-banks inc-turn)
+    board))
+(defn run-turn [board bids & [args]]
+  (cond
+    (ready? board)
+      (-> board
+          clear-banks
+          (eval-bids bids (:figures board))
+          finish)
+    (suspended? board)
+      (let [{:keys [special special-winner figure-list]} board
+            {:keys [check effect]} special]
+        (assert args "Special args must be supplied")
+        (assert (check board special-winner args) "Args invalid for this special")
         (-> board
-            eval-support
-            eval-bank
-            eval-influence)))
-(defn eval-bids [board
-                 bids
-                 figure-list
-                 {:keys [special player args] :as special-input}]
-                 ; {:special Special :player Player :args ?}
-    (if special-input
-        (let [{:keys [check effect]} special]
-            (if (check board player args)
-                (recur (effect board player args) bids figure-list nil)
-                (throw #?(:cljs (js/Error. "Invalid special arguments")
-                          :clj (Exception. "Invalid special arguments")))))
-        (if (empty? figure-list)
-            {:mode :complete :board board}
-            (let [figure (first figure-list)
-                  winner (get-winner (bids figure))
-                  board (if-not winner
-                            board
-                            (reward-winner board figure winner))
-                  special (:special figure)
-                  doable (:doable special)]
-                (if (and special (doable board winner))
-                ; TODO occupy-guard-house
-                    {:mode (:id special) :winner winner :figure-list (rest figure-list) :board board}
-                    (recur board bids (rest figure-list) nil))))))
-(defn resume-turn [board bids figure-list special-input]
-    (let [{:keys [mode board] :as result} (eval-bids board bids figure-list special-input)]
-        (assoc result
-            :board
-            (if (= :complete mode)
-                (-> board
-                    fill-banks
-                    inc-turn)
-                board))))
-(defn run-turn [board bids]
-    (resume-turn (clear-banks board) bids (:figures board) nil))
+            (effect special-winner args)
+            ready-board ; TODO effect can trigger another Special
+            (eval-bids bids figure-list)
+            finish))
+    :else (fail "Board in invalid state")))
