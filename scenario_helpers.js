@@ -44,6 +44,7 @@ function waitFor(testFx, onReady, timeOutMillis) {
           if (new Date().getTime() - start < maxtimeOutMillis) {
             condition = testFx();
           } else {
+            clearInterval(interval);
             console.warn("Timeout waiting after " + maxtimeOutMillis + "ms.");
           }
         } else {
