@@ -9,27 +9,11 @@
   (:use revolt.core
         revolt.setup))
 
-(def special-ids [
-    :steal-spot
-    :swap-spots
-    :occupy-guard-house
-    :take-open-spot
-    :reassign-spots])
+;(defn println [& more] (.write *out* (str (clojure.string/join " " more) "\r\n")))
 
-(defn page-frame []
-    (html5
-        [:head
-            [:title "Revolt Server"]
-            (include-css "css/style.css")
-            (include-js "js/compiled/revolt_client.js")]
-        [:body
-            [:div#content]]))
+(defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
 
-(defn swap-in! [a ks f & args]
-  (apply swap! a update-in ks f args))
-
-(defn reset-in! [a ks x]
-  (swap! a assoc-in ks x))
+(defn reset-in! [a ks x] (swap! a assoc-in ks x))
 
 (defn bank-setup [{:keys [gold blackmail force]}]
   {:gold gold
@@ -110,6 +94,7 @@
   (= (count (:players (:board @state))) (count (:bids @state))))
 
 (defn transmit [state player-id message]
+    (println "transmit to player" player-id "\r\n" message)
     (let [player-channel (get-in @state [:player-channels player-id])]
         (go (>! player-channel message))))
 
@@ -118,9 +103,6 @@
 
 (defn transmit-game-already-started [state player-id]
     (transmit state player-id {:type :game-already-started}))
-
-(defn transmit-bids-already-submitted [state player-id]
-    (transmit state player-id {:type :bids-already-submitted}))
 
 (defn transmit-invalid-bid [state player-id]
     (transmit state player-id {:type :invalid-bid}))
@@ -132,6 +114,7 @@
     (transmit state player-id {:type :invalid-special-args}))
 
 (defn broadcast [state message]
+  (println "broadcasting" "\r\n" message)
   (let [{:keys [player-channels]} @state]
     (doseq [ch (vals player-channels)] (go (>! ch message)))))
 
@@ -167,6 +150,8 @@
       :else              (broadcast-take-bids state board))))
 
 ; TODO make sure submitted by the right player
+;     (already handled by the player-id being associated with the ws-channel?)
+; TODO make sure correct special was submitted for?
 (defn handle-submit-special [state player-id args]
   (let [{:keys [board]} @state
         {:keys [id check]} (:special board)
@@ -219,7 +204,6 @@
 
 (defn ->ServerState [] {
     :player-names {} ; {player-id player-name}
-    :player-counter 0
     :player-channels {} ; {player-id chan}
     :board nil
     :bids {}}) ; {player-id Bid}
@@ -230,21 +214,36 @@
 
 (go-loop []
     (when-let [message (<! server-channel)]
-        (handle-message state message)))
+        (handle-message state message)
+        (recur)))
+
+(def player-counter (atom 0))
 
 ; TODO move signup into this loop?
 (defn ws-handler [{:keys [ws-channel]}]
-    (let [player-id (swap-in! state [:player-counter] inc)]
+    (let [player-id (swap! player-counter inc)]
         (swap-in! state [:player-channels] assoc player-id ws-channel)
+        (go (>! ws-channel {:type :player-id :player-id player-id}))
+        (println "connected to client" player-id)
         (go-loop []
-            (when-let [{:keys [message error]} (<! ws-channel)]
+            (when-let [{:keys [message error] :as raw} (<! ws-channel)]
                 ; handle error
+                (println "message from player" player-id "\r\n" raw)
                 (if message
                     (>! server-channel (assoc message :player-id player-id)))
                 (recur)))))
 
+(def page-frame
+    (html5
+        [:head
+            [:title "Revolt Server"]
+            (include-css "css/style.css")
+            (include-js "js/compiled/revolt_client.js")]
+        [:body
+            [:div#content]]))
+
 (defroutes app-routes
-    (GET "/"   [] (response (page-frame)))
+    (GET "/"   [] (response page-frame))
     (GET "/ws" [] (wrap-websocket-handler ws-handler)))
 
 (def app #'app-routes)
