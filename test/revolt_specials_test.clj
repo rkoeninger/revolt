@@ -1,7 +1,8 @@
 (ns revolt-specials-test
-    (:use revolt.core)
-    (:use revolt.setup)
-    (:use clojure.test))
+  (:use revolt.core
+        revolt.setup
+        clojure.test
+        test-common))
 
 (def rob (->Player 1 "Rob"))
 (def joe (->Player 2 "Joe"))
@@ -13,12 +14,12 @@
 (def locs [hideout courtroom])
 
 (def clear-spot
-    (->Special :clear-spot
-        true
-        (fn [board winner]
-            (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
-        (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
-        (fn [board winner {:keys [location player]}] (remove-influence board location player))))
+  (->Special :clear-spot
+    true
+    (fn [board winner]
+      (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
+    (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
+    (fn [board winner {:keys [location player]}] (remove-influence board location player))))
 
 (def assassin (->Figure :assassin 0 (->Bid 0 0 2) -f hideout   clear-spot))
 (def judge    (->Figure :judge    4 (->Bid 0 1 0) b- courtroom steal-spot))
@@ -26,53 +27,52 @@
 (def figs [assassin judge])
 
 (def board (->Board
-    1
-    locs
-    figs
-    players
-    (zipmap players (repeat zero-bid))
-    (zipmap locs (repeat (zipmap players (repeat 0))))
-    (zipmap players (repeat 0))))
+  1
+  locs
+  figs
+  players
+  (zipmap players (repeat zero-bid))
+  (zipmap locs (repeat (zipmap players (repeat 0))))
+  (zipmap players (repeat 0))))
 
 (defn just-special [special] (->Figure nil nil nil nil nil special))
 
 (deftest simple-special
-    (let [board (-> board
-                    (add-influence hideout rob)
-                    (add-influence courtroom rob)
-                    (add-influence courtroom joe)
-                    (add-influence courtroom joe)
-                    ((get-in assassin [:special :effect]) rob {:location courtroom :player joe}))]
-        (is (= 1 (get-influence board hideout rob)))
-        (is (= 0 (get-influence board hideout joe)))
-        (is (= 1 (get-influence board courtroom rob)))
-        (is (= 1 (get-influence board courtroom joe)))))
+  (let [board (-> board
+                  (add-influence hideout rob)
+                  (add-influence courtroom rob)
+                  (add-influence courtroom joe)
+                  (add-influence courtroom joe)
+                  ((get-in assassin [:special :effect]) rob {:location courtroom :player joe}))]
+    (is= 1 (get-influence board hideout rob))
+    (is= 0 (get-influence board hideout joe))
+    (is= 1 (get-influence board courtroom rob))
+    (is= 1 (get-influence board courtroom joe))))
 
 (deftest steal-spot-empty-board
-    (let [doable (:doable steal-spot)
-          check (:check steal-spot)]
-        (is (not (doable board rob)))
-        (is (not (doable board joe)))
-        (is (not (check board rob {:location hideout :player rob})))
-        (is (not (check board rob {:location hideout :player joe})))
-        (is (not (check board joe {:location hideout :player rob})))
-        (is (not (check board joe {:location hideout :player joe})))))
+  (let [doable (:doable steal-spot)
+        check (:check steal-spot)]
+    (is-not (doable board rob))
+    (is-not (doable board joe))
+    (is-not (check board rob {:location hideout :player rob}))
+    (is-not (check board rob {:location hideout :player joe}))
+    (is-not (check board joe {:location hideout :player rob}))
+    (is-not (check board joe {:location hideout :player joe}))))
 
 (deftest steal-spot-only-other-player-has-guard-house
-    (let [doable (:doable steal-spot)
-          check (:check steal-spot)
-          board (-> board
-                    (add-influence hideout rob)
-                    (add-influence courtroom joe)
-                    (add-influence courtroom joe))
-          board-rob-in-gh (set-guard-house board rob)
-          board-joe-in-gh (set-guard-house board joe)]
-        (is (not (touchable? board-joe-in-gh rob joe)))
-        (is (not (touchable? board-rob-in-gh joe rob)))
-        (is (not (doable board-joe-in-gh rob)))
-        (is (not (doable board-rob-in-gh joe)))
-        (is (doable board-rob-in-gh rob))
-        (is (doable board-joe-in-gh joe))))
+  (let [{:keys [doable check]} steal-spot
+        board (-> board
+                  (add-influence hideout rob)
+                  (add-influence courtroom joe)
+                  (add-influence courtroom joe))
+        board-rob-in-gh (set-guard-house board rob)
+        board-joe-in-gh (set-guard-house board joe)]
+    (is-not (touchable? board-joe-in-gh rob joe))
+    (is-not (touchable? board-rob-in-gh joe rob))
+    (is-not (doable board-joe-in-gh rob))
+    (is-not (doable board-rob-in-gh joe))
+    (is (doable board-rob-in-gh rob))
+    (is (doable board-joe-in-gh joe))))
 
 (deftest steal-spot-single-valid-target
     (let [doable (:doable steal-spot)

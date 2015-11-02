@@ -9,8 +9,6 @@
   (:use revolt.core
         revolt.setup))
 
-;(defn println [& more] (.write *out* (str (clojure.string/join " " more) "\r\n")))
-
 (defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
 
 (defn reset-in! [a ks x] (swap! a assoc-in ks x))
@@ -26,29 +24,29 @@
    :influence-limit influence-limit})
 
 (defn board-status [{:keys [turn support banks influence guard-house]}]
-    {:turn        turn
-     :support     (map-keys :id support)
-     :banks       (map-kv :id bank-setup banks)
-     :influence   (map-kv :id (partial map-keys :id) influence)
-     :guard-house (:id guard-house)})
+  {:turn        turn
+   :support     (map-keys :id support)
+   :banks       (map-kv :id bank-setup banks)
+   :influence   (map-kv :id (partial map-keys :id) influence)
+   :guard-house (:id guard-house)})
 
 (defn figure-setup [{:keys [id support bank immunities location special]}]
-    {:id          id
-     :support     support
-     :bank        (bank-setup bank)
-     :immunities  immunities
-     :location-id (:id location)
-     :special-id  (:id special)})
+  {:id          id
+   :support     support
+   :bank        (bank-setup bank)
+   :immunities  immunities
+   :location-id (:id location)
+   :special-id  (:id special)})
 
 (defn board-setup [{:keys [players figures locations]}]
-    {:players   (vec (map :id players))
-     :figures   (vec (map figure-setup figures))
-     :locations (vec (map location-setup locations))
-     :specials  (vec (filter identity (map (comp :id :special) figures)))})
+  {:players   (mapv :id players)
+   :figures   (mapv figure-setup figures)
+   :locations (mapv location-setup locations)
+   :specials  (filterv identity (map (comp :id :special) figures))})
 
 (defn game-results [board]
-    {:scores   (map-keys :id (get-scores board))
-     :rankings (map-keys :id (get-rankings board))})
+  {:scores   (map-keys :id (get-scores board))
+   :rankings (map-keys :id (get-rankings board))})
 
 (defn by-id [coll id] (first (filter #(= id (:id %)) coll)))
 
@@ -61,83 +59,80 @@
 (defn special-by-id [board special-id] (by-id (map :special (:figures board)) special-id))
 
 (defn read-bid [{:keys [gold blackmail force]}]
-    (->Bid (or gold 0) (or blackmail 0) (or force 0)))
+  (->Bid (or gold 0) (or blackmail 0) (or force 0)))
 
 (defn read-figure-bid-map [board bids]
-    (map-kv (partial figure-by-id board) read-bid bids))
+  (map-kv (partial figure-by-id board) read-bid bids))
 
 (defn read-player-figure-bid-map [board bids]
-    (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
+  (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
 
 (defn read-special-response [board special-id m]
-    (case special-id
-        :take-open-spot
-            {:location (location-by-id board (:location m))}
+  (case special-id
+    :take-open-spot
+      {:location (location-by-id board (:location m))}
 
-        :steal-spot
-            {:location (location-by-id board (:location m))
-             :player (player-by-id board (:player m))}
+    :steal-spot
+      {:location (location-by-id board (:location m))
+       :player (player-by-id board (:player m))}
 
-        :swap-spots
-            {:location0 (location-by-id board (:location0 m))
-             :player0   (player-by-id board (:player0 m))
-             :location1 (location-by-id board (:location1 m))
-             :player1   (player-by-id board (:player1 m))}
+    :swap-spots
+      {:location0 (location-by-id board (:location0 m))
+       :player0   (player-by-id board (:player0 m))
+       :location1 (location-by-id board (:location1 m))
+       :player1   (player-by-id board (:player1 m))}
 
-        :reassign-spots
-            {:reassignments
-             (vec (map (fn [l-ids] (vec (map (partial location-by-id board) l-ids)))
-                       (:reassignments m)))}
-        m))
+    :reassign-spots
+      {:reassignments
+       (mapv (partial mapv (partial location-by-id board)) (:reassignments m))}
+    m))
 
 (defn all-bids-submitted? [state]
   (= (count (:players (:board @state))) (count (:bids @state))))
 
 (defn transmit [state player-id message]
-    (println "transmit to player" player-id "\r\n" message)
-    (let [player-channel (get-in @state [:player-channels player-id])]
-        (go (>! player-channel message))))
+  (let [player-channel (get-in @state [:player-channels player-id])]
+    (go (>! player-channel message))))
 
 (defn transmit-game-not-ready [state player-id]
-    (transmit state player-id {:type :game-not-ready}))
+  (transmit state player-id {:type :game-not-ready}))
 
 (defn transmit-game-already-started [state player-id]
-    (transmit state player-id {:type :game-already-started}))
+  (transmit state player-id {:type :game-already-started}))
 
 (defn transmit-invalid-bid [state player-id]
-    (transmit state player-id {:type :invalid-bid}))
+  (transmit state player-id {:type :invalid-bid}))
 
 (defn transmit-special-not-expected [state player-id]
-    (transmit state player-id {:type :special-not-expected}))
+  (transmit state player-id {:type :special-not-expected}))
 
 (defn transmit-invalid-special-args [state player-id]
-    (transmit state player-id {:type :invalid-special-args}))
+  (transmit state player-id {:type :invalid-special-args}))
 
 (defn broadcast [state message]
-  (println "broadcasting" "\r\n" message)
   (let [{:keys [player-channels]} @state]
     (doseq [ch (vals player-channels)] (go (>! ch message)))))
 
 (defn broadcast-signup [state player-id player-name]
-    (broadcast state {:type :signup :player-id player-id :player-name player-name}))
+  (broadcast state {:type :signup :player-id player-id :player-name player-name}))
 
 (defn broadcast-start-game [state board]
-    (broadcast state {:type :start-game :setup (board-setup board)}))
+  (broadcast state {:type :start-game :setup (board-setup board)}))
 
 (defn broadcast-bids-submitted [state player-id]
-    (broadcast state {:type :bids-submitted :player-id player-id}))
+  (broadcast state {:type :bids-submitted :player-id player-id}))
 
 (defn broadcast-take-bids [state board]
-    (broadcast state {:type :take-bids :status (board-status board)}))
+  (broadcast state {:type :take-bids :status (board-status board)}))
 
 (defn broadcast-special [state board]
-    (broadcast state {:type :special
-                      :special-id (:id (:special board))
-                      :special-winner (:id (:special-winner board))
-                      :status (board-status board)}))
+  (broadcast state {:type :special
+                    :special-id (:id (:special board))
+                    :special-winner (:id (:special-winner board))
+                    :status (board-status board)}))
 
 (defn broadcast-game-over [state board]
-    (broadcast state {:type :game-over :results (game-results board)}))
+  (broadcast state {:type :game-over :results (game-results board)}))
 
 (defn handle-turn [state & [args]]
   (let [{:keys [board bids]} @state
@@ -180,70 +175,72 @@
                 (handle-turn state))))))
 
 (defn handle-start-game [state player-id]
-    (let [{:keys [board player-names]} @state]
-        (if board
-            (transmit-game-already-started state player-id)
-            (let [board (make-board (mapv (partial apply ->Player) player-names))]
-                (do (reset-in! state [:board] board)
-                    (broadcast-start-game state board)
-                    (broadcast-take-bids state board))))))
+  (let [{:keys [board player-names]} @state]
+    (if board
+      (transmit-game-already-started state player-id)
+      (let [board (make-board (mapv (partial apply ->Player) player-names))]
+        (do (reset-in! state [:board] board)
+            (broadcast-start-game state board)
+            (broadcast-take-bids state board))))))
 
 (defn handle-signup [state player-id player-name]
-    (if (:board @state)
-        (transmit-game-already-started state player-id)
-        (do (swap-in! state [:player-names] assoc player-id player-name)
-            (broadcast-signup state player-id player-name))))
+  (if (:board @state)
+    (transmit-game-already-started state player-id)
+    (do (swap-in! state [:player-names] assoc player-id player-name)
+        (broadcast-signup state player-id player-name))))
 
 (defn handle-message [state {:keys [player-id type player-name bids args]}]
-    (case type
-        :signup         (handle-signup state player-id player-name)
-        :start-game     (handle-start-game state player-id)
-        :submit-bids    (handle-submit-bids state player-id bids)
-        :submit-special (handle-submit-special state player-id args)
-        (transmit state player-id {:type :unrecognized-message})))
+  (case type
+    :signup         (handle-signup state player-id player-name)
+    :start-game     (handle-start-game state player-id)
+    :submit-bids    (handle-submit-bids state player-id bids)
+    :submit-special (handle-submit-special state player-id args)
+    (transmit state player-id {:type :unrecognized-message})))
 
 (defn ->ServerState [] {
-    :player-names {} ; {player-id player-name}
-    :player-channels {} ; {player-id chan}
-    :board nil
-    :bids {}}) ; {player-id Bid}
+  :player-names {} ; {player-id player-name}
+  :player-channels {} ; {player-id chan}
+  :board nil
+  :bids {}}) ; {player-id Bid}
 
 (def state (atom (->ServerState)))
 
 (def server-channel (chan))
 
-(go-loop []
-    (when-let [message (<! server-channel)]
-        (handle-message state message)
-        (recur)))
+(defmacro go-message-loop [channel binding & more]
+  `(go-loop []
+    (when-let [~binding (<! ~channel)]
+      ~@more
+      (recur))))
+
+(go-message-loop server-channel message
+  (handle-message state message))
 
 (def player-counter (atom 0))
 
 ; TODO move signup into this loop?
 (defn ws-handler [{:keys [ws-channel]}]
-    (let [player-id (swap! player-counter inc)]
-        (swap-in! state [:player-channels] assoc player-id ws-channel)
-        (go (>! ws-channel {:type :player-id :player-id player-id}))
-        (println "connected to client" player-id)
-        (go-loop []
-            (when-let [{:keys [message error] :as raw} (<! ws-channel)]
-                ; handle error
-                (println "message from player" player-id "\r\n" raw)
-                (if message
-                    (>! server-channel (assoc message :player-id player-id)))
-                (recur)))))
+  (let [player-id (swap! player-counter inc)]
+    (swap-in! state [:player-channels] assoc player-id ws-channel)
+    (go (>! ws-channel {:type :player-id :player-id player-id}))
+    (println "connected to client" player-id)
+    (go-message-loop ws-channel {:keys [message error] :as raw}
+      ; handle error
+      (println "message from player" player-id "\r\n" raw)
+      (if message
+        (>! server-channel (assoc message :player-id player-id))))))
 
 (def page-frame
-    (html5
-        [:head
-            [:title "Revolt Server"]
-            (include-css "css/style.css")
-            (include-js "js/compiled/revolt_client.js")]
-        [:body
-            [:div#content]]))
+  (html5
+    [:head
+      [:title "Revolt Server"]
+      (include-css "css/style.css")
+      (include-js "js/compiled/revolt_client.js")]
+    [:body
+      [:div#content]]))
 
 (defroutes app-routes
-    (GET "/"   [] (response page-frame))
-    (GET "/ws" [] (wrap-websocket-handler ws-handler)))
+  (GET "/"   [] (response page-frame))
+  (GET "/ws" [] (wrap-websocket-handler ws-handler)))
 
 (def app #'app-routes)

@@ -3,34 +3,35 @@
         revolt.setup
         revolt.server
         [clojure.test :only [deftest testing is]]
-        [clojure.core.async :only [<!! chan]]))
+        [clojure.core.async :only [<!! chan]]
+        test-common))
 
 (deftest read-functions
-    (let [l1 (->Location :l1 0 0)
-          l2 (->Location :l2 0 0)
-          l3 (->Location :l3 0 0)
-          f1 (->Figure :f1 0 zero-bid #{} nil nil)
-          f2 (->Figure :f2 0 zero-bid #{} nil nil)
-          f3 (->Figure :f3 0 zero-bid #{} nil nil)
-          p1 (->Player :p1 "rob")
-          p2 (->Player :p2 "joe")
-          board (->Board nil [l1 l2 l3] [f1 f2 f3] [p1 p2] nil nil nil)]
-        (is (= {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
-               (read-figure-bid-map board {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}})))
-        (is (= {p1 {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
-                p2 {f1 (->Bid 1 0 0) f2 (->Bid 1 1 0) f3 (->Bid 1 0 1)}}
-               (read-player-figure-bid-map board
-                   {:p1 {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}
-                    :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}})))
-        (is (= {:player p1 :location l1}
-               (read-special-response board :steal-spot
-                   {:player :p1 :location :l1})))
-        (is (= {:player0 p1 :location0 l1 :player1 p2 :location1 l2}
-               (read-special-response board :swap-spots
-                   {:player0 :p1 :location0 :l1 :player1 :p2 :location1 :l2})))
-        (is (= {:reassignments [[l1 l2] [l1 l3]]}
-               (read-special-response board :reassign-spots
-                   {:reassignments [[:l1 :l2] [:l1 :l3]]})))))
+  (let [l1 (->Location :l1 0 0)
+        l2 (->Location :l2 0 0)
+        l3 (->Location :l3 0 0)
+        f1 (->Figure :f1 0 zero-bid #{} nil nil)
+        f2 (->Figure :f2 0 zero-bid #{} nil nil)
+        f3 (->Figure :f3 0 zero-bid #{} nil nil)
+        p1 (->Player :p1 "rob")
+        p2 (->Player :p2 "joe")
+        board (->Board nil [l1 l2 l3] [f1 f2 f3] [p1 p2] nil nil nil)]
+    (is= {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
+         (read-figure-bid-map board {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}))
+    (is= {p1 {f1 (->Bid 3 0 0) f2 (->Bid 0 1 0) f3 (->Bid 0 0 1)}
+          p2 {f1 (->Bid 1 0 0) f2 (->Bid 1 1 0) f3 (->Bid 1 0 1)}}
+         (read-player-figure-bid-map board
+          {:p1 {:f1 {:gold 3} :f2 {:blackmail 1} :f3 {:force 1}}
+           :p2 {:f1 {:gold 1} :f2 {:gold 1 :blackmail 1} :f3 {:gold 1 :force 1}}}))
+    (is= {:player p1 :location l1}
+         (read-special-response board :steal-spot
+          {:player :p1 :location :l1}))
+    (is= {:player0 p1 :location0 l1 :player1 p2 :location1 l2}
+         (read-special-response board :swap-spots
+          {:player0 :p1 :location0 :l1 :player1 :p2 :location1 :l2}))
+    (is= {:reassignments [[l1 l2] [l1 l3]]}
+         (read-special-response board :reassign-spots
+          {:reassignments [[:l1 :l2] [:l1 :l3]]}))))
 
 (defn ->Harness []
   (let [state (atom (->ServerState))]
