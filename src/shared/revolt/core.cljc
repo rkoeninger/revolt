@@ -134,8 +134,12 @@
   (let [occupied (occupied-influence board location)
         limit (:influence-limit location)]
     (>= occupied limit)))
-(defn board-full? [board]
-  (every? (partial location-full? board) (:locations board)))
+(defn location-empty? [board location]
+  (zero? (occupied-influence board location)))
+(defn board-full? [{:keys [locations] :as board}]
+  (every? (partial location-full? board) locations))
+(defn board-empty? [{:keys [locations] :as board}]
+  (every? (partial location-empty? board) locations))
 (defn get-influence [board location player]
   (get-in board [:influence location player]))
 (defn has-influence? [board location player]

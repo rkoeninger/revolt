@@ -35,16 +35,13 @@
   (zipmap locs (repeat (zipmap players (repeat 0))))
   (zipmap players (repeat 0))))
 
-(defn with-inf [board location player number]
-  (reduce (fn [b _] (add-influence b location player)) board (repeat number 0)))
-
-(defn with-influence [board & more]
-  (reduce (fn [b [l p n]] (with-inf b l p n)) board (partition 3 more)))
-
-(defn with-support [board & more]
-  (reduce (fn [b [p n]] (add-support b p n)) board (partition 2 more)))
-
 (deftest bids
+
+  (testing "Bids are made of gold, blackmail and force"
+    (let [{:keys [gold blackmail force]} (->Bid 3 2 1)]
+      (is= 3 gold)
+      (is= 2 blackmail)
+      (is= 1 force)))
 
   (testing "One blackmail is worth more than any amount of gold"
     (is (compare-bids (->Bid 0 1 0) (->Bid 5 0 0)))

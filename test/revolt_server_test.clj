@@ -109,12 +109,6 @@
       (is= 1 (get-influence board (location-by-id board :cathedral) rob))
       (is= 1 (get-influence board (location-by-id board :market) joe)))))
 
-(defn read-player-*-map [board m]
-  (map-keys (partial player-by-id board) m))
-
-(defn read-location-player-*-map [board m]
-  (map-kv (partial location-by-id board) (partial read-player-*-map board) m))
-
 (deftest last-turn-scenario
   (let [{:keys [state get-message connect handle]} (harness)
         rob (->Player 1 "rob")

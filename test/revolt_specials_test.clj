@@ -18,8 +18,10 @@
     true
     (fn [board winner]
       (pos? (reduce + (map (partial occupied-influence board) (:locations board)))))
-    (fn [board winner {:keys [location player]}] (pos? (get-influence board location player)))
-    (fn [board winner {:keys [location player]}] (remove-influence board location player))))
+    (fn [board winner {:keys [location player]}]
+      (pos? (get-influence board location player)))
+    (fn [board winner {:keys [location player]}]
+      (remove-influence board location player))))
 
 (def assassin (->Figure :assassin 0 (->Bid 0 0 2) -f hideout   clear-spot))
 (def judge    (->Figure :judge    4 (->Bid 0 1 0) b- courtroom steal-spot))
@@ -36,6 +38,16 @@
   (zipmap players (repeat 0))))
 
 (defn just-special [special] (->Figure nil nil nil nil nil special))
+
+(defn is-doable-by-all [board special]
+  (let [{:keys [players]} board
+        {:keys [doable]} special]
+    (every? #(is (doable board %)) players)))
+
+(defn is-not-doable-by-any [board special]
+  (let [{:keys [players]} board
+        {:keys [doable]} special]
+    (every? #(is-not (doable board %)) players)))
 
 (deftest simple-special
   (let [board (-> board
@@ -125,37 +137,42 @@
 
 (deftest swap-spots-only-other-player-has-guard-house
   (let [{:keys [doable check]} swap-spots
-        board (-> board
-                  (add-influence hideout rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe))
-        board-rob-in-gh (set-guard-house board rob)
-        board-joe-in-gh (set-guard-house board joe)]
-    (is-not (touchable? board-joe-in-gh rob joe))
-    (is-not (touchable? board-rob-in-gh joe rob))
-    (is-not (doable board-joe-in-gh rob))
-    (is-not (doable board-rob-in-gh joe))
-    (is (doable board-rob-in-gh rob))
-    (is (doable board-joe-in-gh joe))))
+        board (with-influence board hideout   rob 1
+                                    courtroom joe 2)]
+    (let [board (set-guard-house board rob)]
+      (is-not (touchable? board joe rob))
+      (is-not (doable board joe))
+      (is (doable board rob)))
 
-(deftest take-open-spot-full-board
-  (let [{:keys [doable check]} take-open-spot
-        board (-> board
-                  (add-influence hideout joe)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom rob)
-                  (set-guard-house joe))]
-    (is (board-full? board))
-    (is-not (doable board rob))
-    (is-not (doable board joe))
-    (is-not (check board rob {:location hideout}))
-    (is-not (check board joe {:location hideout}))
-    (is-not (check board rob {:location courtroom}))
-    (is-not (check board joe {:location courtroom}))))
+    (let [board (set-guard-house board joe)]
+      (is-not (touchable? board rob joe))
+      (is-not (doable board rob))
+      (is (doable board joe)))))
+
+(deftest special-take-open-spot
+
+  (testing "take-open-spot (mayor)"
+    (let [{:keys [doable check]} take-open-spot]
+
+      (testing "should not be doable for anyone on an open board"
+        (let [board (-> board
+                        (with-influence hideout   joe (:influence-limit hideout)
+                                        courtroom rob (:influence-limit courtroom))
+                        (set-guard-house joe))]
+          (is (board-full? board))
+          (is-not-doable-by-any board take-open-spot)))
+
+      (testing "should always be doable on an empty board"
+        (is (board-empty? board))
+        (is-doable-by-all board take-open-spot))
+
+      (testing "should be doable as long as there is at least one open spot"
+        (let [board (-> board
+                        (with-influence hideout   joe (:influence-limit hideout)
+                                        courtroom rob (dec (:influence-limit courtroom)))
+                        (set-guard-house joe))]
+          (is-not (board-full? board))
+          (is-doable-by-all board take-open-spot))))))
 
 (deftest take-open-spot-one-full-location
   (let [{:keys [doable check]} take-open-spot
@@ -169,18 +186,6 @@
     (is (doable board joe))
     (is-not (check board rob {:location hideout}))
     (is-not (check board joe {:location hideout}))
-    (is (check board rob {:location courtroom}))
-    (is (check board joe {:location courtroom}))))
-
-(deftest take-open-spot-empty-board
-  (let [{:keys [doable check]} take-open-spot]
-    (is-not (board-full? board))
-    (is-not (location-full? board courtroom))
-    (is-not (location-full? board hideout))
-    (is (doable board rob))
-    (is (doable board joe))
-    (is (check board rob {:location hideout}))
-    (is (check board joe {:location hideout}))
     (is (check board rob {:location courtroom}))
     (is (check board joe {:location courtroom}))))
 
@@ -217,16 +222,11 @@
 
 (deftest reassign-spots-full-board
   (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe)
-                  (add-influence loc1 rob)
-                  (add-influence loc2 rob)
-                  (add-influence loc2 rob)
-                  (add-influence loc2 rob)
-                  (add-influence loc3 rob)
-                  (add-influence loc3 joe)
-                  (add-influence loc3 joe)
-                  (add-influence loc3 rob))]
+        board (with-influence reassign-board loc1 joe 1
+                                             loc1 rob 1
+                                             loc2 rob 3
+                                             loc3 joe 2
+                                             loc3 joe 2)]
     (is (board-full? board))
     (is-not (doable board rob))
     (is-not (doable board joe))
