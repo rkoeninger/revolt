@@ -62,9 +62,7 @@
 
   (testing "There should be no winner if there are no positive bids"
     (is-not (get-winner {:a (->Bid 0 0 0)
-                         :b (->Bid 0 0 0)})))
-
-  (testing "There should be no winner if there is a single non-positive bid"
+                         :b (->Bid 0 0 0)}))
     (is-not (get-winner {:a (->Bid 0 0 0)})))
 
   (testing "There should be no winner if there is a tie for first"
