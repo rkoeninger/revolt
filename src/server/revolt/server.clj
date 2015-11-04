@@ -15,7 +15,7 @@
   (select-keys bank (keys zero-bid)))
 
 (defn location-setup [location]
-  (select-keys location [:id :support :influence-limit]))
+  (select-keys location [:id :support :cap]))
 
 (defn board-status [{:keys [turn support banks influence guard-house]}]
   {:turn        turn

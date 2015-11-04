@@ -156,8 +156,8 @@
 
       (testing "should not be doable for anyone on an open board"
         (let [board (-> board
-                        (with-influence hideout   joe (:influence-limit hideout)
-                                        courtroom rob (:influence-limit courtroom))
+                        (with-influence hideout   joe (:cap hideout)
+                                        courtroom rob (:cap courtroom))
                         (set-guard-house joe))]
           (is (board-full? board))
           (is-not-doable-by-any board take-open-spot)))
@@ -168,8 +168,8 @@
 
       (testing "should be doable as long as there is at least one open spot"
         (let [board (-> board
-                        (with-influence hideout   joe (:influence-limit hideout)
-                                        courtroom rob (dec (:influence-limit courtroom)))
+                        (with-influence hideout   joe (:cap hideout)
+                                        courtroom rob (dec (:cap courtroom)))
                         (set-guard-house joe))]
           (is-not (board-full? board))
           (is-doable-by-all board take-open-spot))))))

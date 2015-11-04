@@ -55,10 +55,10 @@
    :blackmail blackmail
    :force force})
 
-(defn ->Location [id support influence-limit]
+(defn ->Location [id support cap]
   {:id id
    :support support
-   :influence-limit influence-limit})
+   :cap cap})
 
 (defn ->Special [id requires-input doable check effect]
   {:id id           ; Keyword
@@ -128,12 +128,10 @@
   (or (= winner player) (not= player (:guard-house board))))
 (defn occupied-influence [board location]
   (reduce + (vals (get-in board [:influence location]))))
-(defn available-influence [board location]
-  (max 0 (- (:influence-limit location) (occupied-influence board location))))
-(defn location-full? [board location]
-  (let [occupied (occupied-influence board location)
-        limit (:influence-limit location)]
-    (>= occupied limit)))
+(defn available-influence [board {:keys [cap] :as location}]
+  (max 0 (- cap (occupied-influence board location))))
+(defn location-full? [board {:keys [cap] :as location}]
+  (>= (occupied-influence board location) cap))
 (defn location-empty? [board location]
   (zero? (occupied-influence board location)))
 (defn board-full? [{:keys [locations] :as board}]

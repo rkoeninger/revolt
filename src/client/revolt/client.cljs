@@ -278,7 +278,7 @@
         (apply dom/table nil
           (apply dom/tr nil
             (dom/td nil (localize data :location))
-            (dom/td nil (localize data :influence-limit))
+            (dom/td nil (localize data :cap))
             (map
               (partial dom/td nil)
               (:players data)))
@@ -286,7 +286,7 @@
             (fn [location]
               (apply dom/tr nil
                 (dom/td nil (localize data (:id location)))
-                (dom/td nil (:influence-limit location))
+                (dom/td nil (:cap location))
                 (map
                   (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
                   (:players data))))
@@ -354,15 +354,15 @@
           (apply dom/table nil
             (apply dom/tr nil
               (dom/td nil (localize data :location))
-              (dom/td nil (localize data :influence-limit))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [{:keys [id influence-limit]}]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr nil
                   (dom/td nil (localize data id))
-                  (dom/td nil influence-limit)
+                  (dom/td nil cap)
                   (map
                     (fn [p]
                       (let [combo [id p]
@@ -392,15 +392,15 @@
           (apply dom/table nil
             (apply dom/tr nil
               (dom/td nil (localize data :location))
-              (dom/td nil (localize data :influence-limit))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [{:keys [id influence-limit]}]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr nil
                   (dom/td nil (localize data id))
-                  (dom/td nil influence-limit)
+                  (dom/td nil cap)
                   (map
                     (fn [p]
                       (let [combo [id p]
@@ -439,12 +439,12 @@
           (apply dom/table nil
             (apply dom/tr nil
               (dom/td nil (localize data :location))
-              (dom/td nil (localize data :influence-limit))
+              (dom/td nil (localize data :cap))
               (map
                 (partial dom/td nil)
                 (:players data)))
             (map
-              (fn [{:keys [id influence-limit]}]
+              (fn [{:keys [id cap]}]
                 (apply dom/tr
                   #js {:className (if (or (= id selection-1) (= id selection-2)) "selected")}
                   (dom/td nil
@@ -453,9 +453,9 @@
                                          (om/update! data :messenger-selection-2 id)
                                          (om/update! data :messenger-selection-1 id))
                            :disabled (or (and (not selection-1) (= 0 (get-in data [:influence id "Rob"])))
-                                         (and selection-1 (<= influence-limit (reduce + (vals (get-in data [:influence id]))))))}
+                                         (and selection-1 (<= cap (reduce + (vals (get-in data [:influence id]))))))}
                       (localize data id)))
-                  (dom/td nil influence-limit)
+                  (dom/td nil cap)
                   (map
                     (fn [player]
                       (dom/td nil (get-in data [:influence id player])))
@@ -490,7 +490,7 @@
       (apply dom/table nil
         (apply dom/tr nil
           (dom/td nil (localize data :location))
-          (dom/td nil (localize data :influence-limit))
+          (dom/td nil (localize data :cap))
           (map
             (partial dom/td nil)
             (:players data)))
@@ -500,9 +500,9 @@
               (dom/td nil
                 (dom/button
                   #js {:onClick #(send-mayor location)
-                       :disabled (>= (reduce + (vals (get-in data [:influence (:id location)]))) (:influence-limit location))}
+                       :disabled (>= (reduce + (vals (get-in data [:influence (:id location)]))) (:cap location))}
                   (localize data (:id location))))
-              (dom/td nil (:influence-limit location))
+              (dom/td nil (:cap location))
               (map
                 (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
                 (:players data))))

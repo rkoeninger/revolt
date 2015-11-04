@@ -161,7 +161,7 @@
   (testing "AssertionError should be thrown when adding to full location"
     (is (thrown-with-msg? AssertionError #"already full"
       (-> board
-          (with-influence hovel rob (:influence-limit hovel))
+          (with-influence hovel rob (:cap hovel))
           (add-influence hovel rob)))))
 
   (testing "AssertionError should be thrown when removing player from
