@@ -1,11 +1,9 @@
 (ns revolt.server
   (:require [ring.util.response :refer [response]]
-            [compojure.core :refer [defroutes GET ANY]]
-            [compojure.route :refer [resources]]
+            [compojure.core :refer [defroutes GET]]
             [chord.http-kit :refer [wrap-websocket-handler]]
             [clojure.core.async :refer [<! >! go go-loop chan]]
-            [hiccup.page :refer [html5 include-js include-css]]
-            [ring.middleware.format :refer [wrap-restful-format]])
+            [hiccup.page :refer [html5 include-js include-css]])
   (:use revolt.core
         revolt.setup))
 
@@ -16,10 +14,8 @@
 (defn bank-setup [bank]
   (select-keys bank (keys zero-bid)))
 
-(defn location-setup [{:keys [id support influence-limit]}]
-  {:id id
-   :support support
-   :influence-limit influence-limit})
+(defn location-setup [location]
+  (select-keys location [:id :support :influence-limit]))
 
 (defn board-status [{:keys [turn support banks influence guard-house]}]
   {:turn        turn

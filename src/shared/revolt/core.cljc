@@ -18,7 +18,7 @@
       1 (first coll)
       (let [[x y] (take 2 (reverse (if cmp (sort cmp coll) (sort coll))))]
         (if (not= x y) x)))))
-(defn other-than [coll x] (filter (partial not= x) coll))
+(defn other-than [x coll] (filter (partial not= x) coll))
 (defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
 (defn map-vals [f m] (map-kv identity f m))
 (defn map-keys [f m] (map-kv f identity m))

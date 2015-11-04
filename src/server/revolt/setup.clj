@@ -21,12 +21,11 @@
     true
     (fn [{:keys [locations players] :as board} winner]
       (let [pairs (cartesian-product locations players)]
-        (some
-          (fn [[location player]]
-            (and (not= winner player)
-                 (touchable? board winner player)
-                 (has-influence? board location player)))
-          pairs)))
+        (letfn [(target? [[location player]]
+                  (and (not= winner player)
+                    (touchable? board winner player)
+                    (has-influence? board location player)))]
+          (some target? pairs))))
     (fn [board winner {:keys [location player]}]
       (and (touchable? board winner player)
            (has-influence? board location player)))
@@ -44,10 +43,9 @@
 (defn any-swaps? [{:keys [locations players] :as board} winner]
   (let [pairs (cartesian-product locations players)
         pair-pairs (cartesian-product pairs pairs)]
-    (some
-      (fn [[[location0 player0] [location1 player1]]]
-        (can-swap? board winner location0 player0 location1 player1))
-      pair-pairs)))
+    (letfn [(swap? [[[location0 player0] [location1 player1]]]
+              (can-swap? board winner location0 player0 location1 player1))]
+      (some swap? pair-pairs))))
 
 ; Swap the cubes in any two Influence Spaces.
 (def swap-spots
@@ -64,14 +62,15 @@
   (->Special :reassign-spots
     true
     (fn [{:keys [locations] :as board} winner]
-      (some
-        (fn [location]
-          (and
-            (has-influence? board location winner)
-            (some
-              (comp not (partial location-full? board))
-              (other-than locations location))))
-        locations))
+      (letfn [(spot-available-elsewhere [location]
+                (some
+                  (comp not (partial location-full? board))
+                  (other-than location locations)))
+              (can-reassign-from [location]
+                (and
+                  (has-influence? board location winner)
+                  (spot-available-elsewhere location)))]
+        (some can-reassign-from locations)))
     (fn [{:keys [influence locations] :as board} winner {:keys [reassignments]}]
       (and
         (<= (count reassignments) 2)
