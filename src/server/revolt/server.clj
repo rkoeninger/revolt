@@ -13,10 +13,8 @@
 
 (defn reset-in! [a ks x] (swap! a assoc-in ks x))
 
-(defn bank-setup [{:keys [gold blackmail force]}]
-  {:gold gold
-   :blackmail blackmail
-   :force force})
+(defn bank-setup [bank]
+  (select-keys bank (keys zero-bid)))
 
 (defn location-setup [{:keys [id support influence-limit]}]
   {:id id
@@ -50,45 +48,54 @@
 
 (defn by-id [coll id] (first (filter #(= id (:id %)) coll)))
 
-(defn player-by-id [board player-id] (by-id (:players board) player-id))
+(defn player-by-id [{:keys [players]} player-id]
+  (by-id players player-id))
 
-(defn figure-by-id [board figure-id] (by-id (:figures board) figure-id))
+(defn figure-by-id [{:keys [figures]} figure-id]
+  (by-id figures figure-id))
 
-(defn location-by-id [board location-id] (by-id (:locations board) location-id))
+(defn location-by-id [{:keys [locations]} location-id]
+  (by-id locations location-id))
 
-(defn special-by-id [board special-id] (by-id (map :special (:figures board)) special-id))
-
-(defn read-bid [{:keys [gold blackmail force]}]
-  (->Bid (or gold 0) (or blackmail 0) (or force 0)))
+(defn special-by-id [{:keys [figures]} special-id]
+  (by-id (map :special figures) special-id))
 
 (defn read-figure-bid-map [board bids]
-  (map-kv (partial figure-by-id board) read-bid bids))
+  (map-kv (partial figure-by-id board) (partial merge zero-bid) bids))
 
 (defn read-player-figure-bid-map [board bids]
   (map-kv (partial player-by-id board) (partial read-figure-bid-map board) bids))
 
-(defn read-special-response [board special-id m]
-  (case special-id
-    :take-open-spot
-      {:location (location-by-id board (:location m))}
+(defn read-take-open-spot [board {:keys [location]}]
+  {:location (location-by-id board location)})
 
-    :steal-spot
-      {:location (location-by-id board (:location m))
-       :player (player-by-id board (:player m))}
+(defn read-steal-spot [board {:keys [location player]}]
+  {:location (location-by-id board location)
+   :player (player-by-id board player)})
 
-    :swap-spots
-      {:location0 (location-by-id board (:location0 m))
-       :player0   (player-by-id board (:player0 m))
-       :location1 (location-by-id board (:location1 m))
-       :player1   (player-by-id board (:player1 m))}
+(defn read-swap-spots [board {:keys [location0 player0 location1 player1]}]
+  {:location0 (location-by-id board location0)
+   :player0   (player-by-id board player0)
+   :location1 (location-by-id board location1)
+   :player1   (player-by-id board player1)})
 
-    :reassign-spots
-      {:reassignments
-       (mapv (partial mapv (partial location-by-id board)) (:reassignments m))}
-    m))
+(defn read-reassign-spots [board {:keys [reassignments]}]
+  {:reassignments (mapv (partial mapv (partial location-by-id board)) reassignments)})
+
+(defn read-special-response [board special-id args]
+  (let [read-special
+        (case special-id
+          :take-open-spot read-take-open-spot
+          :steal-spot     read-steal-spot
+          :swap-spots     read-swap-spots
+          :reassign-spots read-reassign-spots
+          identity)]
+    (read-special board args)))
 
 (defn all-bids-submitted? [state]
-  (= (count (:players (:board @state))) (count (:bids @state))))
+  (let [{:keys [board bids]} @state
+        {:keys [players]} board]
+    (= (count players) (count bids))))
 
 (defn transmit [state player-id message]
   (let [player-channel (get-in @state [:player-channels player-id])]
@@ -202,6 +209,8 @@
   :player-channels {} ; {player-id chan}
   :board nil
   :bids {}}) ; {player-id Bid}
+
+;;;; Everything after this point is impure / doesn't get tested ;;;;
 
 (def state (atom (->ServerState)))
 
