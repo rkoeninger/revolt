@@ -241,27 +241,82 @@
     (is-not (check board joe {:reassignments [[loc1 loc3] [loc2 loc3]]}))
     (is-not (check board joe {:reassignments [[loc3 loc1] [loc3 loc2]]}))))
 
-(deftest reassign-one-from-location-with-one-cube
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe))]
-    (is (doable board joe))
-    (is (check board joe {:reassignments [[loc1 loc3]]}))))
+(deftest special-reassign-spots
 
-(deftest reassign-one-from-location-with-two-cubes
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe)
-                  (add-influence loc1 joe))]
-    (is (doable board joe))
-    (is (check board joe {:reassignments [[loc1 loc3]]}))))
+  (testing "reassign-spots (messenger)"
+    (let [{:keys [doable check]} reassign-spots
+          board reassign-board]
 
-(deftest reassign-two-from-same-location-with-one-cube
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe))]
-    (is (doable board joe))
-    (is-not (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))))
+      (testing "when the board is empty"
+        (is (board-empty? board))
+
+        (testing "should not be doable by anyone"
+          (is-not-doable-by-any board reassign-spots)))
+
+      (testing "when the winner has no cubes on the board"
+        (let [board (add-influence board loc2 rob)]
+
+          (testing "should not be doable"
+            (is-not (doable board joe)))))
+
+      (testing "when the winner has only one cube on the board"
+        (let [board (add-influence board loc1 joe)]
+
+          (testing "should be doable"
+            (is (doable board joe)))
+
+          (testing "winner should be able to move that one cube"
+            (is (check board joe {:reassignments [[loc1 loc3]]}))
+            (is (check board joe {:reassignments [[loc1 loc2]]})))
+
+          (testing "winner should not be able to move that same cube twice"
+            (is-not (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))
+            (is-not (check board joe {:reassignments [[loc1 loc2] [loc1 loc2]]}))
+            (is-not (check board joe {:reassignments [[loc1 loc3] [loc1 loc2]]}))
+            (is-not (check board joe {:reassignments [[loc1 loc2] [loc1 loc3]]})))))
+
+      (testing "when the winner has only two cubes on the board"
+        (testing "at the same location"
+          (let [board (with-influence board loc1 joe 2)]
+
+            (testing "should be doable"
+              (is (doable board joe)))
+
+            (testing "should be able to move just one cube to another location"
+              (is (check board joe {:reassignments [[loc1 loc3]]}))
+              (is (check board joe {:reassignments [[loc1 loc2]]})))
+
+            (testing "winner should be able to move both cubes to other locations"
+              (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))
+              (is (check board joe {:reassignments [[loc1 loc2] [loc1 loc2]]}))
+              (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc2]]}))
+              (is (check board joe {:reassignments [[loc1 loc2] [loc1 loc3]]})))))
+
+        (testing "at different locations"
+          (let [board (-> board (add-influence loc1 joe)
+                                (add-influence loc2 joe))]
+
+            (testing "should be doable"
+              (is (doable board joe)))
+
+            (testing "should be able to move just one cube to another location"
+              (is (check board joe {:reassignments [[loc1 loc2]]}))
+              (is (check board joe {:reassignments [[loc2 loc1]]}))
+              (is (check board joe {:reassignments [[loc1 loc3]]}))
+              (is (check board joe {:reassignments [[loc2 loc3]]})))
+
+            (testing "winner should be able to move both cubes to another location"
+              (is (check board joe {:reassignments [[loc1 loc3] [loc2 loc3]]}))))))
+
+      (testing "when the board is full"
+        (let [board (with-influence board loc1 rob 2
+                                          loc2 joe 3
+                                          loc3 rob 2
+                                          loc3 rob 2)]
+          (is (board-full? board))
+
+          (testing "should not be doable by anyone"
+            (is-not-doable-by-any board reassign-spots)))))))
 
 (deftest reassign-two-from-same-location-with-two-cubes
   (let [{:keys [doable check]} reassign-spots
