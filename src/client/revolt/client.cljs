@@ -134,46 +134,37 @@
 (defn dont-show-zero [x]
   (if (zero? x) "" x))
 
-(defn denomination-remaining? [data denomination]
-  (> (get-in data [:bank denomination]) 0))
-
 (defn nothing-on-figure? [data id]
   (not (r/pos-bid? (get-in data [:bids id]))))
 
 (defn figure-limit-reached? [data]
   (>= (count (filter r/pos-bid? (vals (:bids data)))) 6))
 
+(defn denomination-arrow [id enabled data denomination figure-disabled offset button-id-prefix id-suffix label]
+  (let [disabled (or figure-disabled (not enabled))
+        className (clojure.string/join " "
+                    ["adjust"
+                     (if disabled "disabled" "enabled")
+                     (if (my-bids-submitted? data) "invisible")])]
+    (dom/button
+      #js {:disabled disabled
+           :className className
+           :id (str button-id-prefix "-" id-suffix)
+           :onClick #(adjust-bid data id denomination offset)}
+      label)))
+
 (defn denomination-input [data id immunities denomination]
   (let [immune (contains? immunities denomination)
+        remaining-bank (get-in data [:bank denomination])
         amount (get-in data [:bids id denomination])
         button-id-prefix (clojure.string/join "-" ["bid" (name id) (name denomination)])
-        figure-disabled (or immune
-                            (my-bids-submitted? data)
-                            (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
+        disabled (or immune
+                     (my-bids-submitted? data)
+                     (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
     (dom/td
       nil
-      (let [disabled (or figure-disabled (not (denomination-remaining? data denomination)))
-            className (clojure.string/join " "
-                        ["adjust"
-                         (if disabled "disabled" "enabled")
-                         (if (my-bids-submitted? data) "invisible")])]
-        (dom/button
-          #js {:disabled disabled
-               :className className
-               :id (str button-id-prefix "-up")
-               :onClick #(adjust-bid data id denomination 1)}
-          "\u2191"))
-      (let [disabled (or figure-disabled (= 0 (get-in data [:bids id denomination])))
-            className (clojure.string/join " "
-                        ["adjust"
-                         (if disabled "disabled" "enabled")
-                         (if (my-bids-submitted? data) "invisible")])]
-        (dom/button
-          #js {:disabled disabled
-               :className className
-               :id (str button-id-prefix "-down")
-               :onClick #(adjust-bid data id denomination -1)}
-          "\u2193"))
+      (denomination-arrow id (pos? remaining-bank) data denomination disabled 1 button-id-prefix "up" "\u2191")
+      (denomination-arrow id (pos? amount) data denomination disabled -1 button-id-prefix "down" "\u2193")
       (dom/input
         #js {:type "text"
              :disabled immune
@@ -192,7 +183,7 @@
     (if (and dval (pos? dval)) (str dval " " (localize data d)))))
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
-  (clojure.string/join ", " (flatten (filter (comp not nil?) [
+  (clojure.string/join ", " (flatten (filter identity [
     (if (and support (pos? support))
       (str support " " (localize data :support)))
     (denom data bank :gold)
