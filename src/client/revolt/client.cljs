@@ -66,12 +66,12 @@
       (>! server-ch msg)
       (recur))))
 
-(defn is-me? [data id] (= (:player-id data) id))
+(defn is-me? [{:keys [player-id]} id] (= player-id id))
 
 (defn receive-status [app-state status]
   (let [{:keys [turn guard-house banks support influence]} status
-                my-bank (get banks (:player-id @app-state))
-                figures (:figures @app-state)]
+        {:keys [player-id figures]} @app-state
+        my-bank (get banks player-id)]
     (swap! app-state assoc :mode :take-bids)
     (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/zero-bid)))
     (swap! app-state assoc :bids-submitted {})
@@ -86,39 +86,40 @@
 (defn receive-msgs! [app-state server-ch]
   (go-loop []
     (when-let [{:keys [message] :as raw} (<! server-ch)]
-      (case (:type message)
-        :player-id
-          (swap! app-state assoc :player-id (:player-id message))
-        :signup (do
-          (swap! app-state update-in [:players] #(conj % (:player-id message)))
-          (when (is-me? @app-state (:player-id message))
-            (swap! app-state assoc :mode :lobby)))
-        :start-game (let [{:keys [players figures locations]} (:setup message)]
-          (swap! app-state assoc :figures figures)
-          (swap! app-state assoc :locations locations)
-          (swap! app-state assoc :players players))
-        :game-over (do nil)
-        :take-bids (receive-status app-state (:status message))
-        :special (let [{:keys [special-id special-winner status]} message]
-          (receive-status app-state status)
-          (if (is-me? @app-state special-winner)
-            (case special-id
-              :steal-spot     (swap! app-state assoc :mode :spy)
-              :swap-spots     (swap! app-state assoc :mode :apothecary)
-              :reassign-spots (swap! app-state assoc :mode :messenger)
-              :take-open-spot (swap! app-state assoc :mode :mayor))))
-        :bids-submitted (let [player (:player-id message)]
-          (swap! app-state assoc-in [:bids-submitted player] true))
-        :invalid-bid (do nil)
-        :special-not-expected (do nil)
-        :invalid-special-args (do nil)
-        :game-already-started (js/alert (localize @app-state :game-already-started))
-        :game-not-ready (js/alert (localize @app-state :game-not-ready))
-        
-        (js/console.warn "type not idendified"))
-      (js/console.log "raw websocket message:")
-      (js/console.log (str raw))
-      (recur))))
+      (let [{:keys [type player-id setup status]} message]
+        (case type
+          :player-id
+            (swap! app-state assoc :player-id player-id)
+          :signup (do
+            (swap! app-state update-in [:players] #(conj % player-id))
+            (when (is-me? @app-state player-id)
+              (swap! app-state assoc :mode :lobby)))
+          :start-game (let [{:keys [players figures locations]} setup]
+            (swap! app-state assoc :figures figures)
+            (swap! app-state assoc :locations locations)
+            (swap! app-state assoc :players players))
+          :game-over (do nil)
+          :take-bids (receive-status app-state status)
+          :special (let [{:keys [special-id special-winner status]} message]
+            (receive-status app-state status)
+            (if (is-me? @app-state special-winner)
+              (case special-id
+                :steal-spot     (swap! app-state assoc :mode :spy)
+                :swap-spots     (swap! app-state assoc :mode :apothecary)
+                :reassign-spots (swap! app-state assoc :mode :messenger)
+                :take-open-spot (swap! app-state assoc :mode :mayor))))
+          :bids-submitted
+            (swap! app-state assoc-in [:bids-submitted player-id] true)
+          :invalid-bid (do nil)
+          :special-not-expected (do nil)
+          :invalid-special-args (do nil)
+          :game-already-started (js/alert (localize @app-state :game-already-started))
+          :game-not-ready (js/alert (localize @app-state :game-not-ready))
+          
+          (js/console.warn "type not idendified"))
+        (js/console.log "raw websocket message:")
+        (js/console.log (str raw))
+        (recur)))))
 
 (defn my-bids-submitted? [data]
   (true? (get-in data [:bids-submitted (:player-id data)])))
@@ -160,11 +161,12 @@
         button-id-prefix (clojure.string/join "-" ["bid" (name id) (name denomination)])
         disabled (or immune
                      (my-bids-submitted? data)
-                     (and (nothing-on-figure? data id) (figure-limit-reached? data)))]
+                     (and (nothing-on-figure? data id) (figure-limit-reached? data)))
+        arrow #(denomination-arrow id %1 data denomination disabled %2 button-id-prefix %3 %4)]
     (dom/td
       nil
-      (denomination-arrow id (pos? remaining-bank) data denomination disabled 1 button-id-prefix "up" "\u2191")
-      (denomination-arrow id (pos? amount) data denomination disabled -1 button-id-prefix "down" "\u2193")
+      (arrow (pos? remaining-bank) 1 "up" "\u2191")
+      (arrow (pos? amount) -1 "down" "\u2193")
       (dom/input
         #js {:type "text"
              :disabled immune
@@ -184,8 +186,7 @@
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
   (clojure.string/join ", " (flatten (filter identity [
-    (if (and support (pos? support))
-      (str support " " (localize data :support)))
+    (if (and support (pos? support)) (str support " " (localize data :support)))
     (denom data bank :gold)
     (denom data bank :blackmail)
     (denom data bank :force)
@@ -289,6 +290,10 @@
     (render [this]
       (apply dom/table nil
         (dom/tr nil
+          (dom/td nil (localize data :turn))
+          (dom/td nil (:turn data))
+          (dom/td nil))
+        (dom/tr nil
           (dom/td nil (localize data :player))
           (dom/td nil (localize data :support))
           (dom/td nil (localize data :bids-submitted)))
@@ -338,94 +343,98 @@
 
 (defn spy-select [data owner]
   (reify
-    om/IRender
-    (render [this]
-      (let [selection (:spy-selection data)]
-        (dom/div nil
-          (apply dom/table nil
-            (apply dom/tr nil
-              (dom/td nil (localize data :location))
-              (dom/td nil (localize data :cap))
-              (map
-                (partial dom/td nil)
-                (:players data)))
+    om/IInitState
+    (init-state [_]
+      {:selection nil})
+    om/IRenderState
+    (render-state [_ {:keys [selection]}]
+      (dom/div nil
+        (apply dom/table nil
+          (apply dom/tr nil
+            (dom/td nil (localize data :location))
+            (dom/td nil (localize data :cap))
             (map
-              (fn [{:keys [id cap]}]
-                (apply dom/tr nil
-                  (dom/td nil (localize data id))
-                  (dom/td nil cap)
-                  (map
-                    (fn [p]
-                      (let [combo [id p]
-                            selected (= combo selection)]
-                        (dom/td 
-                          #js {:className (if selected "selected")}
-                          (dom/button
-                            #js {:onClick #(om/update! data :spy-selection combo)}
-                            (get-in data [:influence id p])))))
-                    (:players data))))
-              (:locations data)))
+              (partial dom/td nil)
+              (:players data)))
+          (map
+            (fn [{:keys [id cap]}]
+              (apply dom/tr nil
+                (dom/td nil (localize data id))
+                (dom/td nil cap)
+                (map
+                  (fn [p]
+                    (let [combo [id p]
+                          selected (= combo selection)]
+                      (dom/td 
+                        #js {:className (if selected "selected")}
+                        (dom/button
+                          #js {:onClick #(om/set-state! owner :selection combo)}
+                          (get-in data [:influence id p])))))
+                  (:players data))))
+            (:locations data)))
+        (dom/button
+          #js {:onClick #(om/set-state! owner :selection nil)}
+          (localize data :clear))
+        (if selection
           (dom/button
-            #js {:onClick #(om/update! data :spy-selection nil)}
-            (localize data :clear))
-          (if selection
-            (dom/button
-              #js {:onClick #(apply send-spy (:spy-selection data))}
-              (localize data :submit))))))))
+            #js {:onClick #(apply send-spy selection)}
+            (localize data :submit)))))))
 
 (defn apothecary-select [data owner]
   (reify
-    om/IRender
-    (render [this]
-      (let [selection-1 (:apothecary-selection-1 data)
-            selection-2 (:apothecary-selection-2 data)]
-        (dom/div nil
-          (apply dom/table nil
-            (apply dom/tr nil
-              (dom/td nil (localize data :location))
-              (dom/td nil (localize data :cap))
-              (map
-                (partial dom/td nil)
-                (:players data)))
+    om/IInitState
+    (init-state [_]
+      {:selection-1 nil
+       :selection-2 nil})
+    om/IRenderState
+    (render-state [_ {:keys [selection-1 selection-2]}]
+      (dom/div nil
+        (apply dom/table nil
+          (apply dom/tr nil
+            (dom/td nil (localize data :location))
+            (dom/td nil (localize data :cap))
             (map
-              (fn [{:keys [id cap]}]
-                (apply dom/tr nil
-                  (dom/td nil (localize data id))
-                  (dom/td nil cap)
-                  (map
-                    (fn [p]
-                      (let [combo [id p]
-                            selected (or (= combo selection-1) (= combo selection-2))]
-                        (dom/td
-                          #js {:className (if selected "selected")}
-                          (dom/button
-                            #js {:onClick
-                                 #(if selection-1
-                                      (om/update! data :apothecary-selection-2 combo)
-                                      (om/update! data :apothecary-selection-1 combo))}
-                            (get-in data [:influence id p])))))
-                    (:players data))))
-              (:locations data)))
+              (partial dom/td nil)
+              (:players data)))
+          (map
+            (fn [{:keys [id cap]}]
+              (apply dom/tr nil
+                (dom/td nil (localize data id))
+                (dom/td nil cap)
+                (map
+                  (fn [p]
+                    (let [combo [id p]
+                          selected (or (= combo selection-1) (= combo selection-2))]
+                      (dom/td
+                        #js {:className (if selected "selected")}
+                        (dom/button
+                          #js {:onClick
+                               #(if selection-1
+                                    (om/set-state! owner :selection-2 combo)
+                                    (om/set-state! owner :selection-1 combo))}
+                          (get-in data [:influence id p])))))
+                  (:players data))))
+            (:locations data)))
+        (dom/button
+          #js {:onClick
+               #(do (om/set-state! owner :selection-1 nil)
+                    (om/set-state! owner :selection-2 nil))}
+          (localize data :clear))
+        (if (and selection-1 selection-2)
           (dom/button
-            #js {:onClick
-                 #(do (om/update! data :apothecary-selection-1 nil)
-                      (om/update! data :apothecary-selection-2 nil))}
-            (localize data :clear))
-          (if (and selection-1 selection-2)
-            (dom/button
-              #js {:onClick
-                   #(apply send-apothecary
-                     (concat (:apothecary-selection-1 data) (:apothecary-selection-2 data)))}
-              (localize data :submit))))))))
+            #js {:onClick #(apply send-apothecary (concat selection-1 selection-2))}
+            (localize data :submit)))))))
 
 (defn messenger-select [data owner]
   (reify
-    om/IRender
-    (render [this]
-      (let [reassignments (:reassignments data)
-            any-reassignments (pos? (count reassignments))
-            selection-1 (:messenger-selection-1 data)
-            selection-2 (:messenger-selection-2 data)]
+    om/IInitState
+    (init-state [_]
+      {:selection-1 nil
+       :selection-2 nil
+       :reassignments []})
+    om/IRenderState
+    (render-state [_ {:keys [selection-1 selection-2 reassignments]}]
+      (let [any-reassignments (pos? (count reassignments))]
         (dom/div nil
           (apply dom/table nil
             (apply dom/tr nil
@@ -441,8 +450,8 @@
                   (dom/td nil
                     (dom/button
                       #js {:onClick #(if selection-1
-                                         (om/update! data :messenger-selection-2 id)
-                                         (om/update! data :messenger-selection-1 id))
+                                         (om/set-state! owner :selection-2 id)
+                                         (om/set-state! owner :selection-1 id))
                            :disabled (or (and (not selection-1) (= 0 (get-in data [:influence id "Rob"])))
                                          (and selection-1 (<= cap (reduce + (vals (get-in data [:influence id]))))))}
                       (localize data id)))
@@ -460,24 +469,27 @@
                     (str (localize data l1) " -> " (localize data l2))))
                 reassignments)))
           (dom/button
-            #js {:onClick #(do (om/update! data :reassignments [])
-                               (om/update! data :messenger-selection-1 nil)
-                               (om/update! data :messenger-selection-2 nil))}
+            #js {:onClick #(do (om/set-state! owner :reassignments [])
+                               (om/set-state! owner :selection-1 nil)
+                               (om/set-state! owner :selection-2 nil))}
             (localize data :clear))
           (if (and selection-1 selection-2 (> 2 (count reassignments)))
             (dom/button
-              #js {:onClick #(do (om/transact! data :reassignments (fn [rs] (conj rs [selection-1 selection-2])))
-                                 (om/update! data :messenger-selection-1 nil)
-                                 (om/update! data :messenger-selection-2 nil))}
+              #js {:onClick #(do (om/update-state! owner :reassignments (fn [rs] (conj rs [selection-1 selection-2])))
+                                 (om/set-state! owner :selection-1 nil)
+                                 (om/set-state! owner :selection-2 nil))}
               (localize data :add)))
           (dom/button
-              #js {:onClick #(send-messenger (:reassignments data))}
+              #js {:onClick #(send-messenger reassignments)}
             (localize data :submit)))))))
 
 (defn mayor-select [data owner]
   (reify
-    om/IRender
-    (render [this]
+    om/IInitState
+    (init-state [_]
+      {:selection nil})
+    om/IRenderState
+    (render-state [_ {:keys [selection]}]
       (apply dom/table nil
         (apply dom/tr nil
           (dom/td nil (localize data :location))
@@ -512,20 +524,8 @@
 
 (defn root-view [data owner]
   (reify
-    om/IInitState
-    (init-state [_]
-      {:delete (chan)
-       :text ""})
-    om/IWillMount
-    (will-mount [_]
-      (let [delete (om/get-state owner :delete)]
-        (go (loop []
-              (let [contact (<! delete)]
-                (om/transact! data :contacts
-                  (fn [xs] (vec (remove #(= contact %) xs))))
-                (recur))))))
-    om/IRenderState
-    (render-state [this state]
+    om/IRender
+    (render [this]
       (apply dom/div nil
         (om/build languages-area data)
         (case (:mode data)
@@ -554,7 +554,6 @@
   (atom
     {:lang :us
      :mode :signup
-     :reassignments []
      :players []
      :bids-submitted {}
      :bids {}}))
