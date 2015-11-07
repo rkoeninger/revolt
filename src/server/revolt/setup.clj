@@ -32,30 +32,27 @@
     (fn [board winner {:keys [location player]}]
       (replace-influence board location player winner))))
 
-(defn can-swap? [board winner location0 player0 location1 player1]
-  (and (not= location0 location1)
-       (not= player0 player1)
-       (touchable? board winner player0)
-       (touchable? board winner player1)
-       (has-influence? board location0 player0)
-       (has-influence? board location1 player1)))
-
-(defn any-swaps? [{:keys [locations players] :as board} winner]
-  (let [pairs (cartesian-product locations players)
-        pair-pairs (cartesian-product pairs pairs)]
-    (letfn [(swap? [[[location0 player0] [location1 player1]]]
-              (can-swap? board winner location0 player0 location1 player1))]
-      (some swap? pair-pairs))))
-
 ; Swap the cubes in any two Influence Spaces.
 (def swap-spots
-  (->Special :swap-spots
-    true
-    any-swaps?
-    (fn [board winner {:keys [location0 player0 location1 player1]}]
-      (can-swap? board winner location0 player0 location1 player1))
-    (fn [board _ {:keys [location0 player0 location1 player1]}]
-      (swap-influence board location0 player0 location1 player1))))
+  (letfn [(can-swap? [board winner location0 player0 location1 player1]
+            (and (not= location0 location1)
+                 (not= player0 player1)
+                 (touchable? board winner player0)
+                 (touchable? board winner player1)
+                 (has-influence? board location0 player0)
+                 (has-influence? board location1 player1)))
+          (swap? [board winner [[location0 player0] [location1 player1]]]
+            (can-swap? board winner location0 player0 location1 player1))]
+    (->Special :swap-spots
+      true
+      (fn [{:keys [locations players] :as board} winner]
+        (let [pairs (cartesian-product locations players)
+              pair-pairs (cartesian-product pairs pairs)]
+          (some (partial swap? board winner) pair-pairs)))
+      (fn [board winner {:keys [location0 player0 location1 player1]}]
+        (can-swap? board winner location0 player0 location1 player1))
+      (fn [board _ {:keys [location0 player0 location1 player1]}]
+        (swap-influence board location0 player0 location1 player1)))))
 
 ; Reassign up to two of your cubes already on the board.
 (def reassign-spots
