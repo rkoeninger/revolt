@@ -1,7 +1,7 @@
-(defproject revolt "0.0"
+(defproject revolt "0.0.0"
   :description "Revolt"
   :url "http://github.com/rkoeninger/revolt"
-  :main revolt
+  :main revolt.core
   :source-paths ["src/shared" "src/server"]
   :clean-targets ^{:protect false} [
     "target"
