@@ -44,7 +44,8 @@
     [compojure "1.4.0"]
     [com.cemerick/url "0.1.1"]
     [figwheel "0.4.0"]
-    [org.omcljs/om "0.9.0"]]
+    [org.omcljs/om "0.9.0"]
+    [prismatic/om-tools "0.3.12"]]
   :exclusions
     [org.clojure/clojure]
   :figwheel {
