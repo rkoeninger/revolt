@@ -20,7 +20,9 @@
     (cond
       (suspended? board) (broadcast-special state board)
       (game-over? board) (broadcast-game-over state board)
-      :else              (broadcast-take-bids state board))))
+      :else
+        (do (reset-in! state [:bids] {})
+            (broadcast-take-bids state board)))))
 
 ; TODO make sure submitted by the right player
 ;     (already handled by the player-id being associated with the ws-channel?)

@@ -70,11 +70,8 @@
 
 (defn receive-status [app-state status]
   (let [{:keys [turn guard-house banks support influence]} status
-        {:keys [player-id figures]} @app-state
+        {:keys [player-id]} @app-state
         my-bank (get banks player-id)]
-    (swap! app-state assoc :mode :take-bids)
-    (swap! app-state assoc :bids (zipmap (map :id figures) (repeat r/zero-bid)))
-    (swap! app-state assoc :bids-submitted {})
     (swap! app-state assoc :bank my-bank)
     (swap! app-state assoc :original-bank my-bank)
     (swap! app-state assoc :banks banks)
@@ -82,6 +79,8 @@
     (swap! app-state assoc :influence influence)
     (swap! app-state assoc :turn turn)
     (swap! app-state assoc :guard-house guard-house)))
+
+(defn zero-bids [figures] (zipmap (map :id figures) (repeat r/zero-bid)))
 
 (defn receive-msgs! [app-state server-ch]
   (go-loop []
@@ -99,7 +98,11 @@
             (swap! app-state assoc :locations locations)
             (swap! app-state assoc :players players))
           :game-over (do nil)
-          :take-bids (receive-status app-state status)
+          :take-bids (do
+            (receive-status app-state status)
+            (swap! app-state assoc :mode :take-bids)
+            (swap! app-state assoc :bids-submitted {})
+            (swap! app-state assoc :bids (zero-bids (:figures @app-state))))
           :special (let [{:keys [special-id special-winner status]} message]
             (receive-status app-state status)
             (if (is-me? @app-state special-winner)
