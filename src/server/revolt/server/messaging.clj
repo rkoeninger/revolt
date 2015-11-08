@@ -1,4 +1,4 @@
-(ns revolt.messaging
+(ns revolt.server.messaging
   (:use revolt.core
         [clojure.core.async :only [put!]]))
 

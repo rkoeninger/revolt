@@ -2,7 +2,7 @@
   (:use revolt.core
         revolt.setup
         revolt.server
-        revolt.messaging
+        revolt.server.messaging
         [clojure.test :only [deftest testing is]]
         [clojure.core.async :only [<!! chan]]
         test-common))

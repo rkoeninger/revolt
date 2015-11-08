@@ -1,7 +1,7 @@
 (ns test-common
   (:use revolt.core
         revolt.server
-        revolt.messaging))
+        revolt.server.messaging))
 
 (defmacro is= [& more] `(clojure.test/is (= ~@more)))
 (defmacro is-not [& more] `(clojure.test/is (not ~@more)))

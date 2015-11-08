@@ -6,7 +6,7 @@
             [hiccup.page :refer [html5 include-js include-css]])
   (:use revolt.core
         revolt.setup
-        revolt.messaging))
+        revolt.server.messaging))
 
 (defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
 
