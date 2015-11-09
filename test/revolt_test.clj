@@ -4,37 +4,6 @@
         clojure.test
         test-common))
 
-(def rob (->Player 1 "Rob"))
-(def joe (->Player 2 "Joe"))
-(def moe (->Player 3 "Moe"))
-(def players [rob joe moe])
-
-(def hovel  (->Location :hovel  10 2))
-(def saloon (->Location :saloon 30 4))
-(def farm   (->Location :farm   40 3))
-(def castle (->Location :castle 90 5))
-
-(def locs [hovel saloon farm castle])
-
-(def prince (->Figure :prince 0 (->Bid 5 0 0) -f castle nil))
-(def beggar (->Figure :beggar 1 (->Bid 0 0 0) b- hovel nil))
-(def barber (->Figure :barber 8 (->Bid 0 0 0) -- saloon nil))
-(def farmer (->Figure :farmer 1 (->Bid 2 0 0) -- farm nil))
-(def axeman (->Figure :axeman 3 (->Bid 0 0 1) bf nil nil))
-(def doctor (->Figure :doctor 0 (->Bid 0 2 0) -- nil nil))
-(def smithy (->Figure :smithy 1 (->Bid 2 0 0) bf nil nil))
-
-(def figs [prince beggar barber farmer axeman doctor smithy])
-
-(def board (->Board
-  1
-  locs
-  figs
-  players
-  (zipmap players (repeat (->Bid 3 1 1)))
-  (zipmap locs (repeat (zipmap players (repeat 0))))
-  (zipmap players (repeat 0))))
-
 (deftest bids
 
   (testing "Bids are made of gold, blackmail and force"
@@ -84,16 +53,16 @@
 (deftest location-holder
 
   (testing "There should be no holder if there are no influence units"
-    (is-not (get-holder board hovel)))
+    (is-not (get-holder standard-board hovel)))
 
   (testing "There should be no holder if there is a tie for first"
-    (is-not (-> board
+    (is-not (-> standard-board
                 (with-influence saloon rob 2
                                 saloon joe 2)
                 (get-holder saloon))))
 
   (testing "The should be a holder if there is a tie for not-first"
-    (is= rob (-> board
+    (is= rob (-> standard-board
                  (with-influence saloon rob 2
                                  saloon moe 1
                                  saloon joe 1)
@@ -160,19 +129,19 @@
 
   (testing "AssertionError should be thrown when adding to full location"
     (is (thrown-with-msg? AssertionError #"already full"
-      (-> board
+      (-> standard-board
           (with-influence hovel rob (:cap hovel))
           (add-influence hovel rob)))))
 
   (testing "AssertionError should be thrown when removing player from
             location where they have no influence"
     (is (thrown-with-msg? AssertionError #"has no influence"
-      (remove-influence board hovel rob)))))
+      (remove-influence standard-board hovel rob)))))
 
 (deftest rewards
 
   (testing "The winner of a figure receives that figure's reward"
-    (let [board (-> (clear-banks board)
+    (let [board (-> (clear-banks standard-board)
                     (reward-winner farmer rob)
                     (reward-winner prince joe))]
       (is= 0 (get-support board joe))
@@ -187,7 +156,7 @@
 (deftest turn-resume
 
   (testing "Turn should eval completely if no specials are won"
-    (let [board (run-turn board {doctor {rob (->Bid 3 1 1)}
+    (let [board (run-turn standard-board {doctor {rob (->Bid 3 1 1)}
                                  farmer {joe (->Bid 3 1 1)}
                                  barber {moe (->Bid 3 1 1)}})]
       (is (ready? board))

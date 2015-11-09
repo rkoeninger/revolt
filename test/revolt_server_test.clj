@@ -34,13 +34,6 @@
          (read-special-response board :reassign-spots
           {:reassignments [[:l1 :l2] [:l1 :l3]]}))))
 
-(defn harness []
-  (let [state (atom (->ServerState))]
-    {:state state
-     :get-message (fn [pid] (<!! (get-in @state [:player-channels pid])))
-     :connect (fn [pid] (swap-in! state [:player-channels] assoc pid (chan)))
-     :handle (fn [pid message] (handle-message state (assoc message :player-id pid)))}))
-
 (deftest signup-rejected-after-game-has-started
   (let [{:keys [state get-message connect handle]} (harness)]
 
