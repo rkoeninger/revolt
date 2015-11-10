@@ -5,23 +5,6 @@
         test-common
         [clojure.pprint :only [pprint]]))
 
-(defn just-special [special] (->Figure nil nil nil nil nil special))
-
-(def loc1 (->Location :loc1 10 2))
-(def loc2 (->Location :loc2 20 3))
-(def loc3 (->Location :loc3 30 4))
-
-(def reassigner (->Figure :reassigner 0 zero-bid -- nil reassign-spots))
-
-(def reassign-board (->Board
-  1
-  [loc1 loc2 loc3]
-  [reassigner]
-  [rob joe]
-  (zipmap [rob joe] (repeat zero-bid))
-  (zipmap [loc1 loc2 loc3] (repeat (zipmap [rob joe] (repeat 0))))
-  (zipmap [rob joe] (repeat 0))))
-
 (deftest simple-special
   (let [board (-> special-board
                   (add-influence hideout rob)
@@ -83,46 +66,51 @@
       (is= 1 (get-influence board courtroom rob))
       (is= 2 (get-influence board courtroom joe)))))
 
-(deftest swap-spots-empty-board
-  (let [board special-board
-        {:keys [doable check]} swap-spots]
-    (is-not (doable board rob))
-    (is-not (doable board joe))
-    (is-not (check board rob {:location hideout :player rob}))
-    (is-not (check board rob {:location hideout :player joe}))
-    (is-not (check board joe {:location hideout :player rob}))
-    (is-not (check board joe {:location hideout :player joe}))))
+(deftest special-swap-spots
 
-(deftest swap-spots-single-valid-target
-  (let [{:keys [doable check]} swap-spots
-        choice {:location0 courtroom :player0 joe :location1 hideout :player1 rob}
-        board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom rob))]
-    (is (doable board rob))
-    (is (doable board joe))
-    (is (check board rob choice))
-    (let [board ((:effect swap-spots) board rob choice)]
-      (is= 0 (get-influence board hideout rob))
-      (is= 1 (get-influence board hideout joe))
-      (is= 2 (get-influence board courtroom rob))
-      (is= 1 (get-influence board courtroom joe)))))
+  (testing "swap-spots (apothecary)"
+    (let [board special-board
+          {:keys [doable check]} swap-spots]
 
-(deftest swap-spots-only-other-player-has-guard-house
-  (let [{:keys [doable check]} swap-spots
-        board (with-influence special-board hideout   rob 1
-                                            courtroom joe 2)]
-    (let [board (set-guard-house board rob)]
-      (is-not (touchable? board joe rob))
-      (is-not (doable board joe))
-      (is (doable board rob)))
+      (testing "when board is empty"
+        (testing "should not be doable"
+          (is-not-doable-by-any board swap-spots))
 
-    (let [board (set-guard-house board joe)]
-      (is-not (touchable? board rob joe))
-      (is-not (doable board rob))
-      (is (doable board joe)))))
+        (testing "no set of inputs should be valid"
+          (are-not [winner loc1 p1 loc2 p2]
+            (check board winner {:location1 loc1 :player1 p1
+                                 :location2 loc2 :player2 p2})
+            rob hideout rob courtroom joe
+            rob courtroom joe hideout rob
+            rob hideout joe courtroom rob
+            rob courtroom rob hideout joe
+            joe hideout rob courtroom joe
+            joe courtroom joe hideout rob
+            joe hideout joe courtroom rob
+            joe courtroom rob hideout joe)))
+
+      (testing "when there is a single cube on the board"
+        (let [board (with-influence board courtroom rob 1)]
+
+          (testing "should not be doable"
+            (is-not-doable-by-any board swap-spots))))
+
+      (testing "when the other player has the guard house"
+        (let [board (with-influence board hideout   rob 1
+                                          courtroom joe 2)]
+          (let [board (set-guard-house board rob)]
+            (is-not (touchable? board joe rob))
+
+            (testing "should not be doable"
+              (is-not (doable board joe)))
+
+            (testing ""
+              (is-not (check board joe {:location hideout :player rob}))))
+
+          (let [board (set-guard-house board joe)]
+            (is-not (touchable? board rob joe))
+            (is-not (doable board rob))
+            (is (doable board joe))))))))
 
 (deftest special-take-open-spot
 
@@ -130,77 +118,63 @@
     (let [board special-board
           {:keys [doable check]} take-open-spot]
 
-      (testing "should not be doable for anyone on an open board"
-        (let [board (-> board
-                        (with-influence hideout   joe (:cap hideout)
-                                        courtroom rob (:cap courtroom))
-                        (set-guard-house joe))]
-          (is (board-full? board))
-          (is-not-doable-by-any board take-open-spot)))
-
-      (testing "should always be doable on an empty board"
+      (testing "when board is empty"
         (is (board-empty? board))
-        (is-doable-by-all board take-open-spot))
 
-      (testing "should be doable as long as there is at least one open spot"
-        (let [board (-> board
-                        (with-influence hideout   joe (:cap hideout)
-                                        courtroom rob (dec (:cap courtroom)))
-                        (set-guard-house joe))]
+        (testing "should be doable"
+          (is-doable-by-all board take-open-spot))
+
+        (testing "all locations should be valid choices"
+          (are [location winner] (check board winner {:location location})
+            hideout joe
+            hideout rob
+            courtroom joe
+            courtroom rob)))
+
+      (testing "when board board is full"
+        (let [board (with-influence board hideout joe (:cap hideout)
+                                          courtroom rob (:cap courtroom))]
+          (is (board-full? board))
+
+          (testing "should not be doable"
+            (is-not-doable-by-any board take-open-spot))
+
+          (testing "no location should be a valid choice"
+            (are-not [location winner] (check board winner {:location location})
+              hideout joe
+              hideout rob
+              courtroom joe
+              courtroom rob))))
+
+      (testing "when there is only one open spot"
+        (let [board (with-influence board hideout joe (:cap hideout)
+                                          courtroom rob (dec (:cap courtroom)))]
           (is-not (board-full? board))
-          (is-doable-by-all board take-open-spot))))))
 
-(deftest take-open-spot-one-full-location
-  (let [{:keys [doable check]} take-open-spot
-        board (-> special-board
-                  (add-influence hideout joe)
-                  (set-guard-house rob))]
-    (is-not (board-full? board))
-    (is-not (location-full? board courtroom))
-    (is (location-full? board hideout))
-    (is (doable board rob))
-    (is (doable board joe))
-    (is-not (check board rob {:location hideout}))
-    (is-not (check board joe {:location hideout}))
-    (is (check board rob {:location courtroom}))
-    (is (check board joe {:location courtroom}))))
+          (testing "should be doable"
+            (is-doable-by-all board take-open-spot))
 
-(deftest reassign-spots-empty-board
-  (let [{:keys [doable check]} reassign-spots
-        board reassign-board]
-    (is-not (doable board rob))
-    (is-not (doable board joe))
-    (is (check board rob {:reassignments []}))
-    (is (check board joe {:reassignments []}))
-    (is-not (check board rob {:reassignments [[loc1 loc2]]}))
-    (is-not (check board rob {:reassignments [[loc2 loc1]]}))
-    (is-not (check board joe {:reassignments [[loc3 loc2]]}))
-    (is-not (check board joe {:reassignments [[loc2 loc3]]}))
-    (is-not (check board rob {:reassignments [[loc1 loc3] [loc2 loc3]]}))
-    (is-not (check board rob {:reassignments [[loc3 loc1] [loc3 loc2]]}))
-    (is-not (check board joe {:reassignments [[loc1 loc3] [loc2 loc3]]}))
-    (is-not (check board joe {:reassignments [[loc3 loc1] [loc3 loc2]]}))))
+          (testing "only that one location should be a valid choice"
+            (is (check board joe {:location courtroom}))
+            (is (check board rob {:location courtroom}))
+            (is-not (check board joe {:location hideout}))
+            (is-not (check board rob {:location hideout})))))
 
-(deftest reassign-spots-full-board
-  (let [{:keys [doable check]} reassign-spots
-        board (with-influence reassign-board loc1 joe 1
-                                             loc1 rob 1
-                                             loc2 rob 3
-                                             loc3 joe 2
-                                             loc3 joe 2)]
-    (is (board-full? board))
-    (is-not (doable board rob))
-    (is-not (doable board joe))
-    (is (check board rob {:reassignments []}))
-    (is (check board joe {:reassignments []}))
-    (is-not (check board rob {:reassignments [[loc1 loc2]]}))
-    (is-not (check board rob {:reassignments [[loc2 loc1]]}))
-    (is-not (check board joe {:reassignments [[loc3 loc2]]}))
-    (is-not (check board joe {:reassignments [[loc2 loc3]]}))
-    (is-not (check board rob {:reassignments [[loc1 loc3] [loc2 loc3]]}))
-    (is-not (check board rob {:reassignments [[loc3 loc1] [loc3 loc2]]}))
-    (is-not (check board joe {:reassignments [[loc1 loc3] [loc2 loc3]]}))
-    (is-not (check board joe {:reassignments [[loc3 loc1] [loc3 loc2]]}))))
+      (testing "when one location is full"
+        (let [board (with-influence board hideout joe 1)]
+
+          (testing "should be doable"
+            (is-doable-by-all board take-open-spot))
+
+          (testing "full location is not a valid choice"
+            (are-not [location winner] (check board winner {:location location})
+              hideout rob
+              hideout joe))
+
+          (testing "any other location is a valid choice"
+            (are [location winner] (check board winner {:location location})
+              courtroom rob
+              courtroom joe)))))))
 
 (deftest special-reassign-spots
 
@@ -212,7 +186,10 @@
         (is (board-empty? board))
 
         (testing "should not be doable by anyone"
-          (is-not-doable-by-any board reassign-spots)))
+          (is-not-doable-by-any board reassign-spots))
+
+        (testing "all non-empty combination of inputs should be invalid"
+          ))
 
       (testing "when the winner has no cubes on the board"
         (let [board (add-influence board loc2 rob)]
@@ -220,11 +197,14 @@
           (testing "should not be doable"
             (is-not (doable board joe)))))
 
-      (testing "when the winner has only one cube on the board"
+      (testing "when the winner has the only cube on the board"
         (let [board (add-influence board loc1 joe)]
 
-          (testing "should be doable"
+          (testing "should be doable by the player with a cube on the board"
             (is (doable board joe)))
+
+          (testing "should not be doable by the player without a cube on the board"
+            (is-not (doable board rob)))
 
           (testing "winner should be able to move that one cube"
             (is (check board joe {:reassignments [[loc1 loc3]]}))
@@ -243,31 +223,49 @@
             (testing "should be doable"
               (is (doable board joe)))
 
-            (testing "should be able to move just one cube to another location"
+            (testing "should be able to move just one cube"
               (is (check board joe {:reassignments [[loc1 loc3]]}))
               (is (check board joe {:reassignments [[loc1 loc2]]})))
 
-            (testing "winner should be able to move both cubes to other locations"
+            (testing "winner should be able to move both cubes"
               (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))
               (is (check board joe {:reassignments [[loc1 loc2] [loc1 loc2]]}))
               (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc2]]}))
               (is (check board joe {:reassignments [[loc1 loc2] [loc1 loc3]]})))))
 
         (testing "at different locations"
-          (let [board (-> board (add-influence loc1 joe)
-                                (add-influence loc2 joe))]
+          (let [board (with-influence board loc1 joe 1
+                                            loc2 joe 1)]
 
             (testing "should be doable"
               (is (doable board joe)))
 
-            (testing "should be able to move just one cube to another location"
+            (testing "should be able to move just one cube"
               (is (check board joe {:reassignments [[loc1 loc2]]}))
               (is (check board joe {:reassignments [[loc2 loc1]]}))
               (is (check board joe {:reassignments [[loc1 loc3]]}))
               (is (check board joe {:reassignments [[loc2 loc3]]})))
 
-            (testing "winner should be able to move both cubes to another location"
+            (testing "winner should be able to move both cubes"
               (is (check board joe {:reassignments [[loc1 loc3] [loc2 loc3]]}))))))
+
+      (testing "when there is only one open space on the board"
+        (let [board (with-influence board loc1 rob 2
+                                          loc2 rob 1
+                                          loc2 joe 2
+                                          loc3 rob 1
+                                          loc3 rob 2)]
+
+          (testing "should be doable"
+            (is-doable-by-all board reassign-spots))
+
+          (testing "winner should be able to move one cube to location with open spot"
+            (is (check board joe {:reassignments [[loc2 loc3]]}))
+            (is (check board rob {:reassignments [[loc1 loc3]]})))
+
+          (testing "winner should not be able to move two cubes to that one open spot"
+            (is-not (check board joe {:reassignments [[loc2 loc3] [loc2 loc3]]}))
+            (is-not (check board rob {:reassignments [[loc1 loc3] [loc2 loc3]]})))))
 
       (testing "when the board is full"
         (let [board (with-influence board loc1 rob 2
@@ -278,65 +276,6 @@
 
           (testing "should not be doable by anyone"
             (is-not-doable-by-any board reassign-spots)))))))
-
-(deftest reassign-two-from-same-location-with-two-cubes
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe)
-                  (add-influence loc1 joe))]
-    (is (doable board joe))
-    (is (check board joe {:reassignments [[loc1 loc3] [loc1 loc3]]}))))
-
-(deftest reassign-one-to-location-with-one-open-spaces
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 rob)
-                  (add-influence loc2 joe))]
-    (is (doable board joe))
-    (is (check board joe {:reassignments [[loc2 loc1]]}))))
-
-(deftest reassign-one-to-location-with-two-open-spaces
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc2 joe)
-                  (add-influence loc2 joe))]
-    (is (doable board joe))
-    (is (check board joe {:reassignments [[loc2 loc1]]}))))
-
-(deftest reassign-two-to-same-location-with-one-open-spaces
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 joe)
-                  (add-influence loc2 rob)
-                  (add-influence loc3 rob))]
-    (is= 1 (available-influence board loc1))
-    (is (doable board rob))
-    (is-not (check board rob {:reassignments [[loc2 loc1] [loc3 loc1]]}))))
-
-(deftest reassign-two-to-same-location-with-two-open-spaces
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 rob)
-                  (add-influence loc2 joe)
-                  (add-influence loc3 rob))]
-    (is= 2 (available-influence board loc2))
-    (is (doable board rob))
-    (is (check board rob {:reassignments [[loc1 loc2] [loc3 loc2]]}))))
-
-(deftest reassign-one-from-b-to-c-then-from-a-to-b
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 rob)
-                  (add-influence loc2 rob))]
-    (is (doable board rob))
-    (is (check board rob {:reassignments [[loc2 loc3] [loc1 loc2]]}))))
-
-(deftest reassign-one-from-a-to-b-then-from-b-to-c
-  (let [{:keys [doable check]} reassign-spots
-        board (-> reassign-board
-                  (add-influence loc1 rob))]
-    (is (doable board rob))
-    (is-not (check board rob {:reassignments [[loc1 loc2] [loc3 loc2]]}))))
 
 (deftest scenario-reassign
   (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}

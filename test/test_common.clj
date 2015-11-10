@@ -4,10 +4,13 @@
         revolt.server
         revolt.server.messaging
         [clojure.core.async :only [chan <!!]]
-        [clojure.test :only [is]]))
+        [clojure.test :only [is are]]))
 
 (defmacro is= [& more] `(is (= ~@more)))
 (defmacro is-not [& more] `(is (not ~@more)))
+
+(defmacro are= [args] `(are [x# y#] (= x# y#) ~@args))
+(defmacro are-not [argv expr & args] `(are ~argv (not ~expr) ~@args))
 
 (defn is-doable-by-all [board special]
   (let [{:keys [players]} board
@@ -99,3 +102,20 @@
      :get-message (fn [pid] (<!! (get-in @state [:player-channels pid])))
      :connect (fn [pid] (swap-in! state [:player-channels] assoc pid (chan)))
      :handle (fn [pid message] (handle-message state (assoc message :player-id pid)))}))
+
+(defn just-special [special] (->Figure nil nil nil nil nil special))
+
+(def loc1 (->Location :loc1 10 2))
+(def loc2 (->Location :loc2 20 3))
+(def loc3 (->Location :loc3 30 4))
+
+(def reassigner (->Figure :reassigner 0 zero-bid -- nil reassign-spots))
+
+(def reassign-board (->Board
+  1
+  [loc1 loc2 loc3]
+  [reassigner]
+  [rob joe]
+  (zipmap [rob joe] (repeat zero-bid))
+  (zipmap [loc1 loc2 loc3] (repeat (zipmap [rob joe] (repeat 0))))
+  (zipmap [rob joe] (repeat 0))))
