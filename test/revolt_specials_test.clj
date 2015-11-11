@@ -5,72 +5,61 @@
         test-common
         [clojure.pprint :only [pprint]]))
 
-(deftest simple-special
-  (let [board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe)
-                  ((get-in assassin [:special :effect]) rob {:location courtroom :player joe}))]
-    (is= 1 (get-influence board hideout rob))
-    (is= 0 (get-influence board hideout joe))
-    (is= 1 (get-influence board courtroom rob))
-    (is= 1 (get-influence board courtroom joe))))
+(deftest special-steal-spot
+  (testing "steal-spot (spy)"
+    (let [{:keys [doable check]} steal-spot
+          board special-board]
 
-(deftest steal-spot-empty-board
-  (let [board special-board
-        {:keys [doable check]} steal-spot]
-    (is-not (doable board rob))
-    (is-not (doable board joe))
-    (is-not (check board rob {:location hideout :player rob}))
-    (is-not (check board rob {:location hideout :player joe}))
-    (is-not (check board joe {:location hideout :player rob}))
-    (is-not (check board joe {:location hideout :player joe}))))
+      (testing "when the board is empty"
+        (is (board-empty? board))
 
-(deftest steal-spot-only-other-player-has-guard-house
-  (let [{:keys [doable check]} steal-spot
-        board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe))
-        board-rob-in-gh (set-guard-house board rob)
-        board-joe-in-gh (set-guard-house board joe)]
-    (is-not (touchable? board-joe-in-gh rob joe))
-    (is-not (touchable? board-rob-in-gh joe rob))
-    (is-not (doable board-joe-in-gh rob))
-    (is-not (doable board-rob-in-gh joe))
-    (is (doable board-rob-in-gh rob))
-    (is (doable board-joe-in-gh joe))))
+        (testing "should not be doable"
+          (is-not-doable-by-any board steal-spot))
 
-(deftest steal-spot-single-valid-target
-  (let [{:keys [doable check]} steal-spot
-        rob-choice {:location courtroom :player joe}
-        joe-choice {:location hideout :player rob}
-        board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom rob))]
-    (is (doable board rob))
-    (is (doable board joe))
-    (is (check board rob rob-choice))
-    (is (check board joe joe-choice))
-    (let [board ((:effect steal-spot) board rob rob-choice)]
-      (is= 1 (get-influence board hideout rob))
-      (is= 0 (get-influence board hideout joe))
-      (is= 2 (get-influence board courtroom rob))
-      (is= 1 (get-influence board courtroom joe)))
-    (let [board ((:effect steal-spot) board joe joe-choice)]
-      (is= 0 (get-influence board hideout rob))
-      (is= 1 (get-influence board hideout joe))
-      (is= 1 (get-influence board courtroom rob))
-      (is= 2 (get-influence board courtroom joe)))))
+        (testing "no location should be valid input for any winner"
+          (are-not [location winner target]
+            (check board winner {:location location :player target})
+            hideout rob joe
+            hideout joe rob
+            courtroom rob joe
+            courtroom joe rob)))
+
+      (testing "when the board is half full"
+        (let [board (with-influence board hideout rob 1
+                                          courtroom joe 3)]
+
+          (testing "should be doable"
+            (is-doable-by-all board steal-spot))
+
+          (testing "when the other player has the guard house"
+            (let [board (set-guard-house board rob)]
+              
+              (testing "they should not be a valid target by the other player"
+                (is-not (check board joe {:location hideout :player rob})))
+
+              (testing "they should be able to target themselves"
+                (is (check board rob {:location hideout :player rob}))))
+
+            (let [board (set-guard-house board joe)]
+              
+              (testing "they should not be a valid target by the other player"
+                (is-not (check board rob {:location courtroom :player joe})))
+
+              (testing "they should be able to target themselves"
+                (is (check board joe {:location courtroom :player joe})))))))
+
+      (testing "when one player is in the guard house and the other has no cubes"
+        (let [board (-> board (with-influence courtroom joe 3)
+                              (set-guard-house joe))]
+
+          (testing "should not be doable by player with no cubes"
+            (is-not (doable board rob))))))))
 
 (deftest special-swap-spots
 
   (testing "swap-spots (apothecary)"
-    (let [board special-board
-          {:keys [doable check]} swap-spots]
+    (let [{:keys [doable check]} swap-spots
+          board special-board]
 
       (testing "when board is empty"
         (testing "should not be doable"
@@ -104,19 +93,23 @@
             (testing "should not be doable"
               (is-not (doable board joe)))
 
-            (testing ""
+            (testing "choices involving other player's cubes should be invalid"
               (is-not (check board joe {:location hideout :player rob}))))
 
           (let [board (set-guard-house board joe)]
             (is-not (touchable? board rob joe))
-            (is-not (doable board rob))
-            (is (doable board joe))))))))
+
+            (testing "should not be doable"
+              (is-not (doable board rob)))
+
+            (testing "choices involving other player's cubes should be invalid"
+              (is-not (check board joe {:location hideout :player rob})))))))))
 
 (deftest special-take-open-spot
 
   (testing "take-open-spot (mayor)"
-    (let [board special-board
-          {:keys [doable check]} take-open-spot]
+    (let [{:keys [doable check]} take-open-spot
+          board special-board]
 
       (testing "when board is empty"
         (is (board-empty? board))
@@ -188,8 +181,25 @@
         (testing "should not be doable by anyone"
           (is-not-doable-by-any board reassign-spots))
 
-        (testing "all non-empty combination of inputs should be invalid"
-          ))
+        (testing "all non-empty combinations of inputs should be invalid"
+          (are-not [winner reassignments]
+            (check board winner {:reassignments reassignments})
+            rob [[loc1 loc2]]
+            rob [[loc1 loc3]]
+            rob [[loc2 loc1]]
+            rob [[loc2 loc3]]
+            rob [[loc3 loc2]]
+            rob [[loc3 loc1]]
+            joe [[loc1 loc2]]
+            joe [[loc1 loc3]]
+            joe [[loc2 loc1]]
+            joe [[loc2 loc3]]
+            joe [[loc3 loc2]]
+            joe [[loc3 loc1]]))
+
+        (testing "empty inputs should still be valid"
+          (is (check board rob {:reassignments []}))
+          (is (check board joe {:reassignments []}))))
 
       (testing "when the winner has no cubes on the board"
         (let [board (add-influence board loc2 rob)]
@@ -276,6 +286,19 @@
 
           (testing "should not be doable by anyone"
             (is-not-doable-by-any board reassign-spots)))))))
+
+(deftest simple-special
+  (let [assassin-effect (get-in assassin [:special :effect])
+        board (-> special-board
+                  (add-influence hideout rob)
+                  (add-influence courtroom rob)
+                  (add-influence courtroom joe)
+                  (add-influence courtroom joe)
+                  (assassin-effect rob {:location courtroom :player joe}))]
+    (is= 1 (get-influence board hideout rob))
+    (is= 0 (get-influence board hideout joe))
+    (is= 1 (get-influence board courtroom rob))
+    (is= 1 (get-influence board courtroom joe))))
 
 (deftest scenario-reassign
   (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
