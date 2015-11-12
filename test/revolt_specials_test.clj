@@ -7,7 +7,7 @@
 
 (deftest special-steal-spot
   (testing "steal-spot (spy)"
-    (let [{:keys [doable check]} steal-spot
+    (let [{:keys [doable check effect]} steal-spot
           board special-board]
 
       (testing "when the board is empty"
@@ -22,7 +22,16 @@
             hideout rob joe
             hideout joe rob
             courtroom rob joe
-            courtroom joe rob)))
+            courtroom joe rob))
+
+        (testing "attempting to steal any spot should throw an error"
+          (are-thrown? AssertionError #"has no influence on"
+            [winner location player]
+            (effect board winner {:location location :player player})
+            rob hideout joe
+            joe hideout rob
+            rob courtroom joe
+            joe courtroom rob)))
 
       (testing "when the board is half full"
         (let [board (with-influence board hideout rob 1
@@ -46,7 +55,21 @@
                 (is-not (check board rob {:location courtroom :player joe})))
 
               (testing "they should be able to target themselves"
-                (is (check board joe {:location courtroom :player joe})))))))
+                (is (check board joe {:location courtroom :player joe})))))
+
+          (testing "winner should not be able to steal cube from player where they do not have one"
+            )
+
+          (testing "applying special to opponent's cube should steal it"
+            (let [board (effect board rob {:location courtroom :player joe})]
+              (is= 1 (get-influence board courtroom rob))
+              (is= 2 (get-influence board courtroom joe)))
+            (let [board (effect board joe {:location hideout :player rob})]
+              (is= 1 (get-influence board hideout joe))
+              (is= 0 (get-influence board hideout rob))))
+
+          (testing "applying special to winner's own cube should have no effect"
+            )))
 
       (testing "when one player is in the guard house and the other has no cubes"
         (let [board (-> board (with-influence courtroom joe 3)
@@ -286,72 +309,6 @@
 
           (testing "should not be doable by anyone"
             (is-not-doable-by-any board reassign-spots)))))))
-
-(deftest simple-special
-  (let [assassin-effect (get-in assassin [:special :effect])
-        board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe)
-                  (assassin-effect rob {:location courtroom :player joe}))]
-    (is= 1 (get-influence board hideout rob))
-    (is= 0 (get-influence board hideout joe))
-    (is= 1 (get-influence board courtroom rob))
-    (is= 1 (get-influence board courtroom joe))))
-
-(deftest scenario-reassign
-  (let [bids {reassigner {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}}
-        board (-> reassign-board
-                  (add-bank rob (->Bid 1 0 0))
-                  (add-influence loc1 rob)
-                  (add-influence loc2 joe)
-                  (add-influence loc3 rob)
-                  (run-turn bids))]
-    (is= reassign-spots (:special board))
-    (let [board (run-turn board
-                          bids
-                          {:reassignments [[loc1 loc2] [loc3 loc2]]})]
-      (is (ready? board))
-      (is= 0 (get-influence board loc1 rob))
-      (is= 0 (get-influence board loc1 joe))
-      (is= 2 (get-influence board loc2 rob))
-      (is= 1 (get-influence board loc2 joe))
-      (is= 0 (get-influence board loc3 rob))
-      (is= 0 (get-influence board loc3 joe)))))
-
-(deftest scenario-mid-game-with-specials
-  (let [bids {assassin {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
-              judge    {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
-        board (-> special-board
-                  (add-influence hideout rob)
-                  (add-influence courtroom rob)
-                  (add-influence courtroom joe)
-                  (add-influence courtroom joe)
-                  (add-bank rob (->Bid 1 0 0))
-                  (add-bank joe (->Bid 1 0 0)))]
-    (is= 1 (get-influence board courtroom rob))
-    (is= 2 (get-influence board courtroom joe))
-    (is= 1 (get-influence board hideout rob))
-    (is= 0 (get-influence board hideout joe))
-    (let [board (run-turn board bids)]
-      (is (suspended? board))
-      (is= clear-spot (:special board))
-      (let [board (run-turn board
-                            bids
-                            {:location courtroom :player joe})]
-        (is (suspended? board))
-        (is= steal-spot (:special board))
-        (let [board (run-turn board
-                              bids
-                              {:location hideout :player rob})]
-          (is (ready? board))
-          (is= 1 (get-influence board courtroom rob))
-          (is= 2 (get-influence board courtroom joe))
-          (is= 0 (get-influence board hideout rob))
-          (is= 1 (get-influence board hideout joe))
-          (is= (->Bid 3 0 2) (get-bank board rob))
-          (is= (->Bid 4 1 0) (get-bank board joe)))))))
 
 (deftest board-should-not-get-suspended-if-no-special-won
   (let [board (-> (make-board [rob joe])

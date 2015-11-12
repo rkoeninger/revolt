@@ -4,13 +4,17 @@
         revolt.server
         revolt.server.messaging
         [clojure.core.async :only [chan <!!]]
-        [clojure.test :only [is are]]))
+        [clojure.test :only [is are]]
+        [clojure.template :only [do-template]]))
 
 (defmacro is= [& more] `(is (= ~@more)))
 (defmacro is-not [& more] `(is (not ~@more)))
 
 (defmacro are= [args] `(are [x# y#] (= x# y#) ~@args))
 (defmacro are-not [argv expr & args] `(are ~argv (not ~expr) ~@args))
+
+(defmacro are-thrown? [klass re argv expr & args]
+  `(do-template ~argv (is (~'thrown-with-msg? ~klass ~re ~expr)) ~@args))
 
 (defn is-doable-by-all [board special]
   (let [{:keys [players]} board
