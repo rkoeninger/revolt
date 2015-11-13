@@ -2,8 +2,7 @@
   (:use revolt.core
         revolt.setup
         clojure.test
-        test-common
-        [clojure.pprint :only [pprint]]))
+        test-common))
 
 (deftest special-steal-spot
   (testing "steal-spot (spy)"
@@ -57,8 +56,10 @@
               (testing "they should be able to target themselves"
                 (is (check board joe {:location courtroom :player joe})))))
 
-          (testing "winner should not be able to steal cube from player where they do not have one"
-            )
+          (testing "where opponent has no cubes"
+            (testing "winner should not be able to steal cube from there"
+              (is-not (check board rob {:location hideout :player joe}))
+              (is-not (check board joe {:location courtroom :player rob}))))
 
           (testing "applying special to opponent's cube should steal it"
             (let [board (effect board rob {:location courtroom :player joe})]
@@ -69,19 +70,31 @@
               (is= 0 (get-influence board hideout rob))))
 
           (testing "applying special to winner's own cube should have no effect"
-            )))
+            (is= board (effect board rob {:location hideout :player rob}))
+            (is= board (effect board joe {:location courtroom :player joe})))))
 
-      (testing "when one player is in the guard house and the other has no cubes"
-        (let [board (-> board (with-influence courtroom joe 3)
-                              (set-guard-house joe))]
+      (testing "when one player has no cubes"
+        (let [board (with-influence board courtroom joe 3)]
 
-          (testing "should not be doable by player with no cubes"
-            (is-not (doable board rob))))))))
+          (testing "when the other player is in the guard house"
+            (let [board (set-guard-house board joe)]
+
+              (testing "should not be doable by player with no cubes"
+                (is-not (doable board rob)))))
+
+          (testing "attempting to steal spot from player with no cubes should fail"
+            (are-thrown? AssertionError #"has no influence on"
+              [winner location player]
+              (effect board winner {:location location :player player})
+              rob courtroom rob
+              rob courtroom rob
+              rob hideout rob
+              rob hideout rob)))))))
 
 (deftest special-swap-spots
 
   (testing "swap-spots (apothecary)"
-    (let [{:keys [doable check]} swap-spots
+    (let [{:keys [doable check effect]} swap-spots
           board special-board]
 
       (testing "when board is empty"
@@ -131,7 +144,7 @@
 (deftest special-take-open-spot
 
   (testing "take-open-spot (mayor)"
-    (let [{:keys [doable check]} take-open-spot
+    (let [{:keys [doable check effect]} take-open-spot
           board special-board]
 
       (testing "when board is empty"
@@ -195,7 +208,7 @@
 (deftest special-reassign-spots
 
   (testing "reassign-spots (messenger)"
-    (let [{:keys [doable check]} reassign-spots
+    (let [{:keys [doable check effect]} reassign-spots
           board reassign-board]
 
       (testing "when the board is empty"
@@ -309,13 +322,3 @@
 
           (testing "should not be doable by anyone"
             (is-not-doable-by-any board reassign-spots)))))))
-
-(deftest board-should-not-get-suspended-if-no-special-won
-  (let [board (-> (make-board [rob joe])
-                  (add-bank rob (->Bid 1 0 0))
-                  (add-bank joe (->Bid 1 0 0)))
-        bids {(get-in board [:figures 5]) {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
-              (get-in board [:figures 6]) {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
-        board (run-turn board bids)]
-    (is (ready? board))
-    (is= 2 (:turn board))))

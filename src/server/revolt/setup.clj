@@ -101,15 +101,18 @@
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
+(def tavern     (->Location :tavern     20 4))
+(def market     (->Location :market     25 5))
+(def plantation (->Location :plantation 30 6))
+(def cathedral  (->Location :cathedral  35 7))
+(def harbor     (->Location :harbor     40 6))
+(def town-hall  (->Location :town-hall  45 7))
+(def fortress   (->Location :fortress   50 8))
+(def palace     (->Location :palace     55 8))
+
 (def locations
-  [(->Location :tavern     20 4)
-   (->Location :market     25 5)
-   (->Location :plantation 30 6)
-   (->Location :cathedral  35 7)
-   (->Location :harbor     40 6)
-   (->Location :town-hall  45 7)
-   (->Location :fortress   50 8)
-   (->Location :palace     55 8)])
+  [tavern     market     plantation cathedral
+   harbor     town-hall  fortress   palace])
 
 ; The Palace is part of the The Palace expansion
 
@@ -119,25 +122,28 @@
 ; :asylum [:winner -30] 5
 ; :jail [:winner -30] 6
 
-(defn- influences [id] (first (filter #(= id (:id %)) locations)))
+(def general    (->Figure :general    1  (->Bid 0 0 1) -f fortress   nil))
+(def captain    (->Figure :captain    1  (->Bid 0 0 1) -f harbor     nil))
+(def innkeeper  (->Figure :innkeeper  3  (->Bid 0 1 0) b- tavern     nil))
+(def magistrate (->Figure :magistrate 1  (->Bid 0 1 0) b- town-hall  nil))
+(def viceroy    (->Figure :viceroy    0  (->Bid 0 0 0) -- palace     occupy-guard-house))
+(def priest     (->Figure :priest     6  (->Bid 0 0 0) -- cathedral  nil))
+(def aristocrat (->Figure :aristocrat 5  (->Bid 3 0 0) -- plantation nil))
+(def merchant   (->Figure :merchant   3  (->Bid 5 0 0) -- market     nil))
+(def printer    (->Figure :printer    10 (->Bid 0 0 0) -- nil        nil))
+(def spy        (->Figure :spy        0  (->Bid 0 0 0) b- nil        steal-spot))
+(def apothecary (->Figure :apothecary 0  (->Bid 0 0 0) -f nil        swap-spots))
+(def messenger  (->Figure :messenger  3  (->Bid 0 0 0) -- nil        reassign-spots))
+(def mayor      (->Figure :mayor      0  (->Bid 0 0 0) bf nil        take-open-spot))
+(def constable  (->Figure :constable  5  (->Bid 0 1 0) bf nil        nil))
+(def rogue      (->Figure :rogue      0  (->Bid 0 2 0) bf nil        nil))
+(def mercenary  (->Figure :mercenary  0  (->Bid 0 0 1) bf nil        nil))
 
 (def figures
-  [(->Figure :general    1  (->Bid 0 0 1) -f (influences :fortress)   nil)
-   (->Figure :captain    1  (->Bid 0 0 1) -f (influences :harbor)     nil)
-   (->Figure :innkeeper  3  (->Bid 0 1 0) b- (influences :tavern)     nil)
-   (->Figure :magistrate 1  (->Bid 0 1 0) b- (influences :town-hall)  nil)
-   (->Figure :viceroy    0  (->Bid 0 0 0) -- (influences :palace)     occupy-guard-house)
-   (->Figure :priest     6  (->Bid 0 0 0) -- (influences :cathedral)  nil)
-   (->Figure :aristocrat 5  (->Bid 3 0 0) -- (influences :plantation) nil)
-   (->Figure :merchant   3  (->Bid 5 0 0) -- (influences :market)     nil)
-   (->Figure :printer    10 (->Bid 0 0 0) -- nil                      nil)
-   (->Figure :spy        0  (->Bid 0 0 0) b- nil                      steal-spot)
-   (->Figure :apothecary 0  (->Bid 0 0 0) -f nil                      swap-spots)
-   (->Figure :messenger  3  (->Bid 0 0 0) -- nil                      reassign-spots)
-   (->Figure :mayor      0  (->Bid 0 0 0) bf nil                      take-open-spot)
-   (->Figure :constable  5  (->Bid 0 1 0) bf nil                      nil)
-   (->Figure :rogue      0  (->Bid 0 2 0) bf nil                      nil)
-   (->Figure :mercenary  0  (->Bid 0 0 1) bf nil                      nil)])
+  [general    captain    innkeeper  magistrate
+   viceroy    priest     aristocrat merchant
+   printer    spy        apothecary messenger
+   mayor      constable  rogue      mercenary])
 
 ; Mayor, Messenger, Constable and Viceroy are from The Palace expansion
 ; as is the concept of the Guard Post (:guard-post board)

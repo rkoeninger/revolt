@@ -6,12 +6,6 @@
 
 (deftest bids
 
-  (testing "Bids are made of gold, blackmail and force"
-    (let [{:keys [gold blackmail force]} (->Bid 3 2 1)]
-      (is= 3 gold)
-      (is= 2 blackmail)
-      (is= 1 force)))
-
   (testing "One blackmail is worth more than any amount of gold"
     (is (compare-bids (->Bid 0 1 0) (->Bid 5 0 0)))
     (is (compare-bids (->Bid 1 1 0) (->Bid 5 0 0)))
@@ -34,14 +28,14 @@
                          :b (->Bid 0 0 0)}))
     (is-not (get-winner {:a (->Bid 0 0 0)})))
 
+  (testing "There should always be a winner when there is only one positive bid"
+    (is= :a (get-winner {:a (->Bid 1 0 0)})))
+
   (testing "There should be no winner if there is a tie for first"
     (is-not (get-winner {:a (->Bid 1 2 0)
                          :b (->Bid 3 0 0)
                          :c (->Bid 4 1 0)
                          :d (->Bid 1 2 0)})))
-
-  (testing "There should always be a winner when there is only one positive bid"
-    (is= :a (get-winner {:a (->Bid 1 0 0)})))
 
   (testing "There should be a winner even if there is a tie for not-first"
     (is= :c (get-winner {:a (->Bid 1 2 0)
@@ -141,9 +135,11 @@
 (deftest rewards
 
   (testing "The winner of a figure receives that figure's reward"
-    (let [board (-> (clear-banks standard-board)
+    (let [board (-> standard-board
+                    clear-banks
                     (reward-winner farmer rob)
                     (reward-winner prince joe))]
+      (is (ready? board))
       (is= 0 (get-support board joe))
       (is= 1 (get-support board rob))
       (is= (->Bid 2 0 0) (get-bank board rob))
@@ -157,8 +153,8 @@
 
   (testing "Turn should eval completely if no specials are won"
     (let [board (run-turn standard-board {doctor {rob (->Bid 3 1 1)}
-                                 farmer {joe (->Bid 3 1 1)}
-                                 barber {moe (->Bid 3 1 1)}})]
+                                          farmer {joe (->Bid 3 1 1)}
+                                          barber {moe (->Bid 3 1 1)}})]
       (is (ready? board))
       (is= 2 (:turn board))
       (is= 0 (get-support board rob))
@@ -169,3 +165,26 @@
       (is= (->Bid 5 0 0) (get-bank board moe))
       (is= 1 (get-influence board farm joe))
       (is= 1 (get-influence board saloon moe)))))
+
+(deftest board-suspension
+  (let [board (-> (make-board [rob joe])
+                  (add-bank rob (->Bid 1 0 0))
+                  (add-bank joe (->Bid 1 0 0)))]
+
+    (testing "if a special that requires input was won"
+      (let [bids {spy        {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
+                  aristocrat {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
+            board (run-turn board bids)]
+
+        (testing "board should get suspended"
+          (is (suspended? board))
+          (is= 1 (:turn board)))))
+
+    (testing "if no special won"
+      (let [bids {priest     {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
+                  aristocrat {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
+            board (run-turn board bids)]
+
+        (testing "board should not get suspended"
+          (is (ready? board))
+          (is= 2 (:turn board)))))))
