@@ -88,81 +88,148 @@
 ; Influence any open Influence Space.
 (def take-open-spot
   (->Special :take-open-spot
+
+    ; TODO special doesn't require input if only one open spot left
     true
+
+    ; Special is not doable if board is full
     (fn [board _]
       (not (board-full? board)))
+
+    ; Input is invalid if selected location is full
     (fn [board _ {:keys [location]}]
       (not (location-full? board location)))
+
     (fn [board winner {:keys [location]}]
       (add-influence board location winner))))
+
+; Reclaiming is interpreted as getting any token the player wants.
+
+; TODO ability to run two specials?
+; TODO or just request user input for both abilities at the same time
+
+; Reclaim one token.
+; Place an opponent's cube to jail, replacing a cube if building is full.
+(def put-other-in-jail
+  (->Special :put-other-in-jail
+    false
+    (fn [board winner]
+      false)
+    (fn [board winner {:keys []}]
+      false)
+    (fn [board winner {:keys []}]
+      board)))
+
+; For the Heretic, influencing gets implemented as a special
+; because a selection needs to be made.
+
+; Influence Asylum, replacing a cube if building is full.
+(def put-self-in-asylum
+  (->Special :put-self-in-asylum
+    false
+    (fn [board winner]
+      false)
+    (fn [board winner {:keys []}]
+      false)
+    (fn [board winner {:keys []}]
+      board)))
+
+; Add any opponent's cube to any open space.
+(def put-other-open-spot
+  (->Special :put-other-open-spot
+    false
+    (fn [board winner]
+      false)
+    (fn [board winner {:keys []}]
+      false)
+    (fn [board winner {:keys []}]
+      board)))
+
+; Gain the reward in any other space.
+(def do-whatever
+  (->Special :do-anything
+    false
+    (fn [board winner]
+      false)
+    (fn [board winner {:keys []}]
+      false)
+    (fn [board winner {:keys []}]
+      board)))
+
+(defmacro deflocation [id support method cap]
+  `(def ~id
+    (->Location
+      ~(keyword id)
+      ~support
+      ~method
+      ~cap)))
+
+(defmacro deffigure [id support bank immunities location special]
+  `(def ~id
+    (->Figure
+      ~(keyword id)
+      ~support
+      ~(apply ->Bid bank)
+      ~immunities
+      ~location
+      ~special)))
+
+(deflocation tavern     20 :winner-take-all 4)
+(deflocation market     25 :winner-take-all 5)
+(deflocation plantation 30 :winner-take-all 6)
+(deflocation cathedral  35 :winner-take-all 7)
+(deflocation harbor     40 :winner-take-all 6)
+(deflocation town-hall  45 :winner-take-all 7)
+(deflocation fortress   50 :winner-take-all 8)
+(deflocation palace     55 :winner-take-all 8)
+(deflocation garden     10 :per-influence   6)
+(deflocation asylum    -30 :winner-take-all 5)
+(deflocation jail      -30 :winner-take-all 6)
+
+(def locations [tavern market plantation cathedral harbor town-hall fortress])
+(def palace-locations (concat locations [palace]))
+(def anarchy-locations (concat locations [garden asylum jail]))
 
 (def -- #{})
 (def b- #{:blackmail})
 (def -f #{:force})
 (def bf #{:blackmail :force})
 
-(def tavern     (->Location :tavern     20 4))
-(def market     (->Location :market     25 5))
-(def plantation (->Location :plantation 30 6))
-(def cathedral  (->Location :cathedral  35 7))
-(def harbor     (->Location :harbor     40 6))
-(def town-hall  (->Location :town-hall  45 7))
-(def fortress   (->Location :fortress   50 8))
-(def palace     (->Location :palace     55 8))
-
-(def locations
-  [tavern     market     plantation cathedral
-   harbor     town-hall  fortress   palace])
-
-; The Palace is part of the The Palace expansion
-
-; Anarchy! additional locations
-
-; :garden [:each 10] 6
-; :asylum [:winner -30] 5
-; :jail [:winner -30] 6
-
-(def general    (->Figure :general    1  (->Bid 0 0 1) -f fortress   nil))
-(def captain    (->Figure :captain    1  (->Bid 0 0 1) -f harbor     nil))
-(def innkeeper  (->Figure :innkeeper  3  (->Bid 0 1 0) b- tavern     nil))
-(def magistrate (->Figure :magistrate 1  (->Bid 0 1 0) b- town-hall  nil))
-(def viceroy    (->Figure :viceroy    0  (->Bid 0 0 0) -- palace     occupy-guard-house))
-(def priest     (->Figure :priest     6  (->Bid 0 0 0) -- cathedral  nil))
-(def aristocrat (->Figure :aristocrat 5  (->Bid 3 0 0) -- plantation nil))
-(def merchant   (->Figure :merchant   3  (->Bid 5 0 0) -- market     nil))
-(def printer    (->Figure :printer    10 (->Bid 0 0 0) -- nil        nil))
-(def spy        (->Figure :spy        0  (->Bid 0 0 0) b- nil        steal-spot))
-(def apothecary (->Figure :apothecary 0  (->Bid 0 0 0) -f nil        swap-spots))
-(def messenger  (->Figure :messenger  3  (->Bid 0 0 0) -- nil        reassign-spots))
-(def mayor      (->Figure :mayor      0  (->Bid 0 0 0) bf nil        take-open-spot))
-(def constable  (->Figure :constable  5  (->Bid 0 1 0) bf nil        nil))
-(def rogue      (->Figure :rogue      0  (->Bid 0 2 0) bf nil        nil))
-(def mercenary  (->Figure :mercenary  0  (->Bid 0 0 1) bf nil        nil))
+(deffigure general    1  (0 0 1) -f fortress   nil)
+(deffigure captain    1  (0 0 1) -f harbor     nil)
+(deffigure innkeeper  3  (0 1 0) b- tavern     nil)
+(deffigure magistrate 1  (0 1 0) b- town-hall  nil)
+(deffigure priest     6  (0 0 0) -- cathedral  nil)
+(deffigure aristocrat 5  (3 0 0) -- plantation nil)
+(deffigure merchant   3  (5 0 0) -- market     nil)
+(deffigure printer    10 (0 0 0) -- nil        nil)
+(deffigure spy        0  (0 0 0) b- nil        steal-spot)
+(deffigure apothecary 0  (0 0 0) -f nil        swap-spots)
+(deffigure rogue      0  (0 2 0) bf nil        nil)
+(deffigure mercenary  3  (0 0 1) bf nil        nil)
+(deffigure viceroy    0  (0 0 0) -- palace     occupy-guard-house)
+(deffigure messenger  3  (0 0 0) -- nil        reassign-spots)
+(deffigure mayor      0  (0 0 0) bf nil        take-open-spot)
+(deffigure constable  5  (0 1 0) bf nil        nil)
+(deffigure warden     4  (0 0 0) -- nil        put-other-in-jail)
+(deffigure heretic    0  (0 1 1) -- nil        put-self-in-asylum)
+(deffigure governor   0  (0 0 0) bf nil        put-other-open-spot)
+(deffigure anarchist  0  (0 0 0) bf nil        do-whatever)
 
 (def figures
+  [general    captain    innkeeper  magistrate
+   priest     aristocrat merchant   printer
+   rogue      spy        apothecary mercenary])
+(def palace-figures
   [general    captain    innkeeper  magistrate
    viceroy    priest     aristocrat merchant
    printer    spy        apothecary messenger
    mayor      constable  rogue      mercenary])
-
-; Mayor, Messenger, Constable and Viceroy are from The Palace expansion
-; as is the concept of the Guard Post (:guard-post board)
-
-; Anarchy! additional figures
-
-; "Four support. Reclaim one token.
-; Place an opponent's cube to jail, replacing a cube if building is full."
-; :warden     4  (->Bid 0 0 0) -- (and reclaim-one-token place-opponent-in-jail :replace)
-
-; "One Force. One Blackmail. Influence Asylum, replacing a cube if building is full."
-; :heretic    0  (->Bid 0 1 1) -- (influences :replace :asylum) nil
-
-; "Influence any open space. Add any opponent's cube to any open space.
-; Immune to blackmail and to force."
-; :governor   0  (->Bid 0 0 0) bf nil   (and take-open-spot place-opponent-anywhere)
-
-; "Gain the reward in any other space."
-; :anarchist  0  (->Bid 0 0 0) bf nil    mimic-other-figure
+#_ (def anarchy-figures
+  [general    captain    innkeeper  magistrate
+   priest     aristocrat merchant   printer
+   warden     spy        apothecary heretic
+   governor   rogue      mercenary  anarchist])
 
 (defn make-board [players]
   (->Board

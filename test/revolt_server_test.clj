@@ -8,9 +8,9 @@
         test-common))
 
 (deftest read-functions
-  (let [l1 (->Location :l1 0 0)
-        l2 (->Location :l2 0 0)
-        l3 (->Location :l3 0 0)
+  (let [l1 (->Location :l1 0 :all 0)
+        l2 (->Location :l2 0 :all 0)
+        l3 (->Location :l3 0 :all 0)
         f1 (->Figure :f1 0 zero-bid #{} nil nil)
         f2 (->Figure :f2 0 zero-bid #{} nil nil)
         f3 (->Figure :f3 0 zero-bid #{} nil nil)
@@ -99,7 +99,7 @@
       (is= (->Bid 5 0 0) (get-bank board rob))
       (is= (->Bid 5 0 1) (get-bank board joe))
       (is= 6 (get-support board rob))
-      (is= 13 (get-support board joe))
+      (is= 16 (get-support board joe))
       (is= 1 (get-influence board (location-by-id board :cathedral) rob))
       (is= 1 (get-influence board (location-by-id board :market) joe)))))
 
@@ -118,8 +118,7 @@
       :cathedral  {1 4, 2 3}
       :harbor     {1 6, 2 0}
       :town-hall  {1 3, 2 4}
-      :fortress   {1 4, 2 4}
-      :palace     {1 6, 2 2}}))
+      :fortress   {1 4, 2 4}}))
     (reset-in! state [:board :banks] (read-player-*-map (:board @state)
      {1 (->Bid 1 0 0)
       2 (->Bid 1 0 0)}))
@@ -134,7 +133,7 @@
     (is (game-over? (:board @state)))
     (let [game-over-message {:type :game-over
                              :results {:rankings {1 1,   2 2}
-                                       :scores   {1 155, 2 75}}}]
+                                       :scores   {1 100, 2 75}}}]
     (is= game-over-message (get-message 1)))))
 
 (deftest first-turn-special-scenario

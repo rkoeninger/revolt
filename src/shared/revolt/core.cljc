@@ -55,9 +55,10 @@
    :blackmail blackmail
    :force force})
 
-(defn ->Location [id support cap]
+(defn ->Location [id support method cap]
   {:id id
    :support support
+   :method method
    :cap cap})
 
 (defn ->Special [id requires-input doable check effect]
@@ -156,6 +157,8 @@
     (plus-bid bank (->Bid extra-gold 0 0))))
 (defn fill-banks [board]
   (update board :banks (partial map-vals fill-bank)))
+(defn winner-take-all? [{:keys [method]}] (= :winner-take-all method))
+(defn per-influence? [{:keys [method]}] (= :per-influence method))
 (defn add-influence [board location player]
   (assert (not (location-full? board location))
     (str location " already full"))
@@ -184,11 +187,21 @@
 (defn get-holder [board location]
   (if (location-full? board location)
     (get-current-holder board location)))
-(defn get-holdings [board player]
-    (filter #(= player (get-holder board %)) (:locations board)))
-(defn get-score [board player]
+(defn get-holdings [{:keys [locations] :as board} player]
+  (filter #(= player (get-holder board %)) locations))
+(defn get-winner-take-all-score [board player]
+  (->> (get-holdings board player)
+       (filter winner-take-all?)
+       (map :support)
+       (reduce +)))
+(defn get-per-influence-score [{:keys [locations] :as board} player]
+  (letfn [(get-support [{:keys [support] :as location}]
+            (* support (get-influence board location player)))]
+    (reduce + (map get-support (filter per-influence? locations)))))
+(defn get-score [{:keys [locations] :as board} player]
   (+ (get-support board player)
-     (reduce + (map :support (get-holdings board player)))
+     (get-winner-take-all-score board player)
+     (get-per-influence-score board player)
      (get-support-value (get-bank board player))))
 (defn get-scores [board]
   (let [players (:players board)]
@@ -198,9 +211,8 @@
   (let [ordered-scores (sort (distinct (vals (get-scores board))))]
     (- (count ordered-scores)
        (.indexOf ordered-scores (get-score board player)))))
-(defn get-rankings [board]
-  (let [players (:players board)]
-    (zipmap players (map (partial get-rank board) players))))
+(defn get-rankings [{:keys [players] :as board}]
+  (zipmap players (map (partial get-rank board) players)))
 (defn get-game-winner [board]
   (let [scores (get-scores board)]
     (if-let [max-score (unique-max (vals scores))]
@@ -218,8 +230,8 @@
       (assoc :special special)
       (assoc :figure-list figure-list)
       (assoc :mode :suspended)))
-(defn ready? [board] (= :ready (:mode board)))
-(defn suspended? [board] (= :suspended (:mode board)))
+(defn ready? [{:keys [mode]}] (= :ready mode))
+(defn suspended? [{:keys [mode]}] (= :suspended mode))
 (defn reward-winner [board {:keys [support bank location]} winner]
   (let [board (-> board
                   (add-support winner support)
@@ -242,7 +254,9 @@
         (recur (ready-board board) bids figure-list)))))
 (defn finish [board]
   (if (ready? board)
-    (-> board fill-banks inc-turn)
+    (-> board
+        fill-banks
+        inc-turn)
     board))
 (defn run-turn [board bids & [args]]
   (cond

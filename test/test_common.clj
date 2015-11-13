@@ -41,10 +41,10 @@
 (defn read-location-player-*-map [board m]
   (map-kv (partial location-by-id board) (partial read-player-*-map board) m))
 
-(def hovel  (->Location :hovel  10 2))
-(def saloon (->Location :saloon 30 4))
-(def farm   (->Location :farm   40 3))
-(def castle (->Location :castle 90 5))
+(def hovel  (->Location :hovel  10 :winner-take-all 2))
+(def saloon (->Location :saloon 30 :winner-take-all 4))
+(def farm   (->Location :farm   40 :winner-take-all 3))
+(def castle (->Location :castle 90 :winner-take-all 5))
 
 (def prince (->Figure :prince 0 (->Bid 5 0 0) -f castle nil))
 (def beggar (->Figure :beggar 1 (->Bid 0 0 0) b- hovel nil))
@@ -71,8 +71,8 @@
       (zipmap locations (repeat (zipmap players (repeat 0))))
       (zipmap players (repeat 0)))))
 
-(def hideout   (->Location :hideout   20 1))
-(def courtroom (->Location :courtroom 30 6))
+(def hideout   (->Location :hideout   20 :winner-take-all 1))
+(def courtroom (->Location :courtroom 30 :winner-take-all 6))
 
 (def clear-spot
   (->Special :clear-spot
@@ -109,9 +109,9 @@
 
 (defn just-special [special] (->Figure nil nil nil nil nil special))
 
-(def loc1 (->Location :loc1 10 2))
-(def loc2 (->Location :loc2 20 3))
-(def loc3 (->Location :loc3 30 4))
+(def loc1 (->Location :loc1 10 :winner-take-all 2))
+(def loc2 (->Location :loc2 20 :winner-take-all 3))
+(def loc3 (->Location :loc3 30 :winner-take-all 4))
 
 (def reassigner (->Figure :reassigner 0 zero-bid -- nil reassign-spots))
 

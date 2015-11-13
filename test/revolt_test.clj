@@ -149,6 +149,28 @@
       (is= 3 (get-score board rob))
       (is= 5 (get-score board joe)))))
 
+(deftest location-support-dispension-methods
+
+  (testing "when everyone has cubes on a :per-influence location"
+    (let [location (->Location :loc1 5 :per-influence 4)
+          board (->Board
+            1
+            [location]
+            []
+            [rob joe moe]
+            {rob zero-bid joe zero-bid moe zero-bid}
+            {location {rob 0 joe 0 moe 0}}
+            {rob 0 joe 0 moe 0})
+          board (with-influence board location rob 1
+                                      location joe 1
+                                      location moe 1)]
+
+      (testing "everyone should have points"
+        (are [player] (= 5 (get-score board player))
+          rob
+          joe
+          moe)))))
+
 (deftest turn-resume
 
   (testing "Turn should eval completely if no specials are won"
