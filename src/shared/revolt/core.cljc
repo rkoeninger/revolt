@@ -1,23 +1,15 @@
 (ns revolt.core
   (:use [clojure.set :only [map-invert]]))
 
-; (Ord b) => (a, a, [a -> b]) -> 0 | 1 | -1
-(defn serial-compare [x y fs]
-  (let [f (first fs)]
-    (cond
-      (empty? fs)       0
-      (> (f x) (f y))   1
-      (< (f x) (f y))  -1
-      :else            (recur x y (rest fs)))))
 (defn inverted-get [m v] ((map-invert m) v))
-(defn unique-max
-  ([coll] (unique-max nil coll))
-  ([cmp coll]
-    (case (count coll)
-      0 nil
-      1 (first coll)
-      (let [[x y] (take 2 (reverse (if cmp (sort cmp coll) (sort coll))))]
-        (if (not= x y) x)))))
+(defn order [coll & [cmp]]
+  (if cmp (sort cmp coll) (sort coll)))
+(defn unique-max [coll & [cmp]]
+  (case (count coll)
+    0 nil
+    1 (first coll)
+    (let [[x y] (take 2 (reverse (order coll cmp)))]
+      (if (not= x y) x))))
 (defn other-than [x coll] (filter (partial not= x) coll))
 (defn map-kv [f g m] (into {} (for [[k v] m] [(f k) (g v)])))
 (defn map-vals [f m] (map-kv identity f m))
@@ -33,7 +25,7 @@
     {}
       outer-map))
 
-(defn first-not-nil [x y] (if (nil? x) y x))
+(defn or-else [x y] (if (nil? x) y x))
 
 (defn relevel
   ; (Map a (Map b c)) -> (Map b (Map a c))
@@ -45,7 +37,7 @@
   ; ((Map a (Map b c)) c (Set a) (Set b)) -> (Map b (Map a c))
   ([m default-val all-outer-keys all-inner-keys]
     (let [default-inner-map (zipmap all-outer-keys (repeat default-val))
-          or-default #(merge-with first-not-nil (sub-map m %) default-inner-map)]
+          or-default #(merge-with or-else (sub-map m %) default-inner-map)]
       (into {} (map #(vector % (or-default %)) all-inner-keys)))))
 
 (defn ->Player [id name] {:id id :name name})
@@ -102,12 +94,17 @@
 (def plus-bid (partial merge-with +))
 (def pos-bid? (comp (partial some pos?) vals))
 (defn compare-bids [x y]
-  (pos?
-    (serial-compare
-      (or x zero-bid)
-      (or y zero-bid)
-      (map #(fnil % 0) [:force :blackmail :gold]))))
-(def bid-comparator (comparator (complement compare-bids)))
+  (let [x (or x zero-bid)
+        y (or y zero-bid)
+        {fx :force bx :blackmail gx :gold} x
+        {fy :force by :blackmail gy :gold} y]
+    (cond
+      (> fx fy) 1 (< fx fy) -1
+      (> bx by) 1 (< bx by) -1
+      (> gx gy) 1 (< gx gy) -1
+      :else 0)))
+(def less-than-bid? (comp neg? compare-bids))
+(def greater-than-bid? (comp pos? compare-bids))
 (def has-blackmail? (comp pos? :blackmail))
 (def has-force? (comp pos? :force))
 (def blackmail-immune? (comp boolean :blackmail :immunities))
@@ -115,7 +112,7 @@
 (defn get-support-value [{:keys [gold blackmail force]}]
   (reduce + (map * [1 3 5] [gold blackmail force])))
 (defn get-winner [bid-map] ; [Map Player Bid] -> Player | nil
-  (let [winning-bid (unique-max bid-comparator (vals bid-map))]
+  (let [winning-bid (unique-max (vals bid-map) compare-bids)]
     (if (and winning-bid (pos-bid? winning-bid))
       (inverted-get bid-map winning-bid))))
 (defn validate-bid [figure bid]

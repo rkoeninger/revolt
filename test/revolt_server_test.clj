@@ -86,8 +86,8 @@
 
     (is= 1 (get-in @state [:board :turn]))
     (handle 2 {:type :submit-bids :bids {:merchant (->Bid 0 1 1)
-                                  :mercenary (->Bid 2 0 0)
-                                  :printer (->Bid 1 0 0)}})
+                                         :mercenary (->Bid 2 0 0)
+                                         :printer (->Bid 1 0 0)}})
     (is= {:type :bids-submitted :player-id 2} (get-message 1))
     (get-message 2)
 
