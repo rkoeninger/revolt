@@ -61,6 +61,10 @@
    :method method
    :cap cap})
 
+; TODO rename :requires-input to :certain/:uncertain
+; and have it be a function that determines if input is required
+; or if special can only have one effect
+
 (defn ->Special [id requires-input doable check effect]
   {:id id           ; Keyword
    :requires-input requires-input ; Boolean

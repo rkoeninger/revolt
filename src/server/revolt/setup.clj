@@ -2,7 +2,7 @@
   (:use revolt.core
         [clojure.math.combinatorics :only [cartesian-product]]))
 
-; Offically, the guard house is like any other Influence Space in that
+; NOTE Offically, the guard house is like any other Influence Space in that
 ; it can be swapped with the Apothecary (if the guard house occupant wins the Apoth),
 ; and the game isn't over if the Guard House is not occupied.
 ; I don't feel like implementing it that way.
@@ -11,14 +11,24 @@
 (def occupy-guard-house
   (->Special :occupy-guard-house
     false
+
+    ; Special is always doable
     (constantly true)
+
+    ; Since there is no input, it is always valid
     (constantly true)
+
     (fn [board winner _] (set-guard-house board winner))))
 
 ; Replace one Influence Cube with one of your own.
 (def steal-spot
   (->Special :steal-spot
+
+    ; TODO Doesn't require input if there is only
+    ; one player+location combo on the board
     true
+
+    ; 
     (fn [{:keys [locations players] :as board} winner]
       (let [pairs (cartesian-product locations players)]
         (letfn [(target? [[location player]]
@@ -26,9 +36,12 @@
                     (touchable? board winner player)
                     (has-influence? board location player)))]
           (some target? pairs))))
+
+    ;
     (fn [board winner {:keys [location player]}]
       (and (touchable? board winner player)
            (has-influence? board location player)))
+
     (fn [board winner {:keys [location player]}]
       (replace-influence board location player winner))))
 
@@ -89,10 +102,12 @@
 (def take-open-spot
   (->Special :take-open-spot
 
-    ; TODO special doesn't require input if only one open spot left
+    ; TODO Doesn't require input if only one open spot left
     true
+    ;(fn [{:keys [locations] :as board} _]
+    ;  (some #(< 1 (available-influence board %)) locations))
 
-    ; Special is not doable if board is full
+    ; Not doable if board is full
     (fn [board _]
       (not (board-full? board)))
 
@@ -103,16 +118,21 @@
     (fn [board winner {:keys [location]}]
       (add-influence board location winner))))
 
-; Reclaiming is interpreted as getting any token the player wants.
+; NOTE Reclaiming is interpreted as getting any token the player wants.
 
 ; TODO ability to run two specials?
 ; TODO or just request user input for both abilities at the same time
 
 ; Reclaim one token.
-; Place an opponent's cube to jail, replacing a cube if building is full.
+; Place an opponent's cube to Jail, replacing a cube if building is full.
 (def put-other-in-jail
   (->Special :put-other-in-jail
-    false
+
+    ; Wouldn't require input if spots are open
+    ; But always requires input because of "reclaim one token"
+    ;(constantly true)
+    true
+
     (fn [board winner]
       false)
     (fn [board winner {:keys []}]
@@ -126,7 +146,13 @@
 ; Influence Asylum, replacing a cube if building is full.
 (def put-self-in-asylum
   (->Special :put-self-in-asylum
-    false
+
+    ; Requires special input if Asylum is full
+    ; TODO and cubes don't all belong to the same person
+    true
+    #_(fn [board _]
+      (and (location-full? board (get-in board [:locations :asylum]))))
+
     (fn [board winner]
       false)
     (fn [board winner {:keys []}]
@@ -225,7 +251,7 @@
    viceroy    priest     aristocrat merchant
    printer    spy        apothecary messenger
    mayor      constable  rogue      mercenary])
-#_ (def anarchy-figures
+(def anarchy-figures
   [general    captain    innkeeper  magistrate
    priest     aristocrat merchant   printer
    warden     spy        apothecary heretic

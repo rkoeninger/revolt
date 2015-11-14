@@ -38,7 +38,7 @@ page1.open(url, function (status) {
               bid("priest",     1, 0, 0),
               bid("aristocrat", 0, 1, 0),
               bid("merchant",   1, 0, 0),
-              bid("viceroy",    1, 0, 1)]);
+              bid("printer",    1, 0, 1)]);
             setTimeout(defer(submitBids), 2000);
           });
         });
