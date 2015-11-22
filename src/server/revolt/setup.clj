@@ -135,8 +135,8 @@
 
     (fn [board winner]
       false)
-    (fn [board winner {:keys []}]
-      false)
+    (fn [board winner {:keys [player]}]
+      (and (not= winner player)))
     (fn [board winner {:keys []}]
       board)))
 
@@ -160,27 +160,42 @@
     (fn [board winner {:keys []}]
       board)))
 
+; TODO does guard-house prevent opponent from being affected?
+
 ; Add any opponent's cube to any open space.
 (def put-other-open-spot
   (->Special :put-other-open-spot
-    false
-    (fn [board winner]
-      false)
-    (fn [board winner {:keys []}]
-      false)
-    (fn [board winner {:keys []}]
-      board)))
+    true
+
+    ; Not doable if board is full
+    (fn [board _]
+      (not (board-full? board)))
+
+    ; Input is invalid if selected location is full
+    (fn [board _ {:keys [location]}]
+      (not (location-full? board location)))
+
+    (fn [board winner {:keys [location player]}]
+      (add-influence board location winner))))
 
 ; Gain the reward in any other space.
 (def do-whatever
   (->Special :do-anything
-    false
-    (fn [board winner]
-      false)
-    (fn [board winner {:keys []}]
-      false)
-    (fn [board winner {:keys []}]
-      board)))
+    true
+
+    ; Always doable
+    (constantly true)
+
+    ; Any figure is valid input
+    (constantly true)
+
+    (fn [board winner {:keys [figure args]}]
+      (let [{:keys [special]} figure
+            {:keys [doable check effect]} special
+            board (reward-winner board figure winner)]
+        (if (and special (doable board winner))
+          (effect board winner args)
+          board)))))
 
 (defmacro deflocation [id support method cap]
   `(def ~id
@@ -212,9 +227,9 @@
 (deflocation asylum    -30 :winner-take-all 5)
 (deflocation jail      -30 :winner-take-all 6)
 
-(def locations [tavern market plantation cathedral harbor town-hall fortress])
-(def palace-locations (concat locations [palace]))
-(def anarchy-locations (concat locations [garden asylum jail]))
+(def base-locations [tavern market plantation cathedral harbor town-hall fortress])
+(def palace-locations (concat base-locations [palace]))
+(def anarchy-locations (concat base-locations [garden asylum jail]))
 
 (def -- #{})
 (def b- #{:blackmail})
@@ -242,7 +257,7 @@
 (deffigure governor   0  (0 0 0) bf nil        put-other-open-spot)
 (deffigure anarchist  0  (0 0 0) bf nil        do-whatever)
 
-(def figures
+(def base-figures
   [general    captain    innkeeper  magistrate
    priest     aristocrat merchant   printer
    rogue      spy        apothecary mercenary])
@@ -257,12 +272,15 @@
    warden     spy        apothecary heretic
    governor   rogue      mercenary  anarchist])
 
-(defn make-board [players]
-  (->Board
-    1
-    locations
-    figures
-    players
-    (zipmap players (repeat (->Bid 3 1 1)))
-    (zipmap locations (repeat (zipmap players (repeat 0))))
-    (zipmap players (repeat 0))))
+(defn make-board [players & [figures locations initial-bank]]
+  (let [figures (or figures base-figures)
+        locations (or locations base-locations)
+        initial-bank (or initial-bank (->Bid 3 1 1))]
+    (->Board
+      1
+      locations
+      figures
+      players
+      (zipmap players (repeat initial-bank))
+      (zipmap locations (repeat (zipmap players (repeat 0))))
+      (zipmap players (repeat 0)))))

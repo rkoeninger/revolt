@@ -233,13 +233,15 @@
       (assoc :mode :suspended)))
 (defn ready? [{:keys [mode]}] (= :ready mode))
 (defn suspended? [{:keys [mode]}] (= :suspended mode))
+(defn reward-influence [board winner location]
+  (if (or (nil? location) (location-full? board location))
+    board
+    (add-influence board location winner)))
 (defn reward-winner [board {:keys [support bank location]} winner]
-  (let [board (-> board
-                  (add-support winner support)
-                  (add-bank winner bank))]
-    (if (or (nil? location) (location-full? board location))
-      board
-      (add-influence board location winner))))
+  (-> board
+      (add-support winner support)
+      (add-bank winner bank)
+      (reward-influence winner location)))
 (defn eval-bids [board bids figure-list]
   (if (empty? figure-list)
     (ready-board board)
@@ -273,7 +275,7 @@
         (assert (check board special-winner args) "Args invalid for this special")
         (-> board
             (effect special-winner args)
-            ready-board ; TODO effect can trigger another Special
+            ready-board
             (eval-bids bids figure-list)
             finish))
     :else

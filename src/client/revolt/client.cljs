@@ -25,10 +25,9 @@
 (defn adjust-bid [data id denomination adj]
   (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
         bank-denom-adjusted (- (get-in data [:bank denomination]) adj)]
-    (if (and (>= bank-denom-adjusted 0) (>= bid-denom-adjusted 0))
-      (do
-        (om/transact! data [:bank denomination] #(- % adj))
-        (om/transact! data [:bids id denomination] #(+ % adj))))))
+    (when (and (>= bank-denom-adjusted 0) (>= bid-denom-adjusted 0))
+      (om/transact! data [:bank denomination] #(- % adj))
+      (om/transact! data [:bids id denomination] #(+ % adj)))))
 
 (defn dont-show-zero [x]
   (if (zero? x) "" x))
@@ -80,7 +79,8 @@
 
 (defn denom [data bank d]
   (let [dval (get bank d)]
-    (if (and dval (pos? dval)) (str dval " " (localize data d)))))
+    (if (and dval (pos? dval))
+      (str dval " " (localize data d)))))
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
   (clojure.string/join ", " (flatten (filter identity [
@@ -285,8 +285,8 @@
                       (dom/button
                         #js {:onClick
                              #(if selection-1
-                                  (om/set-state! owner :selection-2 combo)
-                                  (om/set-state! owner :selection-1 combo))}
+                                (om/set-state! owner :selection-2 combo)
+                                (om/set-state! owner :selection-1 combo))}
                         (get-in data [:influence id p])))))
                 (:players data))))
           (:locations data)))
