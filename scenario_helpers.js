@@ -3,23 +3,55 @@
 /*jslint node: true, browser: true, indent: 2*/
 /*global phantom*/
 
-function step(delay, func) {
-  return {
-    delay: delay,
-    func: func
-  };
-}
-
 function sequence(steps) {
-  var current, rest;
+  var current, rest, next;
   if (steps && steps.length > 0) {
     current = steps[0];
     rest = steps.slice(1, steps.length);
-    setTimeout(function () {
-      current.func();
+    next = function () {
+      if (current.func) {
+        current.func();
+      }
       sequence(rest);
-    }, current.delay);
+    };
+    if (current.type === "delay") {
+      console.log("Delaying " + current.delay + "ms...");
+      setTimeout(next, current.delay);
+    } else if (current.type === "condition") {
+      waitFor(current.condition, next, current.delay);
+    } else if (current.type === "mode") {
+      waitForMode(current.mode, next);
+    } else {
+      throw new Error("Unrecognized step type: " + step.type);
+    }
   }
+}
+
+function delay(millis, func) {
+  return {
+    type: "delay",
+    delay: millis,
+    func: func
+  }
+}
+
+function condition(predicate, func) {
+  return {
+    type: "condition",
+    condition: predicate,
+    func: func
+  }
+}
+
+function mode(modeString, func) {
+  return {
+    type: "mode",
+    mode: modeString,
+    func: func
+  }
+}
+
+function noop() {
 }
 
 function defer(f, args) {
@@ -85,6 +117,7 @@ function startGame() {
   var startGameButton = document.body.querySelector("#start-game-button");
   if (startGameButton) {
     startGameButton.click();
+    console.log("Clicked #start-game-button");
   } else {
     console.error("Couldn't find #start-game-button");
   }
@@ -129,6 +162,7 @@ function submitBids() {
   var submitButton = document.body.querySelector("#submit-button");
   if (submitButton) {
     submitButton.click();
+    console.log("Clicked #submit-button");
   } else {
     console.error("Couldn't find #submit-button");
   }
