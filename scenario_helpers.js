@@ -1,38 +1,14 @@
 'use strict';
 
 /*jslint node: true, browser: true, indent: 2*/
-/*global phantom*/
-
-function sequence(steps) {
-  var current, rest, next;
-  if (steps && steps.length > 0) {
-    current = steps[0];
-    rest = steps.slice(1, steps.length);
-    next = function () {
-      if (current.func) {
-        current.func();
-      }
-      sequence(rest);
-    };
-    if (current.type === "delay") {
-      console.log("Delaying " + current.delay + "ms...");
-      setTimeout(next, current.delay);
-    } else if (current.type === "condition") {
-      waitFor(current.condition, next, current.delay);
-    } else if (current.type === "mode") {
-      waitForMode(current.mode, next);
-    } else {
-      throw new Error("Unrecognized step type: " + step.type);
-    }
-  }
-}
+/*global phantom, cljs, revolt*/
 
 function delay(millis, func) {
   return {
     type: "delay",
     delay: millis,
     func: func
-  }
+  };
 }
 
 function condition(predicate, func) {
@@ -40,7 +16,7 @@ function condition(predicate, func) {
     type: "condition",
     condition: predicate,
     func: func
-  }
+  };
 }
 
 function mode(modeString, func) {
@@ -48,7 +24,7 @@ function mode(modeString, func) {
     type: "mode",
     mode: modeString,
     func: func
-  }
+  };
 }
 
 function noop() {
@@ -69,21 +45,21 @@ function repeatAction(n, f) {
 
 function waitFor(testFx, onReady, timeOutMillis) {
   var maxtimeOutMillis = timeOutMillis || 10000,
-      start = new Date().getTime(),
-      condition = false,
-      interval = setInterval(function () {
-        if (!condition) {
-          if (new Date().getTime() - start < maxtimeOutMillis) {
-            condition = testFx();
-          } else {
-            clearInterval(interval);
-            console.warn("Timeout waiting after " + maxtimeOutMillis + "ms.");
-          }
+    start = new Date().getTime(),
+    condition = false,
+    interval = setInterval(function () {
+      if (!condition) {
+        if (new Date().getTime() - start < maxtimeOutMillis) {
+          condition = testFx();
         } else {
           clearInterval(interval);
-          onReady();
+          console.warn("Timeout waiting after " + maxtimeOutMillis + "ms.");
         }
-      }, 100);
+      } else {
+        clearInterval(interval);
+        onReady();
+      }
+    }, 100);
 }
 
 function keyword(s) {
@@ -93,14 +69,38 @@ function keyword(s) {
 function waitForMode(modeString, onReady) {
   waitFor(function () {
     var data = cljs.core.deref.call(null, revolt.client.app_state),
-        currentModeKw = cljs.core.get.call(null, data, keyword("mode"));
+      currentModeKw = cljs.core.get.call(null, data, keyword("mode"));
     return cljs.core._EQ_.call(null, keyword(modeString), currentModeKw);
   }, onReady);
 }
 
+function sequence(steps) {
+  var current, rest, next;
+  if (steps && steps.length > 0) {
+    current = steps[0];
+    rest = steps.slice(1, steps.length);
+    next = function () {
+      if (current.func) {
+        current.func();
+      }
+      sequence(rest);
+    };
+    if (current.type === "delay") {
+      console.log("Delaying " + current.delay + "ms...");
+      setTimeout(next, current.delay);
+    } else if (current.type === "condition") {
+      waitFor(current.condition, next, current.delay);
+    } else if (current.type === "mode") {
+      waitForMode(current.mode, next);
+    } else {
+      throw new Error("Unrecognized step type: " + current.type);
+    }
+  }
+}
+
 function signup(username) {
   var signupInput = document.body.querySelector("#signup-input"),
-      signupButton = document.body.querySelector("#signup-button");
+    signupButton = document.body.querySelector("#signup-button");
   if (signupInput) {
     if (signupButton) {
       signupInput.value = username;
@@ -126,11 +126,11 @@ function startGame() {
 function incBid(figure, denomination) {
   waitFor(function () {
     var incButtonId = "bid-" + figure + "-" + denomination + "-up",
-        incButton = document.body.querySelector("#" + incButtonId);
-    return typeof incButton !== "undefined";
+      incButton = document.body.querySelector("#" + incButtonId);
+    return incButton !== undefined;
   }, function () {
     var incButtonId = "bid-" + figure + "-" + denomination + "-up",
-        incButton = document.body.querySelector("#" + incButtonId);
+      incButton = document.body.querySelector("#" + incButtonId);
     if (incButton) {
       incButton.click();
     } else {
@@ -149,7 +149,7 @@ function bid(figure, gold, blackmail, force) {
 }
 
 function placeBids(bids) {
-  var i, j, current;
+  var i, current;
   for (i = 0; i < bids.length; ++i) {
     current = bids[i];
     repeatAction(current.gold, defer(incBid, [current.figure, "gold"]));
