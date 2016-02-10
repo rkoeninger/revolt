@@ -74,6 +74,12 @@ function waitForMode(modeString, onReady) {
   }, onReady);
 }
 
+function playerCount() {
+  var data = cljs.core.deref.call(null, revolt.client.app_state),
+    playersVec = cljs.core.get.call(null, data, keyword("players"));
+  return cljs.core.count.call(null, playersVec);
+}
+
 function sequence(steps) {
   var current, rest, next;
   if (steps && steps.length > 0) {
@@ -91,6 +97,7 @@ function sequence(steps) {
     } else if (current.type === "condition") {
       waitFor(current.condition, next, current.delay);
     } else if (current.type === "mode") {
+      console.log("Waiting to enter mode: " + current.mode);
       waitForMode(current.mode, next);
     } else {
       throw new Error("Unrecognized step type: " + current.type);
@@ -161,8 +168,12 @@ function placeBids(bids) {
 function submitBids() {
   var submitButton = document.body.querySelector("#submit-button");
   if (submitButton) {
-    submitButton.click();
-    console.log("Clicked #submit-button");
+    if (submitButton.disabled) {
+      console.log("#submit-button is disabled");
+    } else {
+      submitButton.click();
+      console.log("Clicked #submit-button");
+    }
   } else {
     console.error("Couldn't find #submit-button");
   }
