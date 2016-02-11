@@ -2,10 +2,12 @@ notifications:
   email: false
 language: clojure
 before_script:
-  - npm install -g phamtomjs2
+  - npm install phamtomjs-prebuilt
+  - npm install jslint
 after_script:
   - lein figwheel&
   - FIGHWEEL_SERVER_PID=$!
   - sleep 60
   - phantomjs scenarios.js
   - kill -9 $FIGWHEEL_SERVER_PID
+  - jslint '*.js' || true
