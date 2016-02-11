@@ -6,9 +6,10 @@ before_script:
   - npm install phantomjs-prebuilt
   - npm install jslint
 after_script:
-  - lein figwheel&
-  - FIGHWEEL_SERVER_PID=$!
-  - sleep 60
-  - phantomjs scenarios.js
-  - kill -9 $FIGWHEEL_SERVER_PID
-  - jslint '*.js' || true
+  - phantomjs -v
+#  - lein figwheel&
+#  - FIGHWEEL_SERVER_PID=$!
+#  - sleep 60
+#  - phantomjs scenarios.js
+#  - kill -9 $FIGWHEEL_SERVER_PID
+#  - jslint '*.js' || true
