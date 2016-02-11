@@ -1,3 +1,11 @@
 notifications:
   email: false
 language: clojure
+before_script:
+  - npm install -g phamtomjs2
+after_script:
+  - lein figwheel&
+  - FIGHWEEL_SERVER_PID=$!
+  - sleep 60
+  - phantomjs scenarios.js
+  - kill -9 $FIGWHEEL_SERVER_PID
