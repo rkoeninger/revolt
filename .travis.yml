@@ -2,7 +2,8 @@ notifications:
   email: false
 language: clojure
 before_script:
-  - npm install phamtomjs-prebuilt
+  - npm install -g npm
+  - npm install phantomjs-prebuilt
   - npm install jslint
 after_script:
   - lein figwheel&
