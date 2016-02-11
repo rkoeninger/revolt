@@ -6,6 +6,7 @@
 var url = "http://localhost:3449/";
 var helpersUrl = "scenario_helpers.js";
 var webpage = require("webpage");
+var playersDoneCount = 0;
 
 function runClient(f) {
   var page = webpage.create();
@@ -14,6 +15,12 @@ function runClient(f) {
   };
   page.onInitialized = function () {
     page.injectJs(helpersUrl);
+  };
+  page.onCallback = function (data) {
+    if (data && data.message === "done") {
+      playersDoneCount++;
+      console.log("Player " + data.playerId + " is done");
+    }
   };
   page.open(url, function (status) {
     if (status !== "success") {
@@ -56,7 +63,8 @@ runClient(function () {
       bid("mercenary",  1, 0, 0),
       bid("merchant",   0, 0, 1)
     ]])),
-    delay(1000, submitBids)
+    delay(1000, submitBids),
+    delay(3000, defer(callbackDone, ["emma"]))
   ]);
 });
 
@@ -97,6 +105,18 @@ runClient(function () {
       bid("printer",    1, 0, 1),
       bid("aristocrat", 0, 0, 1)
     ]])),
-    delay(1000, submitBids)
+    delay(1000, submitBids),
+    delay(3000, defer(callbackDone, ["noah"]))
   ]);
 });
+
+function waitForDone() {
+  if (playersDoneCount === 2) {
+    console.log("All players done");
+    phantom.exit(0);
+  } else {
+    setTimeout(waitForDone, 1000);
+  }
+}
+
+waitForDone();

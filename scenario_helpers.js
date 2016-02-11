@@ -66,18 +66,34 @@ function keyword(s) {
   return new cljs.core.Keyword(null, s, s, cljs.core.hash(cljs.core.keyword(s)));
 }
 
+function getAppState(keyString) {
+  var data = cljs.core.deref.call(null, revolt.client.app_state);
+  return cljs.core.get.call(null, data, keyword(keyString));
+}
+
+function setAppState(keyString, value) {
+  cljs.core.swap_BANG_.call(null, revolt.client.app_state, cljs.core.assoc, keyword(keyString), value);
+}
+
 function waitForMode(modeString, onReady) {
   waitFor(function () {
-    var data = cljs.core.deref.call(null, revolt.client.app_state),
-      currentModeKw = cljs.core.get.call(null, data, keyword("mode"));
-    return cljs.core._EQ_.call(null, keyword(modeString), currentModeKw);
+    return cljs.core._EQ_.call(null, keyword(modeString), getAppState("mode"));
   }, onReady);
 }
 
 function playerCount() {
-  var data = cljs.core.deref.call(null, revolt.client.app_state),
-    playersVec = cljs.core.get.call(null, data, keyword("players"));
-  return cljs.core.count.call(null, playersVec);
+  return cljs.core.count.call(null, getAppState("players"));
+}
+
+function callbackDone(playerId) {
+  if (typeof(window.callPhantom) === "function") {
+    window.callPhantom({
+      message: "done",
+      playerId: playerId
+    });
+  } else {
+    console.log("window.callPhantom not defined");
+  }
 }
 
 function sequence(steps) {
