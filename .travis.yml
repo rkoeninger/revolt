@@ -5,7 +5,8 @@ before_script:
   - npm install -g npm@latest
   - npm install phantomjs-prebuilt@latest
   - npm install jslint
-after_script:
+script:
+  - lein test
   - lein figwheel&
   - FIGHWEEL_SERVER_PID=$!
   # Need some way to trigger phantomjs script when lein is done loading
