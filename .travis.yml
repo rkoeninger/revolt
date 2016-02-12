@@ -3,10 +3,12 @@ notifications:
 language: clojure
 before_script:
   - npm install -g npm@latest
-  - npm install -g phantomjs-prebuilt@latest
+  - npm install phantomjs-prebuilt@latest
 #  - npm install jslint
   - npm -v
   - phantomjs -v
+  - ls -l
+  - ls -l ./node_modules
 #after_script:
 #  - lein figwheel&
 #  - FIGHWEEL_SERVER_PID=$!
