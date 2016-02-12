@@ -4,16 +4,12 @@ language: clojure
 before_script:
   - npm install -g npm@latest
   - npm install phantomjs-prebuilt@latest
-#  - npm install jslint
-  - npm -v
-  - phantomjs -v
-  - ./node_modules/phantomjs-prebuilt/bin/phantomjs -v
-  - ls -l
-  - ls -l ./node_modules
-#after_script:
-#  - lein figwheel&
-#  - FIGHWEEL_SERVER_PID=$!
-#  - sleep 60
-#  - phantomjs scenarios.js
-#  - kill -9 $FIGWHEEL_SERVER_PID
-#  - jslint '*.js' || true
+  - npm install jslint
+after_script:
+  - lein figwheel&
+  - FIGHWEEL_SERVER_PID=$!
+  # Need some way to trigger phantomjs script when lein is done loading
+  - sleep 60
+  - ./node_modules/phantomjs-prebuilt/bin/phantomjs scenarios.js
+  - kill -9 $FIGWHEEL_SERVER_PID
+  - jslint '*.js' || true
