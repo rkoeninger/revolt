@@ -391,21 +391,22 @@
 
 (defcomponent root-view [data owner]
   (render [_]
-    (apply dom/div nil
+    (dom/div nil
       (om/build languages-area data)
-      (case (:mode data)
-        :signup     [(om/build signup-area data)]
-        :lobby      [(om/build lobby-area data)]
-        :take-bids  [(om/build support-area data)
-                     (om/build map-area data)
-                     (om/build bank-area data)
-                     (om/build bid-area data)]
-        :game-over  [(om/build support-area data)
-                     (om/build map-area data)]
-        :spy        [(om/build spy-select data)]
-        :apothecary [(om/build apothecary-select data)]
-        :messenger  [(om/build messenger-select data)]
-        :mayor      [(om/build mayor-select data)]))))
+      (apply dom/div #js {:id "play-area"}
+        (case (:mode data)
+          :signup     [(om/build signup-area data)]
+          :lobby      [(om/build lobby-area data)]
+          :take-bids  [(om/build support-area data)
+                       (om/build map-area data)
+                       (om/build bank-area data)
+                       (om/build bid-area data)]
+          :game-over  [(om/build support-area data)
+                       (om/build map-area data)]
+          :spy        [(om/build spy-select data)]
+          :apothecary [(om/build apothecary-select data)]
+          :messenger  [(om/build messenger-select data)]
+          :mayor      [(om/build mayor-select data)])))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]

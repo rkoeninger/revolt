@@ -1,12 +1,14 @@
 html, body {
 	width: 100%;
 	height: 100%;
+	padding: 0;
+	margin: 0;
 }
 body {
 	background-image: url('/img/background.jpg');
 	background-repeat: repeat;
 }
-#content {
+#languages, #play-area {
 	margin: 32px;
 	padding: 1em;
 	border-width: 10px;
