@@ -193,14 +193,14 @@
 
 (defn language-flag [data title key]
   (dom/img
-    #js {:src (str "img/" (name key) ".png")
+    #js {:src (str "img/flags/" (name key) ".png")
          :title title
          :className "language-flag"
          :onClick #(om/update! data :lang key)}))
 
 (defcomponent languages-area [data owner]
   (render [_]
-    (dom/div nil
+    (dom/div #js {:id "languages"}
       (language-flag data "English" :us)
       (language-flag data "Spanish" :mx)
       (language-flag data "French"  :fr))))
