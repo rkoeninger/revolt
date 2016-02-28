@@ -8,6 +8,24 @@ body {
 	background-image: url('/img/background.jpg');
 	background-repeat: repeat;
 }
+#nav-bar {
+	background-image: url('/img/nav_background.gif');
+	background-repeat: repeat-x;
+	background-color: #ffffff;
+}
+#title-logo {
+	display: inline-block;
+	margin: 32px;
+	max-width: 100%;
+}
+#title-logo img {
+	max-width: 100%;
+}
+#languages {
+	display: inline-block;
+	width: auto;
+	height: auto;
+}
 #languages, #play-area {
 	margin: 32px;
 	padding: 1em;
@@ -17,6 +35,12 @@ body {
 }
 .clear {
 	clear: both;
+}
+.signup {
+	margin: 0 auto;
+}
+.signup > div {
+	margin: 0 auto;
 }
 .immunity-none {
 	color: black;

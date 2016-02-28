@@ -51,7 +51,8 @@
        :take-open-spot           "Influence any open space"
        :all-tokens-must-be-used  "All tokens must be used."
        :no-more-than-six-figures "No more than six figures can be bid on."
-       :game-already-started     "The game has already started."}
+       :game-already-started     "The game has already started."
+       :what-is-your-name        "What is your name?"}
 
   :mx {:general                  "General"
        :captain                  "Capitán"
@@ -103,7 +104,8 @@
        :take-open-spot           "Influir en cualquier espacio abierto"
        :all-tokens-must-be-used  "Todas las fichas deben utilizarse."
        :no-more-than-six-figures "No más de seis cifras pueden pujar por."
-       :game-already-started     "El juego ya ha comenzado."}
+       :game-already-started     "El juego ya ha comenzado."
+       :what-is-your-name        "Cuál es tu nombre?"}
 
   :fr {:general                  "Général"
        :captain                  "Capitaine"
@@ -155,4 +157,5 @@
        :take-open-spot           "Influencer un espace ouvert"
        :all-tokens-must-be-used  "Tous les jetons doivent être utilisés."
        :no-more-than-six-figures "Pas plus de six chiffres peuvent être enchérir sur."
-       :game-already-started     "Le jeu a déjà commencé."}})
+       :game-already-started     "Le jeu a déjà commencé."
+       :what-is-your-name        "Quel est votre nom?"}})
