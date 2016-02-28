@@ -97,14 +97,17 @@
     (if special-id (localize data special-id))]))))
 
 (defn bid-row [data {:keys [id immunities] :as figure}]
-  (dom/tr #js {:class "bid-row"}
+  (dom/tr #js {:className "bid-row"}
     (dom/td
-      #js {:className (str "figure-name " (get immunity-class immunities))}
+      #js {:className (str "figure-name " (get immunity-class immunities))
+           :data-title (figure-description data figure)
+           :onClick (fn [] (js/alert (figure-description data figure)))}
       (localize data id))
     (denomination-input data id immunities :gold)
     (denomination-input data id immunities :blackmail)
     (denomination-input data id immunities :force)
-    (dom/td nil (figure-description data figure))))
+    (dom/td #js {:className "figure-description"}
+      (figure-description data figure))))
 
 (defcomponent bid-area [data owner]
   (render [_]
@@ -142,17 +145,15 @@
 
 (defcomponent bank-area [data owner]
   (render [_]
-    (dom/div #js {:class "bank"}
+    (dom/div #js {:className "bank"}
       (bank-denomination data :gold)
       (bank-denomination data :blackmail)
       (bank-denomination data :force)
-      (submit-button data)
-      (if (my-bids-submitted? data)
-        (dom/span nil (localize data :bids-submitted))))))
+      (submit-button data))))
 
 (defcomponent map-area [data owner]
   (render [_]
-    (dom/div #js {:class "map"}
+    (dom/div #js {:className "map"}
       (dom/span nil (localize data :guard-house))
       (dom/span nil (:guard-house data))
       (apply dom/table nil
@@ -174,7 +175,7 @@
 
 (defcomponent support-area [data owner]
   (render [_]
-    (dom/div #js {:class "support"}
+    (dom/div #js {:className "support"}
       (apply dom/table nil
         (dom/tr nil
           (dom/td nil (localize data :turn))
@@ -189,7 +190,7 @@
             (dom/tr nil
               (dom/td nil p)
               (dom/td nil (get-in data [:support p]))
-              (dom/td nil (if (get-in data [:bids-submitted p]) "X"))))
+              (dom/td nil (if (get-in data [:bids-submitted p]) (dom/img #js {:className "check-mark" :src "/img/check_mark.png"})))))
           (:players data))))))
 
 (defn language-flag [data title key]
@@ -207,12 +208,14 @@
       (language-flag data "French"  :fr))))
 
 (defn player-list [{:keys [players]}]
-  (apply dom/ul nil (map (partial dom/li nil) players)))
+  (apply dom/ul #js {:className "player-list"}
+    (map (partial dom/li nil) players)))
 
 (defcomponent signup-area [data owner]
   (render [_]
-    (dom/div #js {:class "signup"}
-      (dom/div nil (localize data :what-is-your-name))
+    (dom/div #js {:className "signup"}
+      (dom/div #js {:className "what-is-your-name"}
+        (localize data :what-is-your-name))
       (dom/div nil
         (dom/input #js {:id "signup-input"
                         :ref "player-name"}))
@@ -386,7 +389,7 @@
 
 (defcomponent lobby-area [data owner]
   (render [_]
-    (dom/div #js {:class "lobby"}
+    (dom/div #js {:className "lobby"}
       (player-list data)
       (dom/button
         #js {:id "start-game-button"
@@ -396,10 +399,10 @@
 (defcomponent root-view [data owner]
   (render [_]
     (dom/div nil
-      (dom/nav #js {:id "nav-bar"})
+      (dom/nav #js {:id "nav-bar"}
+        (om/build languages-area data))
       (dom/div #js {:id "title-logo"}
         (dom/img #js {:src "/img/logo.png"}))
-      (om/build languages-area data)
       (apply dom/div #js {:id "play-area"}
         (case (:mode data)
           :signup     [(om/build signup-area data)]
