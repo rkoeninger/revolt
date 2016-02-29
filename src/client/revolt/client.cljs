@@ -59,17 +59,15 @@
         disabled (or immune
                      (my-bids-submitted? data)
                      (and (nothing-on-figure? data id) (figure-limit-reached? data)))
-        arrow #(denomination-arrow id %1 data denomination disabled %2 button-id-prefix %3 %4)]
-    (dom/td
-      nil
+        arrow #(denomination-arrow id %1 data denomination disabled %2 button-id-prefix %3 %4)
+        label (dom/input #js {:type "text"
+                              :disabled immune
+                              :readOnly true
+                              :value (dont-show-zero amount)})]
+    (dom/td #js {:className (str "denomination-input " (name denomination))}
       (arrow (pos? remaining-bank) 1 "up" "\u2191")
-      (arrow (pos? amount) -1 "down" "\u2193")
-      (dom/input
-        #js {:type "text"
-             :disabled immune
-             :readOnly true
-             :size 1
-             :value (dont-show-zero amount)}))))
+      label
+      (arrow (pos? amount) -1 "down" "\u2193"))))
 
 (def immunity-class
   {#{}                  "immunity-none"
@@ -124,13 +122,10 @@
 (defn bank-denomination [data denomination]
   (let [remaining (get-in data [:bank denomination])
         total     (get-in data [:original-bank denomination])]
-    (dom/span nil
-      (dom/span nil (localize data denomination))
-      (dom/input
-        #js {:type "text"
-             :readOnly true
-             :size 1
-             :value (str remaining "/" total)}))))
+    (dom/div #js {:className (str "bank-denomination " (name denomination))
+                  :title (localize data denomination)}
+      (dom/span #js {:className (str "bank-amount " (name denomination))}
+        (str remaining "/" total)))))
 
 (defn tokens-remaining? [data]
   (r/pos-bid? (:bank data)))
@@ -146,10 +141,10 @@
 (defcomponent bank-area [data owner]
   (render [_]
     (dom/div #js {:className "bank"}
+      (submit-button data)
       (bank-denomination data :gold)
       (bank-denomination data :blackmail)
-      (bank-denomination data :force)
-      (submit-button data))))
+      (bank-denomination data :force))))
 
 (defcomponent map-area [data owner]
   (render [_]
