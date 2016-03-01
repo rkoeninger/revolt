@@ -107,25 +107,11 @@
     (dom/td #js {:className "figure-description"}
       (figure-description data figure))))
 
-(defcomponent bid-area [data owner]
-  (render [_]
-    (let [{:keys [figures]} data]
-      (apply dom/table nil
-        (dom/tr nil
-          (dom/td nil (localize data :figure))
-          (dom/td nil (localize data :gold))
-          (dom/td nil (localize data :blackmail))
-          (dom/td nil (localize data :force)))
-          (dom/td nil) ; figure description
-        (map (partial bid-row data) figures)))))
-
 (defn bank-denomination [data denomination]
-  (let [remaining (get-in data [:bank denomination])
-        total     (get-in data [:original-bank denomination])]
-    (dom/div #js {:className (str "bank-denomination " (name denomination))
-                  :title (localize data denomination)}
-      (dom/span #js {:className (str "bank-amount " (name denomination))}
-        (str remaining "/" total)))))
+  (dom/div #js {:className (str "bank-denomination " (name denomination))
+                :title (localize data denomination)}
+    (dom/span #js {:className (str "bank-amount " (name denomination))}
+      (get-in data [:bank denomination]))))
 
 (defn tokens-remaining? [data]
   (r/pos-bid? (:bank data)))
@@ -138,13 +124,17 @@
          :onClick #(rm/send-bids bids)}
     (localize data :submit)))
 
-(defcomponent bank-area [data owner]
+(defcomponent bid-area [data owner]
   (render [_]
-    (dom/div #js {:className "bank"}
-      (submit-button data)
-      (bank-denomination data :gold)
-      (bank-denomination data :blackmail)
-      (bank-denomination data :force))))
+    (let [{:keys [figures]} data]
+      (apply dom/table nil
+        (dom/tr nil
+          (dom/td nil (submit-button data))
+          (dom/td nil (bank-denomination data :gold))
+          (dom/td nil (bank-denomination data :blackmail))
+          (dom/td nil (bank-denomination data :force))
+          (dom/td nil)) ; figure description
+        (map (partial bid-row data) figures)))))
 
 (defcomponent map-area [data owner]
   (render [_]
@@ -404,7 +394,6 @@
           :lobby      [(om/build lobby-area data)]
           :take-bids  [(om/build support-area data)
                        (om/build map-area data)
-                       (om/build bank-area data)
                        (om/build bid-area data)]
           :game-over  [(om/build support-area data)
                        (om/build map-area data)]
