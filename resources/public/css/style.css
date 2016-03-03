@@ -1,3 +1,5 @@
+@import url('//fonts.googleapis.com/css?family=UnifrakturCook:700');
+
 html, body {
 	width: 100%;
 	height: 100%;
@@ -97,6 +99,17 @@ body {
 .check-mark {
 	height: 1em;
 }
+.turn * {
+	display: inline-flex;
+	justify-content: center;
+	flex-direction: column;
+}
+.turn-value {
+	margin: 0.2em;
+	font-family: 'UnifrakturCook', cursive;
+	font-size: 1.2em;
+	font-weight: bold;
+}
 .bank-denomination {
 	display: inline-flex;
 	justify-content: center;
@@ -129,6 +142,10 @@ body {
 }
 .denomination-input input[type='text'] {
 	width: 1em;
+}
+.map table {
+	border: 1px solid #000000;
+	border-collapse: separate;
 }
 
 @media (max-width: 1000px) {

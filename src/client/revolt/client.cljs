@@ -127,20 +127,21 @@
 (defcomponent bid-area [data owner]
   (render [_]
     (let [{:keys [figures]} data]
-      (apply dom/table nil
-        (dom/tr nil
-          (dom/td nil (submit-button data))
-          (dom/td nil (bank-denomination data :gold))
-          (dom/td nil (bank-denomination data :blackmail))
-          (dom/td nil (bank-denomination data :force))
-          (dom/td nil)) ; figure description
-        (map (partial bid-row data) figures)))))
+      (dom/div #js {:className "bid"}
+        (apply dom/table nil
+          (dom/tr nil
+            (dom/td nil (submit-button data))
+            (dom/td nil (bank-denomination data :gold))
+            (dom/td nil (bank-denomination data :blackmail))
+            (dom/td nil (bank-denomination data :force))
+            (dom/td nil)) ; figure description
+          (map (partial bid-row data) figures))))))
 
 (defcomponent map-area [data owner]
   (render [_]
     (dom/div #js {:className "map"}
-      (dom/span nil (localize data :guard-house))
-      (dom/span nil (:guard-house data))
+      ; (dom/span nil (localize data :guard-house))
+      ; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
       (apply dom/table nil
         (apply dom/tr nil
           (dom/td nil (localize data :location))
@@ -163,10 +164,6 @@
     (dom/div #js {:className "support"}
       (apply dom/table nil
         (dom/tr nil
-          (dom/td nil (localize data :turn))
-          (dom/td nil (:turn data))
-          (dom/td nil))
-        (dom/tr nil
           (dom/td nil (localize data :player))
           (dom/td nil (localize data :support))
           (dom/td nil (localize data :bids-submitted)))
@@ -177,6 +174,12 @@
               (dom/td nil (get-in data [:support p]))
               (dom/td nil (if (get-in data [:bids-submitted p]) (dom/img #js {:className "check-mark" :src "/img/check_mark.png"})))))
           (:players data))))))
+
+(defcomponent turn-area [data owner]
+  (render [_]
+    (dom/div #js {:className "turn"}
+      (dom/span #js {:className "turn-label"} (localize data :turn))
+      (dom/span #js {:className "turn-value"} (:turn data)))))
 
 (defn language-flag [data title key]
   (dom/img
@@ -392,10 +395,12 @@
         (case (:mode data)
           :signup     [(om/build signup-area data)]
           :lobby      [(om/build lobby-area data)]
-          :take-bids  [(om/build support-area data)
+          :take-bids  [(om/build turn-area data)
+                       (om/build support-area data)
                        (om/build map-area data)
                        (om/build bid-area data)]
-          :game-over  [(om/build support-area data)
+          :game-over  [(om/build turn-area data)
+                       (om/build support-area data)
                        (om/build map-area data)]
           :spy        [(om/build spy-select data)]
           :apothecary [(om/build apothecary-select data)]
