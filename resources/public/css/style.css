@@ -37,6 +37,9 @@ body {
 	border-image: url('/img/border.png') 25% repeat;
 	background: white;
 }
+.turn, .support, .map, .bid {
+	float: left;
+}
 .clear {
 	clear: both;
 }

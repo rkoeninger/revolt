@@ -19,6 +19,9 @@
       (js/console.error (str key " is not in " (:lang data) " dictionary"))
       (str "TRANSLATION MISSING - " (str key)))))
 
+(defn clear-div []
+  (dom/div #js {:className "clear"}))
+
 (defn my-bids-submitted? [data]
   (true? (get-in data [:bids-submitted (:player-id data)])))
 
@@ -398,7 +401,8 @@
           :take-bids  [(om/build turn-area data)
                        (om/build support-area data)
                        (om/build map-area data)
-                       (om/build bid-area data)]
+                       (om/build bid-area data)
+                       (clear-div)]
           :game-over  [(om/build turn-area data)
                        (om/build support-area data)
                        (om/build map-area data)]
