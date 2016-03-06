@@ -1,5 +1,3 @@
-@import url('//fonts.googleapis.com/css?family=UnifrakturCook:700');
-
 html, body {
 	width: 100%;
 	height: 100%;
@@ -106,9 +104,6 @@ body {
 }
 .turn-value {
 	margin: 0.2em;
-	font-family: 'UnifrakturCook', cursive;
-	font-size: 1.2em;
-	font-weight: bold;
 }
 .bank-denomination {
 	display: inline-flex;
