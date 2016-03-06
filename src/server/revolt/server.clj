@@ -125,6 +125,7 @@
   (html5
     [:head
       [:title "Revolt Server"]
+      [:link {:rel "shortcut icon" :type "image/png" :href "/favicon.png"}]
       (include-css "css/style.css")
       (include-js "js/compiled/revolt_client.js")]
     [:body
