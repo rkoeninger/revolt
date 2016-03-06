@@ -100,6 +100,12 @@ body {
 .check-mark {
 	height: 1em;
 }
+.support {
+	border: 1px solid #000000;
+}
+.turn {
+	border: 1px solid #000000;
+}
 .turn * {
 	display: inline-flex;
 	justify-content: center;
