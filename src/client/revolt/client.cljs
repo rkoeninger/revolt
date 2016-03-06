@@ -147,20 +147,20 @@
       ; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
       (apply dom/table nil
         (apply dom/tr nil
-          (dom/td nil (localize data :location))
+          (dom/td nil (localize data :player))
+          (map #(dom/td nil (localize data (:id %))) (:locations data)))
+        (apply dom/tr nil
           (dom/td nil (localize data :cap))
-          (map
-            (partial dom/td nil)
-            (:players data)))
+          (map #(dom/td nil (:cap %)) (:locations data)))
         (map
-          (fn [location]
+          (fn [player]
             (apply dom/tr nil
-              (dom/td nil (localize data (:id location)))
-              (dom/td nil (:cap location))
+              (dom/td nil player)
               (map
-                (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
-                (:players data))))
-          (:locations data))))))
+                (fn [location]
+                  (dom/td nil (get-in data [:influence (:id location) player])))
+                (:locations data))))
+          (:players data))))))
 
 (defcomponent support-area [data owner]
   (render [_]
