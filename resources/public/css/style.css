@@ -79,6 +79,7 @@ body {
 .figure-name {
 	padding: 0.2em;
 	font-weight: bold;
+	text-align: center;
 }
 .error-label {
 	font-weight: bold;
@@ -99,6 +100,44 @@ body {
 }
 .check-mark {
 	height: 1em;
+}
+.command-button {
+	background: transparent;
+	border: none;
+}
+.command-button div {
+	background-image: url('/img/button.png');
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center center;
+	cursor: pointer;
+	height: 5em;
+	width: 9em;
+	margin: auto 0.5em;
+	display: inline-flex;
+	justify-content: center;
+	flex-direction: column;
+}
+.command-button:hover div {
+	background-image: url('/img/button_hover.png');
+}
+.command-button:active div {
+	background-image: url('/img/button_active.png');
+}
+.command-button.disabled div {
+	background-image: url('/img/button_disabled.png');
+}
+.command-button div span {
+	font-weight: bold;
+	font-size: 1.5em;
+	text-align: center;
+}
+.command-button:active div span {
+	color: #ffffff;
+	text-shadow: -1px -1px 0 #000000,
+	              1px -1px 0 #000000,
+	             -1px  1px 0 #000000,
+	              1px  1px 0 #000000;
 }
 .support {
 	border: 1px solid #000000;
@@ -126,10 +165,10 @@ body {
 	width: 2em;
 	height: 2em;
 	margin: auto 0.5em;
-	text-shadow: -1px -1px 0 #000,  
-	              1px -1px 0 #000,
-	             -1px  1px 0 #000,
-	              1px  1px 0 #000;
+	text-shadow: -1px -1px 0 #000000,
+	              1px -1px 0 #000000,
+	             -1px  1px 0 #000000,
+	              1px  1px 0 #000000;
 }
 .bank-denomination.gold {
 	background-image: url('/img/gold.png');

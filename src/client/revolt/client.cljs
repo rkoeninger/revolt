@@ -120,12 +120,14 @@
   (r/pos-bid? (:bank data)))
 
 (defn submit-button [{:keys [bids] :as data}]
-  (dom/button
-    #js {:id "submit-button"
-         :disabled (or (tokens-remaining? data)
-                       (my-bids-submitted? data))
-         :onClick #(rm/send-bids bids)}
-    (localize data :submit)))
+  (let [disabled (or (tokens-remaining? data)
+                     (my-bids-submitted? data))]
+    (dom/button
+      #js {:className (str "command-button" (if disabled " disabled"))
+           :disabled disabled
+           :onClick #(rm/send-bids bids)}
+      (dom/div nil
+        (dom/span nil (localize data :submit))))))
 
 (defcomponent bid-area [data owner]
   (render [_]
