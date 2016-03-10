@@ -142,49 +142,42 @@
             (dom/td nil)) ; figure description
           (map (partial bid-row data) figures))))))
 
-(defcomponent map-area [data owner]
-  (render [_]
-    (dom/div #js {:className "map"}
-      ; (dom/span nil (localize data :guard-house))
-      ; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
-      (apply dom/table nil
-        (apply dom/tr nil
-          (dom/td nil (localize data :player))
-          (map #(dom/td nil (localize data (:id %))) (:locations data)))
-        (apply dom/tr nil
-          (dom/td nil (localize data :cap))
-          (map #(dom/td nil (:cap %)) (:locations data)))
-        (map
-          (fn [player]
-            (apply dom/tr nil
-              (dom/td nil player)
-              (map
-                (fn [location]
-                  (dom/td nil (get-in data [:influence (:id location) player])))
-                (:locations data))))
-          (:players data))))))
-
-(defcomponent support-area [data owner]
-  (render [_]
-    (dom/div #js {:className "support"}
-      (apply dom/table nil
-        (dom/tr nil
-          (dom/td nil (localize data :player))
-          (dom/td nil (localize data :support))
-          (dom/td nil (localize data :bids-submitted)))
-        (map
-          (fn [p]
-            (dom/tr nil
-              (dom/td nil p)
-              (dom/td nil (get-in data [:support p]))
-              (dom/td nil (if (get-in data [:bids-submitted p]) (dom/img #js {:className "check-mark" :src "/img/check_mark.png"})))))
-          (:players data))))))
-
 (defcomponent turn-area [data owner]
   (render [_]
     (dom/div #js {:className "turn"}
       (dom/span #js {:className "turn-label"} (localize data :turn))
       (dom/span #js {:className "turn-value"} (:turn data)))))
+
+; (dom/span nil (localize data :guard-house))
+; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
+
+(defcomponent score-board [data owner]
+  (render [_]
+    (let [players (:players data)
+          locations (:locations data)
+          get-in-bank (fn [d] (fn [p] (get-in data [:banks p d])))
+          th-span2 (fn [label] (dom/th #js {:colSpan 2} (localize data label)))
+          get-data (fn [f] (map #(dom/td nil (get-in data (f %))) players))]
+      (dom/div #js {:className "score-board"}
+        (apply dom/table nil
+          (apply dom/tr nil (th-span2 :player)    (map #(dom/th nil %) players))
+          (apply dom/tr nil (th-span2 :ready)
+            (map
+              #(dom/td nil
+                (if (get-in data [:bids-submitted %])
+                  (dom/img #js {:className "check-mark" :src "/img/check_mark.png" :alt "X"})))
+              players))
+          (apply dom/tr nil (th-span2 :support)   (get-data #(vector :support %)))
+          (apply dom/tr nil (th-span2 :gold)      (get-data #(vector :banks % :gold)))
+          (apply dom/tr nil (th-span2 :blackmail) (get-data #(vector :banks % :blackmail)))
+          (apply dom/tr nil (th-span2 :force)     (get-data #(vector :banks % :force)))
+          (map
+            (fn [{:keys [id cap]}]
+              (apply dom/tr nil
+                (dom/th nil (localize data id))
+                (dom/td nil cap)
+                (map #(dom/td nil (get-in data [:influence id %])) players)))
+            locations))))))
 
 (defn language-flag [data title key]
   (dom/img
@@ -401,13 +394,12 @@
           :signup     [(om/build signup-area data)]
           :lobby      [(om/build lobby-area data)]
           :take-bids  [(om/build turn-area data)
-                       (om/build support-area data)
-                       (om/build map-area data)
+                       (om/build score-board data)
                        (om/build bid-area data)
                        (clear-div)]
           :game-over  [(om/build turn-area data)
-                       (om/build support-area data)
-                       (om/build map-area data)]
+                       (om/build score-board data)
+                       (clear-div)]
           :spy        [(om/build spy-select data)]
           :apothecary [(om/build apothecary-select data)]
           :messenger  [(om/build messenger-select data)]

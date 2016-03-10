@@ -37,8 +37,12 @@ body {
 	border-image: url('/img/border.png') 25% repeat;
 	background: white;
 }
-.turn, .support, .map, .bid {
+.turn, .support, .map, .bid, .score-board {
 	float: left;
+	margin: 0 auto;
+}
+.score-board th {
+	font-weight: bold;
 }
 .clear {
 	clear: both;
@@ -56,6 +60,9 @@ body {
 }
 .signup input {
 	font-size: 1.5em;
+}
+.lobby {
+	margin: 0 auto;
 }
 .player-list {
 	list-style: none;
@@ -190,27 +197,12 @@ body {
 	border: 1px solid #000000;
 	border-collapse: separate;
 }
-
-@media (max-width: 1000px) {
-	.figure-description {
-		display: none;
-	}
-	.figure-name {
-		cursor: pointer;
-		position: relative;
-	}
-	.figure-name:hover:after {
-		color: #000000;
-		max-width: 500px;
-		white-space: nowrap;
-		border: 1px solid #fc0;
-		background: #fffea1;
-		content: attr(data-title);
-		position: absolute;
-		left: 0;
-	}
+.figure-description {
+	display: none;
 }
-
+.figure-name {
+	cursor: pointer;
+}
 .adjust.enabled {
 	-moz-box-shadow:inset 0px 1px 0px 0px #a4e271;
 	-webkit-box-shadow:inset 0px 1px 0px 0px #a4e271;
