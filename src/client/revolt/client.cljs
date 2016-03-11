@@ -412,9 +412,12 @@
       (language-flag data "Spanish" :mx)
       (language-flag data "French"  :fr))))
 
+(defn play-area [& children]
+  (apply dom/div #js {:className "play-area"} (concat children [(clear-div)])))
+
 (defcomponent root-view [data owner]
   (render [_]
-    (dom/div nil
+    (apply dom/div nil
       (dom/nav #js {:id "nav-bar"}
         (dom/div #js {:className "nav-bar-child-left"}
           (if-not (or (= :signup (:mode data)) (= :lobby (:mode data)))
@@ -423,19 +426,16 @@
           (om/build languages-area data)))
       (dom/div #js {:id "title-logo"}
         (dom/img #js {:src "/img/logo.png"}))
-      (apply dom/div #js {:id "play-area"}
-        (case (:mode data)
-          :signup     [(om/build signup-area data)]
-          :lobby      [(om/build lobby-area data)]
-          :take-bids  [(om/build score-board data)
-                       (om/build bid-board data)
-                       (clear-div)]
-          :game-over  [(om/build score-board data)
-                       (clear-div)]
-          :spy        [(om/build spy-select data)]
-          :apothecary [(om/build apothecary-select data)]
-          :messenger  [(om/build messenger-select data)]
-          :mayor      [(om/build mayor-select data)])))))
+      (case (:mode data)
+        :signup     [(play-area (om/build signup-area data))]
+        :lobby      [(play-area (om/build lobby-area data))]
+        :take-bids  [(play-area (om/build score-board data))
+                     (play-area (om/build bid-board data))]
+        :game-over  [(play-area (om/build score-board data))]
+        :spy        [(play-area (om/build spy-select data))]
+        :apothecary [(play-area (om/build apothecary-select data))]
+        :messenger  [(play-area (om/build messenger-select data))]
+        :mayor      [(play-area (om/build mayor-select data))]))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]
