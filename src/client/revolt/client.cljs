@@ -119,9 +119,6 @@
 (defn tokens-remaining? [data]
   (r/pos-bid? (:bank data)))
 
-(defn player-name-value [owner]
-  (.-value (om/get-node owner "player-name")))
-
 (defn command-button [data label disabled on-click]
   (dom/button
     #js {:className (str "command-button" (if disabled " disabled"))
@@ -141,10 +138,8 @@
   (command-button
     data
     :signup
-    false ;(clojure.string/blank? (player-name-value owner))
-    #(let [player-name (player-name-value owner)]
-      (om/update! data :player-name player-name)
-      (rm/send-signup player-name))))
+    (clojure.string/blank? (:player-name data))
+    #(rm/send-signup (:player-name data))))
 
 (defcomponent bid-board [data owner]
   (render [_]
@@ -224,8 +219,8 @@
         (localize data :what-is-your-name))
       (dom/div nil
         (dom/input
-          #js {:id "signup-input"
-               :ref "player-name"}))
+          #js {:onChange #(om/update! data :player-name (.-value (.-target %)))
+               :value (or (:player-name data) "")}))
       (dom/div nil
         (signup-button data owner))
       (player-list data))))
