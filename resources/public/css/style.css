@@ -13,11 +13,7 @@ body {
 	background-image: url('/img/nav_background.gif');
 	background-repeat: repeat-x;
 	background-color: #000000;
-	text-align: right;
 	padding: 0 1em;
-	display: flex;
-	justify-content: center;
-	flex-direction: column;
 }
 #title-logo {
 	margin: 24px auto;
@@ -37,7 +33,7 @@ body {
 	border-image: url('/img/border.png') 25% repeat;
 	background: white;
 }
-.turn, .support, .map, .bid, .score-board {
+.support, .map, .bid-board, .score-board {
 	float: left;
 	margin: 0 auto;
 }
@@ -101,6 +97,35 @@ body {
 .selected {
 	background-color: #77ff77;
 }
+.nav-bar-child-left {
+	display: inline-flex;
+	justify-content: center;
+	flex-direction: column;
+	float: left;
+	height: 100%;
+}
+.nav-bar-child-right {
+	display: inline-flex;
+	justify-content: center;
+	flex-direction: column;
+	float: right;
+	text-align: right;
+	height: 100%;
+}
+.turn {
+	font-weight: bold;
+	font-size: 1.4em;
+	color: #ffffff;
+	text-shadow: -1px -1px 0 #000000,
+	              1px -1px 0 #000000,
+	             -1px  1px 0 #000000,
+	              1px  1px 0 #000000;
+}
+.turn-value {
+	margin: 0.5em;
+}
+.languages {
+}
 .language-flag {
 	margin: 0.5em;
 	cursor: pointer;
@@ -148,17 +173,6 @@ body {
 }
 .support {
 	border: 1px solid #000000;
-}
-.turn {
-	border: 1px solid #000000;
-}
-.turn * {
-	display: inline-flex;
-	justify-content: center;
-	flex-direction: column;
-}
-.turn-value {
-	margin: 0.2em;
 }
 .bank-denomination {
 	display: inline-flex;

@@ -119,20 +119,37 @@
 (defn tokens-remaining? [data]
   (r/pos-bid? (:bank data)))
 
-(defn submit-button [{:keys [bids] :as data}]
-  (let [disabled (or (tokens-remaining? data)
-                     (my-bids-submitted? data))]
-    (dom/button
-      #js {:className (str "command-button" (if disabled " disabled"))
-           :disabled disabled
-           :onClick #(rm/send-bids bids)}
-      (dom/div nil
-        (dom/span nil (localize data :submit))))))
+(defn player-name-value [owner]
+  (.-value (om/get-node owner "player-name")))
 
-(defcomponent bid-area [data owner]
+(defn command-button [data label disabled on-click]
+  (dom/button
+    #js {:className (str "command-button" (if disabled " disabled"))
+         :disabled disabled
+         :onClick on-click}
+    (dom/div nil
+      (dom/span nil (localize data label)))))
+
+(defn submit-button [{:keys [bids] :as data}]
+  (command-button
+    data
+    :submit
+    (or (tokens-remaining? data) (my-bids-submitted? data))
+    #(rm/send-bids bids)))
+
+(defn signup-button [data owner]
+  (command-button
+    data
+    :signup
+    false ;(clojure.string/blank? (player-name-value owner))
+    #(let [player-name (player-name-value owner)]
+      (om/update! data :player-name player-name)
+      (rm/send-signup player-name))))
+
+(defcomponent bid-board [data owner]
   (render [_]
     (let [{:keys [figures]} data]
-      (dom/div #js {:className "bid"}
+      (dom/div #js {:className "bid-board"}
         (apply dom/table nil
           (dom/tr nil
             (dom/td nil (submit-button data))
@@ -142,56 +159,59 @@
             (dom/td nil)) ; figure description
           (map (partial bid-row data) figures))))))
 
-(defcomponent turn-area [data owner]
-  (render [_]
-    (dom/div #js {:className "turn"}
-      (dom/span #js {:className "turn-label"} (localize data :turn))
-      (dom/span #js {:className "turn-value"} (:turn data)))))
-
 ; (dom/span nil (localize data :guard-house))
 ; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
 
+(defn name-row [data]
+  (apply dom/tr nil
+    (dom/th #js {:colSpan 2} (localize data :player))
+    (map
+      (fn [player] (dom/th nil player))
+      (:players data))))
+
+(defn ready-row [data]
+  (apply dom/tr nil
+    (dom/th #js {:colSpan 2} (localize data :ready))
+    (map
+      (fn [player]
+        (dom/td nil
+          (if (get-in data [:bids-submitted player])
+            (dom/img #js {:className "check-mark" :src "/img/check_mark.png" :alt "X"}))))
+      (:players data))))
+
+(defn support-row [data]
+  (apply dom/tr nil
+    (dom/th #js {:colSpan 2} (localize data :support))
+    (map
+      (fn [player] (dom/td nil (get-in data [:support player])))
+      (:players data))))
+
+(defn bank-row [data denomination]
+  (apply dom/tr nil
+    (dom/th #js {:colSpan 2} (localize data denomination))
+    (map
+      (fn [player] (dom/td nil (get-in data [:banks player denomination])))
+      (:players data))))
+
+(defn influence-row [data {:keys [id cap]}]
+  (apply dom/tr nil
+    (dom/th nil (localize data id))
+    (dom/td nil cap)
+    (map
+      (fn [player] (dom/td nil (get-in data [:influence id player])))
+      (:players data))))
+
 (defcomponent score-board [data owner]
   (render [_]
-    (let [players (:players data)
-          locations (:locations data)
-          get-in-bank (fn [d] (fn [p] (get-in data [:banks p d])))
-          th-span2 (fn [label] (dom/th #js {:colSpan 2} (localize data label)))
-          get-data (fn [f] (map #(dom/td nil (get-in data (f %))) players))]
-      (dom/div #js {:className "score-board"}
-        (apply dom/table nil
-          (apply dom/tr nil (th-span2 :player)    (map #(dom/th nil %) players))
-          (apply dom/tr nil (th-span2 :ready)
-            (map
-              #(dom/td nil
-                (if (get-in data [:bids-submitted %])
-                  (dom/img #js {:className "check-mark" :src "/img/check_mark.png" :alt "X"})))
-              players))
-          (apply dom/tr nil (th-span2 :support)   (get-data #(vector :support %)))
-          (apply dom/tr nil (th-span2 :gold)      (get-data #(vector :banks % :gold)))
-          (apply dom/tr nil (th-span2 :blackmail) (get-data #(vector :banks % :blackmail)))
-          (apply dom/tr nil (th-span2 :force)     (get-data #(vector :banks % :force)))
-          (map
-            (fn [{:keys [id cap]}]
-              (apply dom/tr nil
-                (dom/th nil (localize data id))
-                (dom/td nil cap)
-                (map #(dom/td nil (get-in data [:influence id %])) players)))
-            locations))))))
-
-(defn language-flag [data title key]
-  (dom/img
-    #js {:src (str "img/flags/" (name key) ".png")
-         :title title
-         :className "language-flag"
-         :onClick #(om/update! data :lang key)}))
-
-(defcomponent languages-area [data owner]
-  (render [_]
-    (dom/div #js {:id "languages"}
-      (language-flag data "English" :us)
-      (language-flag data "Spanish" :mx)
-      (language-flag data "French"  :fr))))
+    (dom/div #js {:className "score-board"}
+      (apply dom/table nil
+        (name-row data)
+        (ready-row data)
+        (support-row data)
+        (bank-row data :gold)
+        (bank-row data :blackmail)
+        (bank-row data :force)
+        (map (partial influence-row data) (:locations data))))))
 
 (defn player-list [{:keys [players]}]
   (apply dom/ul #js {:className "player-list"}
@@ -203,16 +223,11 @@
       (dom/div #js {:className "what-is-your-name"}
         (localize data :what-is-your-name))
       (dom/div nil
-        (dom/input #js {:id "signup-input"
-                        :ref "player-name"}))
+        (dom/input
+          #js {:id "signup-input"
+               :ref "player-name"}))
       (dom/div nil
-        (dom/button
-          #js {:id "signup-button"
-               :onClick
-               #(let [player-name (.-value (om/get-node owner "player-name"))]
-                  (om/update! data :player-name player-name)
-                  (rm/send-signup player-name))}
-          (localize data :signup)))
+        (signup-button data owner))
       (player-list data))))
 
 (defcomponent spy-select [data owner]
@@ -382,23 +397,45 @@
              :onClick #(rm/send-start-game)}
         (localize data :start-game)))))
 
+(defcomponent turn-area [data owner]
+  (render [_]
+    (dom/div #js {:className "turn"}
+      (dom/span #js {:className "turn-label"} (localize data :turn))
+      (dom/span #js {:className "turn-value"} (:turn data)))))
+
+(defn language-flag [data title key]
+  (dom/img
+    #js {:src (str "img/flags/" (name key) ".png")
+         :title title
+         :className "language-flag"
+         :onClick #(om/update! data :lang key)}))
+
+(defcomponent languages-area [data owner]
+  (render [_]
+    (dom/div #js {:className "languages"}
+      (language-flag data "English" :us)
+      (language-flag data "Spanish" :mx)
+      (language-flag data "French"  :fr))))
+
 (defcomponent root-view [data owner]
   (render [_]
     (dom/div nil
       (dom/nav #js {:id "nav-bar"}
-        (om/build languages-area data))
+        (dom/div #js {:className "nav-bar-child-left"}
+          (if-not (or (= :signup (:mode data)) (= :lobby (:mode data)))
+            (om/build turn-area data)))
+        (dom/div #js {:className "nav-bar-child-right"}
+          (om/build languages-area data)))
       (dom/div #js {:id "title-logo"}
         (dom/img #js {:src "/img/logo.png"}))
       (apply dom/div #js {:id "play-area"}
         (case (:mode data)
           :signup     [(om/build signup-area data)]
           :lobby      [(om/build lobby-area data)]
-          :take-bids  [(om/build turn-area data)
-                       (om/build score-board data)
-                       (om/build bid-area data)
+          :take-bids  [(om/build score-board data)
+                       (om/build bid-board data)
                        (clear-div)]
-          :game-over  [(om/build turn-area data)
-                       (om/build score-board data)
+          :game-over  [(om/build score-board data)
                        (clear-div)]
           :spy        [(om/build spy-select data)]
           :apothecary [(om/build apothecary-select data)]
