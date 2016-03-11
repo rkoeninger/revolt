@@ -119,9 +119,10 @@
 (defn tokens-remaining? [data]
   (r/pos-bid? (:bank data)))
 
-(defn command-button [data label disabled on-click]
+(defn command-button [data id label disabled on-click]
   (dom/button
-    #js {:className (str "command-button" (if disabled " disabled"))
+    #js {:id id
+         :className (str "command-button" (if disabled " disabled"))
          :disabled disabled
          :onClick on-click}
     (dom/div nil
@@ -130,6 +131,7 @@
 (defn submit-button [{:keys [bids] :as data}]
   (command-button
     data
+    "submit-button"
     :submit
     (or (tokens-remaining? data) (my-bids-submitted? data))
     #(rm/send-bids bids)))
@@ -137,6 +139,7 @@
 (defn signup-button [data owner]
   (command-button
     data
+    "signup-button"
     :signup
     (clojure.string/blank? (:player-name data))
     #(rm/send-signup (:player-name data))))
@@ -219,7 +222,7 @@
         (localize data :what-is-your-name))
       (dom/div nil
         (dom/input
-          #js {:id "player-name"
+          #js {:id "signup-input"
                :onChange #(om/update! data :player-name (.-value (.-target %)))
                :value (or (:player-name data) "")}))
       (dom/div nil
