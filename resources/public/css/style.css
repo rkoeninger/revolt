@@ -8,20 +8,20 @@ body {
 	background-image: url('/img/background.jpg');
 	background-repeat: repeat;
 }
-#nav-bar {
+.nav-bar {
 	height: 31px;
 	background-image: url('/img/nav_background.gif');
 	background-repeat: repeat-x;
 	background-color: #000000;
 	padding: 0 1em;
 }
-#title-logo {
+.title-logo {
 	margin: 24px auto;
 	padding: 0 24px;
 	align-content: center;
 	max-width: 100%;
 }
-#title-logo img {
+.title-logo img {
 	display: block;
 	margin: 0 auto;
 	max-width: 100%;

@@ -219,7 +219,8 @@
         (localize data :what-is-your-name))
       (dom/div nil
         (dom/input
-          #js {:onChange #(om/update! data :player-name (.-value (.-target %)))
+          #js {:id "player-name"
+               :onChange #(om/update! data :player-name (.-value (.-target %)))
                :value (or (:player-name data) "")}))
       (dom/div nil
         (signup-button data owner))
@@ -418,13 +419,13 @@
 (defcomponent root-view [data owner]
   (render [_]
     (apply dom/div nil
-      (dom/nav #js {:id "nav-bar"}
+      (dom/nav #js {:className "nav-bar"}
         (dom/div #js {:className "nav-bar-child-left"}
           (if-not (or (= :signup (:mode data)) (= :lobby (:mode data)))
             (om/build turn-area data)))
         (dom/div #js {:className "nav-bar-child-right"}
           (om/build languages-area data)))
-      (dom/div #js {:id "title-logo"}
+      (dom/div #js {:className "title-logo"}
         (dom/img #js {:src "/img/logo.png"}))
       (case (:mode data)
         :signup     [(play-area (om/build signup-area data))]
