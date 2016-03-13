@@ -144,6 +144,14 @@
     (clojure.string/blank? (:player-name data))
     #(rm/send-signup (:player-name data))))
 
+(defn start-game-button [data]
+  (command-button
+    data
+    "start-game-button"
+    :start-game
+    false
+    #(rm/send-start-game)))
+
 (defcomponent bid-board [data owner]
   (render [_]
     (let [{:keys [figures]} data]
@@ -223,8 +231,7 @@
       (dom/div nil
         (dom/input
           #js {:id "signup-input"
-               :onChange #(om/update! data :player-name (.-value (.-target %)))
-               :value (or (:player-name data) "")}))
+               :onKeyUp #(om/update! data :player-name (.-value (.-target %)))}))
       (dom/div nil
         (signup-button data owner))
       (player-list data))))
@@ -391,10 +398,7 @@
   (render [_]
     (dom/div #js {:className "lobby"}
       (player-list data)
-      (dom/button
-        #js {:id "start-game-button"
-             :onClick #(rm/send-start-game)}
-        (localize data :start-game)))))
+      (start-game-button data))))
 
 (defcomponent turn-area [data owner]
   (render [_]

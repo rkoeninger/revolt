@@ -44,7 +44,9 @@
     [compojure "1.4.0"]
     [com.cemerick/url "0.1.1"]
     [figwheel "0.4.0"]
-    [org.omcljs/om "0.9.0"]
+    [org.omcljs/om "0.9.0" :exclusions [cljsjs/react]]
+    [cljs-react-test "0.1.3-SNAPSHOT"]
+    [cljsjs/react-with-addons "0.13.3-0"]
     [prismatic/om-tools "0.3.12"]]
   :exclusions
     [org.clojure/clojure]

@@ -121,18 +121,27 @@ function sequence(steps) {
   }
 }
 
-function signup(username) {
-  var signupInput = document.body.querySelector("#signup-input"),
-    signupButton = document.body.querySelector("#signup-button");
+function enterName(username) {
+  var signupInput = document.body.querySelector("#signup-input");
   if (signupInput) {
-    if (signupButton) {
-      signupInput.value = username;
-      signupButton.click();
-    } else {
-      console.error("Couldn't find #signup-button");
-    }
+    signupInput.value = username;
+    React.addons.TestUtils.Simulate.keyUp(signupInput);
   } else {
     console.error("Couldn't find #signup-input");
+  }
+}
+
+function signup() {
+  var signupButton = document.body.querySelector("#signup-button");
+  if (signupButton) {
+    if (signupButton.disabled) {
+      console.error("#signup-button is disabled");
+    } else {
+      signupButton.click();
+      console.log("Clicked #signup-button");
+    }
+  } else {
+    console.error("Couldn't find #signup-button");
   }
 }
 

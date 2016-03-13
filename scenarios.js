@@ -36,7 +36,8 @@ runClient(function () {
   sequence([
     delay(2000),
     mode("signup"),
-    delay(1000, defer(signup, ["emma"])),
+    delay(1000, defer(enterName, ["emma"])),
+    delay(1000, signup),
     mode("take-bids", defer(placeBids, [[
       bid("priest",     1, 0, 0),
       bid("aristocrat", 0, 1, 0),
@@ -72,7 +73,8 @@ runClient(function () {
   sequence([
     delay(3000),
     mode("signup"),
-    delay(1000, defer(signup, ["noah"])),
+    delay(1000, defer(enterName, ["noah"])),
+    delay(1000, signup),
     mode("lobby"),
     condition(function () {
       return playerCount() === 2;
