@@ -24,7 +24,7 @@
    :special-id  (:id special)})
 
 (defn board-setup [{:keys [players figures locations]}]
-  {:players   (mapv :id players)
+  {:players   players
    :figures   (mapv figure-setup figures)
    :locations (mapv location-setup locations)
    :specials  (filterv identity (map (comp :id :special) figures))})

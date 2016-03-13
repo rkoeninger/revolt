@@ -171,17 +171,15 @@
 (defn name-row [data]
   (apply dom/tr nil
     (dom/th #js {:colSpan 2} (localize data :player))
-    (map
-      (fn [player] (dom/th nil player))
-      (:players data))))
+    (map #(dom/th nil (:name %)) (:players data))))
 
 (defn ready-row [data]
   (apply dom/tr nil
     (dom/th #js {:colSpan 2} (localize data :ready))
     (map
-      (fn [player]
+      (fn [{pid :id}]
         (dom/td nil
-          (if (get-in data [:bids-submitted player])
+          (if (get-in data [:bids-submitted pid])
             (dom/img #js {:className "check-mark" :src "/img/check_mark.png" :alt "X"}))))
       (:players data))))
 
@@ -189,14 +187,14 @@
   (apply dom/tr nil
     (dom/th #js {:colSpan 2} (localize data :support))
     (map
-      (fn [player] (dom/td nil (get-in data [:support player])))
+      (fn [{pid :id}] (dom/td nil (get-in data [:support pid])))
       (:players data))))
 
 (defn bank-row [data denomination]
   (apply dom/tr nil
     (dom/th #js {:colSpan 2} (localize data denomination))
     (map
-      (fn [player] (dom/td nil (get-in data [:banks player denomination])))
+      (fn [{pid :id}] (dom/td nil (get-in data [:banks pid denomination])))
       (:players data))))
 
 (defn influence-row [data {:keys [id cap]}]
@@ -204,7 +202,7 @@
     (dom/th nil (localize data id))
     (dom/td nil cap)
     (map
-      (fn [player] (dom/td nil (get-in data [:influence id player])))
+      (fn [{pid :id}] (dom/td nil (get-in data [:influence id pid])))
       (:players data))))
 
 (defcomponent score-board [data owner]
@@ -221,7 +219,7 @@
 
 (defn player-list [{:keys [players]}]
   (apply dom/ul #js {:className "player-list"}
-    (map (partial dom/li nil) players)))
+    (map #(dom/li nil (:name %)) players)))
 
 (defcomponent signup-area [data owner]
   (render [_]
@@ -245,9 +243,7 @@
         (apply dom/tr nil
           (dom/td nil (localize data :location))
           (dom/td nil (localize data :cap))
-          (map
-            (partial dom/td nil)
-            (:players data)))
+          (map #(dom/td nil (:name %)) (:players data)))
         (map
           (fn [{:keys [id cap]}]
             (apply dom/tr nil
@@ -255,13 +251,13 @@
               (dom/td nil cap)
               (map
                 (fn [p]
-                  (let [combo [id p]
+                  (let [combo [id (:id p)]
                         selected (= combo selection)]
                     (dom/td 
                       #js {:className (if selected "selected")}
                       (dom/button
                         #js {:onClick #(om/set-state! owner :selection combo)}
-                        (get-in data [:influence id p])))))
+                        (get-in data [:influence id (:id p)])))))
                 (:players data))))
           (:locations data)))
       (dom/button
@@ -282,17 +278,15 @@
         (apply dom/tr nil
           (dom/td nil (localize data :location))
           (dom/td nil (localize data :cap))
-          (map
-            (partial dom/td nil)
-            (:players data)))
+          (map #(dom/td nil (:name %)) (:players data)))
         (map
           (fn [{:keys [id cap]}]
             (apply dom/tr nil
               (dom/td nil (localize data id))
               (dom/td nil cap)
               (map
-                (fn [p]
-                  (let [combo [id p]
+                (fn [{pid :id}]
+                  (let [combo [id pid]
                         selected (or (= combo selection-1) (= combo selection-2))]
                     (dom/td
                       #js {:className (if selected "selected")}
@@ -301,7 +295,7 @@
                              #(if selection-1
                                 (om/set-state! owner :selection-2 combo)
                                 (om/set-state! owner :selection-1 combo))}
-                        (get-in data [:influence id p])))))
+                        (get-in data [:influence id pid])))))
                 (:players data))))
           (:locations data)))
       (dom/button
@@ -326,9 +320,7 @@
           (apply dom/tr nil
             (dom/td nil (localize data :location))
             (dom/td nil (localize data :cap))
-            (map
-              (partial dom/td nil)
-              (:players data)))
+            (map #(dom/td nil (:name %)) (:players data)))
           (map
             (fn [{:keys [id cap]}]
               (apply dom/tr
@@ -343,8 +335,8 @@
                     (localize data id)))
                 (dom/td nil cap)
                 (map
-                  (fn [player]
-                    (dom/td nil (get-in data [:influence id player])))
+                  (fn [{pid :id}]
+                    (dom/td nil (get-in data [:influence id pid])))
                   (:players data))))
             (:locations data)))
         (if any-reassignments
@@ -377,9 +369,7 @@
       (apply dom/tr nil
         (dom/td nil (localize data :location))
         (dom/td nil (localize data :cap))
-        (map
-          (partial dom/td nil)
-          (:players data)))
+        (map #(dom/td nil (:name %)) (:players data)))
       (map
         (fn [location]
           (apply dom/tr nil
@@ -390,7 +380,7 @@
                 (localize data (:id location))))
             (dom/td nil (:cap location))
             (map
-              (fn [p] (dom/td nil (get-in data [:influence (:id location) p])))
+              (fn [{pid :id}] (dom/td nil (get-in data [:influence (:id location) pid])))
               (:players data))))
         (:locations data)))))
 
