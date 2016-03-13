@@ -7,14 +7,14 @@
             [chord.client :refer [ws-ch]]
             [cemerick.url :refer [url]]
             [revolt.core :as r]
-            [revolt.lang :refer [languages]]
+            [revolt.lang :refer [dictionary languages]]
             [revolt.client.messaging :as rm]))
 
 (enable-console-print!)
 
 (defn localize [data key]
   (or
-    (get-in languages [(:lang data) key])
+    (get-in dictionary [(:lang data) key])
     (do
       (js/console.error (str key " is not in " (:lang data) " dictionary"))
       (str "TRANSLATION MISSING - " (str key)))))
@@ -415,10 +415,8 @@
 
 (defcomponent languages-area [data owner]
   (render [_]
-    (dom/div #js {:className "languages"}
-      (language-flag data "English" :us)
-      (language-flag data "Spanish" :mx)
-      (language-flag data "French"  :fr))))
+    (apply dom/div #js {:className "languages"}
+      (map #(language-flag data (localize data %) %) languages))))
 
 (defn play-area [& children]
   (apply dom/div #js {:className "play-area"} (concat children [(clear-div)])))
@@ -464,7 +462,7 @@
 
 (defonce app-state
   (atom
-    {:lang :us
+    {:lang :english
      :mode :signup
      :players []
      :bids-submitted {}
