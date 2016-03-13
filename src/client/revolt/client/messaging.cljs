@@ -60,8 +60,7 @@
   (let [{:keys [turn guard-house banks support influence]} status
         {:keys [player-id]} @app-state
         my-bank (get banks player-id)]
-    (swap! app-state assoc :bank my-bank)
-    (swap! app-state assoc :original-bank my-bank)
+    (swap! app-state assoc :remaining-bank my-bank)
     (swap! app-state assoc :banks banks)
     (swap! app-state assoc :support support)
     (swap! app-state assoc :influence influence)

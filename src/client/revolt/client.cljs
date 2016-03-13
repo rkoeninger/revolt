@@ -27,9 +27,9 @@
 
 (defn adjust-bid [data id denomination adj]
   (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
-        bank-denom-adjusted (- (get-in data [:bank denomination]) adj)]
+        bank-denom-adjusted (- (get-in data [:remaining-bank denomination]) adj)]
     (when (and (>= bank-denom-adjusted 0) (>= bid-denom-adjusted 0))
-      (om/transact! data [:bank denomination] #(- % adj))
+      (om/transact! data [:remaining-bank denomination] #(- % adj))
       (om/transact! data [:bids id denomination] #(+ % adj)))))
 
 (defn dont-show-zero [x]
@@ -56,7 +56,7 @@
 
 (defn denomination-input [data id immunities denomination]
   (let [immune (contains? immunities denomination)
-        remaining-bank (get-in data [:bank denomination])
+        remaining-bank (get-in data [:remaining-bank denomination])
         amount (get-in data [:bids id denomination])
         button-id-prefix (clojure.string/join "-" ["bid" (name id) (name denomination)])
         disabled (or immune
@@ -114,10 +114,10 @@
   (dom/div #js {:className (str "bank-denomination " (name denomination))
                 :title (localize data denomination)}
     (dom/span #js {:className (str "bank-amount " (name denomination))}
-      (get-in data [:bank denomination]))))
+      (get-in data [:remaining-bank denomination]))))
 
 (defn tokens-remaining? [data]
-  (r/pos-bid? (:bank data)))
+  (r/pos-bid? (:remaining-bank data)))
 
 (defn command-button [data id label disabled on-click]
   (dom/button
