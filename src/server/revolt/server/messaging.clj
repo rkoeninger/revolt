@@ -77,6 +77,12 @@
     :reassign-spots (read-reassign-spots board args)
     args))
 
+(comment defn ack-connection [state channel player-id]
+  (put! ws-channel {
+    :type :player-id
+    :player-id player-id
+    :players (map (partial apply ->Player) (:player-names state))}))
+
 (defn transmit [state player-id message]
   (let [player-channel (get-in @state [:player-channels player-id])]
     (if (:logging @state)
@@ -109,7 +115,7 @@
     (doseq [ch (vals player-channels)] (put! ch message))))
 
 (defn broadcast-signup [state player-id player-name]
-  (broadcast state {:type :signup :player-id player-id :player-name player-name}))
+  (broadcast state {:type :signup :player {:id player-id :name player-name}}))
 
 (defn broadcast-start-game [state board]
   (broadcast state {:type :start-game :setup (board-setup board)}))

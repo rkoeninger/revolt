@@ -111,7 +111,10 @@
 (defn ws-handler [{:keys [ws-channel]}]
   (let [player-id (swap! player-counter inc)]
     (swap-in! state [:player-channels] assoc player-id ws-channel)
-    (go (>! ws-channel {:type :player-id :player-id player-id}))
+    (go (>! ws-channel {
+      :type :player-id
+      :player-id player-id
+      :players (map (partial apply ->Player) (:player-names @state))}))
     (println "connected to client" player-id)
     (go-message-loop ws-channel {:keys [message error] :as raw}
       ; handle error

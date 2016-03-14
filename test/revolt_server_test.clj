@@ -40,13 +40,13 @@
     (connect 1)
     (handle 1 {:type :signup :player-name "rob"})
     (is= {1 "rob"} (:player-names @state))
-    (is= {:type :signup :player-id 1 :player-name "rob"} (get-message 1))
+    (is= {:type :signup :player {:id 1 :name "rob"}} (get-message 1))
 
     (connect 2)
     (handle 2 {:type :signup :player-name "joe"})
     (is= {1 "rob" 2 "joe"} (:player-names @state))
-    (is= {:type :signup :player-id 2 :player-name "joe"} (get-message 1))
-    (is= {:type :signup :player-id 2 :player-name "joe"} (get-message 2))
+    (is= {:type :signup :player {:id 2 :name "joe"}} (get-message 1))
+    (is= {:type :signup :player {:id 2 :name "joe"}} (get-message 2))
 
     (handle 1 {:type :start-game})
     (is (:board @state))

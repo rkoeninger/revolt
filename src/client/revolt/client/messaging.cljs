@@ -74,17 +74,19 @@
     (when-let [{:keys [message] :as raw} (<! server-ch)]
       (let [{:keys [type player-id setup status]} message]
         (case type
-          :player-id
+          :player-id (let [{:keys [players]} message]
             (swap! app-state assoc :player-id player-id)
-          :signup (do
-            (swap! app-state update-in [:players] #(conj % player-id))
-            (when (is-me? @app-state player-id)
+            (swap! app-state assoc :players players))
+          :signup (let [{:keys [player]} message]
+            (swap! app-state update-in [:players] #(conj % player))
+            (when (is-me? @app-state (:id player))
               (swap! app-state assoc :mode :lobby)))
           :start-game (let [{:keys [players figures locations]} setup]
             (swap! app-state assoc :figures figures)
             (swap! app-state assoc :locations locations)
             (swap! app-state assoc :players players))
-          :game-over (do nil)
+          :game-over (do
+            (swap! app-state assoc :mode :game-over))
           :take-bids (do
             (receive-status app-state status)
             (swap! app-state assoc :mode :take-bids)

@@ -234,6 +234,12 @@
         (signup-button data owner))
       (player-list data))))
 
+(defcomponent lobby-area [data owner]
+  (render [_]
+    (dom/div #js {:className "lobby"}
+      (player-list data)
+      (start-game-button data))))
+
 (defcomponent spy-select [data owner]
   (init-state [_]
     {:selection nil})
@@ -383,12 +389,6 @@
               (fn [{pid :id}] (dom/td nil (get-in data [:influence (:id location) pid])))
               (:players data))))
         (:locations data)))))
-
-(defcomponent lobby-area [data owner]
-  (render [_]
-    (dom/div #js {:className "lobby"}
-      (player-list data)
-      (start-game-button data))))
 
 (defcomponent turn-area [data owner]
   (render [_]
