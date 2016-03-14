@@ -77,12 +77,6 @@
     :reassign-spots (read-reassign-spots board args)
     args))
 
-(comment defn ack-connection [state channel player-id]
-  (put! ws-channel {
-    :type :player-id
-    :player-id player-id
-    :players (map (partial apply ->Player) (:player-names state))}))
-
 (defn transmit [state player-id message]
   (let [player-channel (get-in @state [:player-channels player-id])]
     (if (:logging @state)
