@@ -39,7 +39,7 @@
     [org.clojure/core.async "0.1.346.0-17112a-alpha"]
     [jarohen/chord "0.6.0"]
     [hiccup "1.0.5"]
-    [hyjinks "0.0.1"]
+    [hyjinks "0.0.2-SNAPSHOT"]
     [ring/ring-core "1.4.0"]
     [ring-middleware-format "0.6.0"]
     [compojure "1.4.0"]

@@ -8,7 +8,9 @@
             [cemerick.url :refer [url]]
             [revolt.core :as r]
             [revolt.lang :refer [dictionary languages]]
-            [revolt.client.messaging :as rm]))
+            [revolt.client.messaging :as rm]
+            [hyjinks.core :as h]
+            [hyjinks.react :refer [render-dom]]))
 
 (enable-console-print!)
 
