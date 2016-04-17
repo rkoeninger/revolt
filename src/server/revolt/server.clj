@@ -3,7 +3,7 @@
             [compojure.core :refer [defroutes GET]]
             [chord.http-kit :refer [wrap-websocket-handler]]
             [clojure.core.async :refer [<! >! go go-loop chan]]
-            [hyjinks.core :refer [html head title favicon import-css import-js body div]])
+            [hyjinks.core :refer [tag->string html head title favicon import-css import-js body div]])
   (:use revolt.core
         revolt.setup
         revolt.server.messaging))
@@ -125,7 +125,7 @@
 (swap! state assoc :logging true)
 
 (def page-frame
-  (str
+  (tag->string
     (html
       (head
         (title "Revolt")
