@@ -198,10 +198,10 @@
 
 (defn influence-row [data {:keys [id cap]}]
   (h/tr
-    (h/th (localize data id))
-    (h/td cap)
+    (h/th {:className "location-name"} (localize data id))
+    (h/td {:className "influence-cap"} cap)
     (map
-      (fn [{pid :id}] (h/td (get-in data [:influence id pid])))
+      (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence id pid]))))
       (:players data))))
 
 (defn score-board [data]
