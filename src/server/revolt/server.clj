@@ -65,7 +65,7 @@
   (let [{:keys [board player-names]} @state]
     (if board
       (transmit-game-already-started state player-id)
-      (let [board (make-board (mapv (partial apply ->Player) player-names))]
+      (let [board (make-board (mapv (partial apply ->Player) player-names) palace-figures palace-locations)]
         (do (reset-in! state [:board] board)
             (broadcast-start-game state board)
             (broadcast-take-bids state board))))))
@@ -118,7 +118,8 @@
     (println "connected to client" player-id)
     (go-message-loop ws-channel {:keys [message error] :as raw}
       ; handle error
-      (println "message from player" player-id "\r\n" raw)
+      (println "message from player" player-id)
+      (println raw)
       (if message
         (>! server-channel (assoc message :player-id player-id))))))
 
