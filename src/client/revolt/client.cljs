@@ -10,6 +10,10 @@
             [revolt.client.lang :refer [dictionary languages]]
             [revolt.client.messaging :as rm]
             [revolt.client.components :refer [check-mark score-board-template]]
+            [revolt.client.spy :refer [spy-select]]
+            [revolt.client.apothecary :refer [apothecary-select]]
+            [revolt.client.messenger :refer [messenger-select]]
+            [revolt.client.mayor :refer [mayor-select]]
             [hyjinks.core :as h]
             [hyjinks.react :refer [tag->react]]))
 
