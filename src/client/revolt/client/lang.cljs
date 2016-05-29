@@ -1,4 +1,4 @@
-(ns ^:figwheel-always revolt.lang)
+(ns ^:figwheel-always revolt.client.lang)
 
 (def languages [
   :english
