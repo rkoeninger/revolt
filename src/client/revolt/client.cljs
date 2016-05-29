@@ -9,6 +9,7 @@
             [revolt.core :as r]
             [revolt.client.lang :refer [dictionary languages]]
             [revolt.client.messaging :as rm]
+            [revolt.client.components :refer [check-mark score-board-template]]
             [hyjinks.core :as h]
             [hyjinks.react :refer [tag->react]]))
 
@@ -164,56 +165,22 @@
           (h/td)) ; figure description
         (map (partial bid-row data) figures)))))
 
-; (dom/span nil (localize data :guard-house))
-; (dom/span nil (:guard-house data)) ; TODO - should only be visible when palace is in setup
-
-(defn name-row [data]
-  (h/tr
-    (h/th {:colSpan 2} (localize data :player))
-    (map #(h/th (:name %)) (:players data))))
-
-(def check-img
-  (h/img {:className "check-mark" :src "/img/check_mark.png" :alt "X"}))
-
-(defn ready-row [data]
-  (h/tr
-    (h/th {:colSpan 2} (localize data :ready))
-    (map
-      (fn [{pid :id}] (h/td (if (get-in data [:bids-submitted pid]) check-img)))
-      (:players data))))
-
-(defn support-row [data]
-  (h/tr
-    (h/th {:colSpan 2} (localize data :support))
-    (map
-      (fn [{pid :id}] (h/td (get-in data [:support pid])))
-      (:players data))))
-
-(defn bank-row [data denomination]
-  (h/tr
-    (h/th {:colSpan 2} (localize data denomination))
-    (map
-      (fn [{pid :id}] (h/td (get-in data [:banks pid denomination])))
-      (:players data))))
-
-(defn influence-row [data {:keys [id cap]}]
-  (h/tr
-    (h/th {:className "location-name"} (localize data id))
-    (h/td {:className "influence-cap"} cap)
-    (map
-      (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence id pid]))))
-      (:players data))))
-
 (defn score-board [data]
-  (h/div {:className "score-board"}
-    (h/table
-      (name-row data)
-      (ready-row data)
-      (support-row data)
-      (bank-row data :gold)
-      (bank-row data :blackmail)
-      (bank-row data :force)
-      (map (partial influence-row data) (:locations data)))))
+  (score-board-template
+    data
+    []
+    (fn [lid pid] (dont-show-zero (get-in data [:influence lid pid])))))
+
+(defn palace-score-board [data]
+  (score-board-template
+    data
+    (let [guard-house (:guard-house data)]
+      (h/tr
+        (h/th {:colSpan 2} :palace)
+        (map
+          #(if (= guard-house (:id %)) check-mark)
+          (:players data))))
+    (fn [lid pid] (dont-show-zero (get-in data [:influence lid pid])))))
 
 (defn player-list [{:keys [players]}]
   (h/ol {:className "player-list"}
@@ -222,7 +189,7 @@
 (defn signup-area [data]
   (h/div {:className "signup"}
     (h/div {:className "what-is-your-name"}
-      (localize data :what-is-your-name))
+      :what-is-your-name)
     (h/div
       (h/input {:id "signup-input" :onKeyUp #(om/update! data :player-name (.-value (.-target %)))}))
     (h/div (signup-button data))
@@ -232,143 +199,6 @@
   (h/div {:className "lobby"}
     (player-list data)
     (start-game-button data)))
-
-(defn spy-select [data]
-  (let [selection {:spy-selection data}]
-    (h/div
-      (h/table
-        (h/tr
-          (h/td :location)
-          (h/td :cap)
-          (map #(h/td (:name %)) (:players data)))
-        (map
-          (fn [{:keys [id cap]}]
-            (h/tr
-              (h/td id)
-              (h/td cap)
-              (map
-                (fn [p]
-                  (let [combo [id (:id p)]
-                        selected (= combo selection)]
-                    (h/td {:className (if selected "selected")}
-                      (h/button {:onClick #(om/update! data :spy-selection combo)}
-                        (get-in data [:influence id (:id p)])))))
-                (:players data))))
-          (:locations data)))
-      (h/button
-        {:onClick #(om/update! data :spy-selection nil)}
-        :clear)
-      (if selection
-        (h/button
-          {:onClick #(apply rm/send-spy selection)}
-          :submit)))))
-
-(defn apothecary-select [data]
-  (let [selection-1 (:apothecary-selection-1 data)
-        selection-2 (:apothecary-selection-2 data)]
-    (h/div
-      (h/table
-        (h/tr
-          (h/td :location)
-          (h/td :cap)
-          (map #(h/td (:name %)) (:players data)))
-        (map
-          (fn [{:keys [id cap]}]
-            (h/tr
-              (h/td id)
-              (h/td cap)
-              (map
-                (fn [{pid :id}]
-                  (let [combo [id pid]
-                        selected (or (= combo selection-1) (= combo selection-2))]
-                    (h/td
-                      {:className (if selected "selected")}
-                      (h/button
-                        {:onClick #(if selection-1
-                                       (om/update! data :apothecary-selection-2 combo)
-                                       (om/update! data :apothecary-selection-1 combo))}
-                        (get-in data [:influence id pid])))))
-                (:players data))))
-          (:locations data)))
-      (h/button
-        {:onClick #(do (om/update! data :apothecary-selection-1 nil)
-                       (om/update! data :apothecary-selection-2 nil))}
-        :clear)
-      (if (and selection-1 selection-2)
-        (h/button
-          {:onClick #(apply rm/send-apothecary (concat selection-1 selection-2))}
-          :submit)))))
-
-(defn messenger-select [data]
-  (let [selection-1 (:messenger-selection-1 data)
-        selection-2 (:messenger-selection-2 data)
-        reassignments (:messenger-reassignments data)
-        any-reassignments (pos? (count reassignments))]
-    (h/div
-      (h/table
-        (h/tr
-          (h/td :location)
-          (h/td :cap)
-          (map #(h/td (:name %)) (:players data)))
-        (map
-          (fn [{:keys [id cap]}]
-            (h/tr
-              {:className (if (or (= id selection-1) (= id selection-2)) "selected")}
-              (h/td
-                (h/button
-                  {:onClick #(if selection-1
-                                 (om/update! data :messenger-selection-2 id)
-                                 (om/update! data :messenger-selection-1 id))
-                   :disabled (or (and (not selection-1) (= 0 (get-in data [:influence id "Rob"])))
-                                 (and selection-1 (<= cap (reduce + (vals (get-in data [:influence id]))))))}
-                  id))
-              (h/td cap)
-              (map
-                (fn [{pid :id}]
-                  (h/td (get-in data [:influence id pid])))
-                (:players data))))
-          (:locations data)))
-      (if any-reassignments
-        (h/ul
-          (map
-            (fn [[lid1 lid2]] (h/li [lid1 " -> " lid2])))
-            reassignments))
-      (h/button
-        {:onClick #(do (om/update! data :messenger-reassignments [])
-                       (om/update! data :messenger-selection-1 nil)
-                       (om/update! data :messenger-selection-2 nil))}
-        :clear)
-      (if (and selection-1 selection-2 (> 2 (count reassignments)))
-        (h/button
-          {:onClick #(do (om/transact! data [:messenger-reassignments] (fn [rs] (conj rs [selection-1 selection-2])))
-                         (om/update! data :messenger-selection-1 nil)
-                         (om/update! data :messenger-selection-2 nil))}
-          :add))
-      (h/button
-        {:onClick #(rm/send-messenger reassignments)}
-        :submit))))
-
-(defn mayor-select [data]
-  (h/table
-    (h/tr
-      (h/td :location)
-      (h/td :cap)
-      (map #(h/td (:name %)) (:players data)))
-    (map
-      (fn [location]
-        (let [disabled (>= (reduce + (vals (get-in data [:influence (:id location)]))) (:cap location))]
-          (h/tr
-            (h/td
-              (h/button
-                {:onClick #(rm/send-mayor location)
-                 :disabled disabled}
-                (:id location)))
-            (h/td (:cap location))
-            (map
-              (fn [{pid :id}]
-                (h/td (get-in data [:influence (:id location) pid])))
-              (:players data)))))
-      (:locations data))))
 
 (defn turn-area [data]
   (h/div {:className "turn"}

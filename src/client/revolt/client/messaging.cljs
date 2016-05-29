@@ -3,47 +3,24 @@
   (:require [cljs.core.async :refer [put! chan <!]]
             [chord.client :refer [ws-ch]]
             [cemerick.url :refer [url]]
-            [revolt.core :as r]))
+            [revolt.core :refer [zero-bid]]))
 
 (defonce message-channel (atom nil))
 
+(defn send-message [type content]
+  (put! @message-channel (assoc content :type type)))
+
 (defn send-signup [player-name]
-  (put! @message-channel
-    {:type :signup
-     :player-name player-name}))
+  (send-message :signup
+    {:player-name player-name}))
 
 (defn send-start-game []
-  (put! @message-channel
-    {:type :start-game}))
+  (send-message :start-game
+    {}))
 
 (defn send-bids [bids]
-  (put! @message-channel
-    {:type :submit-bids
-     :bids bids}))
-
-(defn send-spy [location-id target-id]
-  (put! @message-channel
-    {:type :submit-special
-     :args {:location location-id
-            :player target-id}}))
-
-(defn send-apothecary [location0-id target0-id location1-id target1-id]
-  (put! @message-channel
-    {:type :submit-special
-     :args {:location0 location0-id
-            :player0 target0-id
-            :location1 location1-id
-            :player1 target1-id}}))
-
-(defn send-messenger [reassignments]
-  (put! @message-channel
-    {:type :submit-special
-     :args {:reassignments reassignments}}))
-
-(defn send-mayor [location-id]
-  (put! @message-channel
-    {:type :submit-special
-     :args {:location location-id}}))
+  (send-message :submit-bids
+    {:bids bids}))
 
 (defn send-msgs! [new-msg-ch server-ch]
   (go-loop []
@@ -67,7 +44,7 @@
     (swap! app-state assoc :turn turn)
     (swap! app-state assoc :guard-house guard-house)))
 
-(defn zero-bids [figures] (zipmap (map :id figures) (repeat r/zero-bid)))
+(defn zero-bids [figures] (zipmap (map :id figures) (repeat zero-bid)))
 
 (defn receive-msgs! [app-state server-ch]
   (go-loop []
