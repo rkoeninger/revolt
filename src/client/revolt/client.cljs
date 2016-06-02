@@ -6,16 +6,11 @@
             [cljs.core.async :refer [put! chan <!]]
             [chord.client :refer [ws-ch]]
             [cemerick.url :refer [url]]
+            [hyjinks.core :as h]
+            [hyjinks.react :refer [tag->react]]
             [revolt.core :as r]
             [revolt.client.lang :refer [dictionary languages]]
-            [revolt.client.messaging :as rm]
-            [revolt.client.components :refer [check-mark score-board-template]]
-            [revolt.client.spy :refer [spy-select]]
-            [revolt.client.apothecary :refer [apothecary-select]]
-            [revolt.client.messenger :refer [messenger-select]]
-            [revolt.client.mayor :refer [mayor-select]]
-            [hyjinks.core :as h]
-            [hyjinks.react :refer [tag->react]]))
+            [revolt.client.messaging :as rm]))
 
 (enable-console-print!)
 
@@ -28,6 +23,9 @@
 
 (defn clear-div []
   (h/div {:className "clear"}))
+
+(def check-mark
+  (h/img {:className "check-mark" :src "/img/check_mark.png" :alt "X"}))
 
 (defn my-bids-submitted? [data]
   (true? (get-in data [:bids-submitted (:player-id data)])))
@@ -131,7 +129,7 @@
              :disabled disabled
              :onClick on-click}
     (h/div
-      (h/span (localize data label)))))
+      (h/span label))))
 
 (defn submit-button [{:keys [bids] :as data}]
   (command-button
@@ -169,22 +167,176 @@
           (h/td)) ; figure description
         (map (partial bid-row data) figures)))))
 
-(defn score-board [data]
-  (score-board-template
-    data
-    []
-    (fn [lid pid] (dont-show-zero (get-in data [:influence lid pid])))))
+(defn name-row [data]
+  (h/tr
+    (h/th {:colSpan 2} :player)
+    (map (comp h/th :name) (:players data))))
 
-(defn palace-score-board [data]
-  (score-board-template
-    data
-    (let [guard-house (:guard-house data)]
+(defn ready-row [data]
+  (h/tr
+    (h/th {:colSpan 2} :ready)
+    (map
+      (fn [{pid :id}] (h/td (if (get-in data [:bids-submitted pid]) check-mark)))
+      (:players data))))
+
+(defn support-row [data]
+  (h/tr
+    (h/th {:colSpan 2} :support)
+    (map
+      (fn [{pid :id}] (h/td (get-in data [:support pid])))
+      (:players data))))
+
+(defn bank-row [data denomination]
+  (h/tr
+    (h/th {:colSpan 2} denomination)
+    (map
+      (fn [{pid :id}] (h/td (get-in data [:banks pid denomination])))
+      (:players data))))
+
+(defn guard-house-row [data]
+  (let [guard-house (:guard-house data)]
+    (if (= :palace (:expansion data))
       (h/tr
-        (h/th {:colSpan 2} :palace)
+        (h/th {:colSpan 2} :guard-house)
         (map
           #(if (= guard-house (:id %)) check-mark)
-          (:players data))))
-    (fn [lid pid] (dont-show-zero (get-in data [:influence lid pid])))))
+          (:players data))))))
+
+(defn influence-row-template [data f {:keys [id cap]}]
+  (h/tr
+    (h/th {:className "location-name"} id)
+    (h/td {:className "influence-cap"} cap)
+    (map
+      (fn [{pid :id}] (h/td (f id pid)))
+      (:players data))))
+
+(defn influence-rows-template [data f]
+  (map
+    (partial influence-row-template data f)
+    (:locations data)))
+
+(defn influence-row [data location]
+  (influence-row-template
+    data
+    (fn [lid pid]
+      (dont-show-zero (get-in data [:influence lid pid])))
+    location))
+
+(defn influence-rows [data]
+  (influence-rows-template
+    data
+    (fn [lid pid]
+      (dont-show-zero (get-in data [:influence lid pid])))))
+
+(defn score-board [data]
+  (h/div {:className "score-board"}
+    (h/table
+      (name-row data)
+      (ready-row data)
+      (support-row data)
+      (bank-row data :gold)
+      (bank-row data :blackmail)
+      (bank-row data :force)
+      (guard-house-row data)
+      (influence-rows data))))
+
+(defn spy-select [data]
+  (let [selection (:spy-selection data)]
+    (h/div {:className "score-board"}
+      (h/table
+        (name-row data)
+        (support-row data)
+        (guard-house-row data)
+        (influence-rows-template
+          data
+          (fn [lid pid]
+            (let [amount (get-in data [:influence lid pid])
+                  selected (= [lid pid] selection)]
+              (if (and (pos? amount) (not= pid (get-in data [:player-id])))
+                (h/button
+                  {:onClick #(om/update! data :spy-selection [lid pid])
+                   :className (if selected "selected")}
+                  amount)))))))))
+
+(defn spy-buttons [data]
+  (let [selection (:spy-selection data)]
+    (command-button
+      data
+      "spy-submit-button"
+      :submit
+      (nil? selection)
+      #(if selection
+        (do
+          (apply rm/send-spy selection)
+          (om/update! data :spy-selection nil))))))
+
+(defn apothecary-select [data]
+  (let [selection-1 (:apothecary-selection-1 data)
+        selection-2 (:apothecary-selection-2 data)]
+    (h/div {:className "score-board"}
+      (h/table
+        (name-row data)
+        (support-row data)
+        (guard-house-row data)
+        (influence-rows-template
+          data
+          (fn [lid pid]
+            (let [amount (get-in data [:influence lid pid])
+                  selected (or (= selection-1 [lid pid]) (= selection-2 [lid pid]))]
+              (if (pos? amount)
+                (h/button
+                  {:className (if selected "selected")
+                   :onClick #(if selection-1
+                                (om/update! data :apothecary-selection-2 [lid pid])
+                                (om/update! data :apothecary-selection-1 [lid pid]))}
+                  amount)))))))))
+
+(defn apothecary-buttons [data]
+  (let [selection-1 (:apothecary-selection-1 data)
+        selection-2 (:apothecary-selection-2 data)]
+    [(command-button
+      data
+      "apothecary-submit-button"
+      :submit
+      (and selection-1 selection-2)
+      #(do
+        (apply rm/send-apothecary (concat selection-1 selection-2))
+        (om/update! data :apothecary-selection-1 nil)
+        (om/update! data :apothecary-selection-2 nil)))
+    (command-button
+      data
+      "apothecary-clear-button"
+      :clear
+      (or selection-1 selection-2)
+      #(do
+        (om/update! data :apothecary-selection-1 nil)
+        (om/update! data :apothecary-selection-2 nil)))]))
+
+(defn messenger-select [data]
+  (let [selection (:messenger-selection data)
+        reassignments (:messenger-reassignments data)
+        any-reassignments (pos? (count reassignments))]
+    nil))
+
+(defn messenger-submit [data]
+  (h/div
+    (command-button
+      data
+      "messenger-submit-button"
+      :submit
+      true
+      #(rm/send-messenger (:reassignments data)))))
+
+(defn mayor-select [data]
+  ; (score-board-template
+  ;   data
+  ;   []
+  ;   (fn [lid pid]
+  ;     (if (and (= pid (:player-id data)) (< (reduce + (vals (get-in data [:influence lid]))) (get-in data [:locations lid :cap])))
+  ;       (h/button {:onClick #(rm/send-mayor lid)}
+  ;         :select))))
+  nil
+  )
 
 (defn player-list [{:keys [players]}]
   (h/ol {:className "player-list"}
@@ -234,6 +386,9 @@
   (h/div {:className "title-logo"}
     (h/img {:src "/img/logo.png"})))
 
+(defn translate [data value]
+  (if (keyword? value) (localize data value) value))
+
 (defcomponent root-view [data owner]
   (render [_]
     (tag->react
@@ -252,7 +407,7 @@
             :apothecary [(apothecary-select data)]
             :messenger  [(messenger-select data)]
             :mayor      [(mayor-select data)])))
-      #(if (keyword? %) (localize data %) %))))
+      (partial translate data))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]

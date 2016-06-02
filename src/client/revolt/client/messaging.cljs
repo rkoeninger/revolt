@@ -10,6 +10,26 @@
 (defn send-message [type content]
   (put! @message-channel (assoc content :type type)))
 
+(defn send-spy [location-id target-id]
+  (send-message :submit-special
+    {:args {:location location-id
+            :player target-id}}))
+
+(defn send-mayor [location-id]
+  (send-message :submit-special
+    {:args {:location location-id}}))
+
+(defn send-apothecary [location0-id target0-id location1-id target1-id]
+  (send-message :submit-special
+    {:args {:location0 location0-id
+            :player0 target0-id
+            :location1 location1-id
+            :player1 target1-id}}))
+
+(defn send-messenger [reassignments]
+  (send-message :submit-special
+    {:args {:reassignments reassignments}}))
+
 (defn send-signup [player-name]
   (send-message :signup
     {:player-name player-name}))
