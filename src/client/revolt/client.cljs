@@ -276,7 +276,7 @@
       data
       "spy-clear-button"
       :clear
-      false
+      (nil? selection)
       #(om/update! data :spy-selection nil))]))
 
 (defn apothecary-select [data]
@@ -308,7 +308,7 @@
       data
       "apothecary-submit-button"
       :submit
-      (and selection-1 selection-2)
+      (not (and selection-1 selection-2))
       #(do
         (apply rm/send-apothecary (concat selection-1 selection-2))
         (om/update! data :apothecary-selection-1 nil)
@@ -317,7 +317,7 @@
       data
       "apothecary-clear-button"
       :clear
-      (or selection-1 selection-2)
+      (not (or selection-1 selection-2))
       #(do
         (om/update! data :apothecary-selection-1 nil)
         (om/update! data :apothecary-selection-2 nil)))]))
