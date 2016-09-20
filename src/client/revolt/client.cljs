@@ -263,22 +263,21 @@
 
 (defn spy-buttons [data]
   (let [selection (:spy-selection data)]
-    (h/div
-      (command-button
-        data
-        "spy-submit-button"
-        :submit
-        (nil? selection)
-        #(if selection
-          (do
-            (apply rm/send-spy selection)
-            (om/update! data :spy-selection nil)))))
-      (command-button
-        data
-        "spy-clear-button"
-        :clear
-        false
-        #(om/update! data :spy-selection nil))))
+    [(command-button
+      data
+      "spy-submit-button"
+      :submit
+      (nil? selection)
+      #(if selection
+        (do
+          (apply rm/send-spy selection)
+          (om/update! data :spy-selection nil))))
+    (command-button
+      data
+      "spy-clear-button"
+      :clear
+      false
+      #(om/update! data :spy-selection nil))]))
 
 (defn apothecary-select [data]
   (let [selection-1 (:apothecary-selection-1 data)
