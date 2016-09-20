@@ -159,13 +159,14 @@
   (let [{:keys [figures]} data]
     (h/div {:className "bid-board"}
       (h/table
-        (h/tr
-          (h/td (submit-button data))
-          (h/td (bank-denomination data :gold))
-          (h/td (bank-denomination data :blackmail))
-          (h/td (bank-denomination data :force))
-          (h/td)) ; figure description
-        (map (partial bid-row data) figures)))))
+        (h/tbody
+          (h/tr
+            (h/td (submit-button data))
+            (h/td (bank-denomination data :gold))
+            (h/td (bank-denomination data :blackmail))
+            (h/td (bank-denomination data :force))
+            (h/td)) ; figure description
+          (map (partial bid-row data) figures))))))
 
 (defn name-row [data]
   (h/tr
@@ -231,65 +232,75 @@
 (defn score-board [data]
   (h/div {:className "score-board"}
     (h/table
-      (name-row data)
-      (ready-row data)
-      (support-row data)
-      (bank-row data :gold)
-      (bank-row data :blackmail)
-      (bank-row data :force)
-      (guard-house-row data)
-      (influence-rows data))))
+      (h/tbody
+        (name-row data)
+        (ready-row data)
+        (support-row data)
+        (bank-row data :gold)
+        (bank-row data :blackmail)
+        (bank-row data :force)
+        (guard-house-row data)
+        (influence-rows data)))))
 
 (defn spy-select [data]
   (let [selection (:spy-selection data)]
     (h/div {:className "score-board"}
       (h/table
-        (name-row data)
-        (support-row data)
-        (guard-house-row data)
-        (influence-rows-template
-          data
-          (fn [lid pid]
-            (let [amount (get-in data [:influence lid pid])
-                  selected (= [lid pid] selection)]
-              (if (and (pos? amount) (not= pid (get-in data [:player-id])))
-                (h/button
-                  {:onClick #(om/update! data :spy-selection [lid pid])
-                   :className (if selected "selected")}
-                  amount)))))))))
+        (h/tbody
+          (name-row data)
+          (support-row data)
+          (guard-house-row data)
+          (influence-rows-template
+            data
+            (fn [lid pid]
+              (let [amount (get-in data [:influence lid pid])
+                    selected (= [lid pid] selection)]
+                (if (and (pos? amount) (not= pid (get-in data [:player-id])))
+                  (h/button
+                    {:onClick #(om/update! data :spy-selection [lid pid])
+                     :className (if selected "selected")}
+                    amount))))))))))
 
 (defn spy-buttons [data]
   (let [selection (:spy-selection data)]
-    (command-button
-      data
-      "spy-submit-button"
-      :submit
-      (nil? selection)
-      #(if selection
-        (do
-          (apply rm/send-spy selection)
-          (om/update! data :spy-selection nil))))))
+    (h/div
+      (command-button
+        data
+        "spy-submit-button"
+        :submit
+        (nil? selection)
+        #(if selection
+          (do
+            (apply rm/send-spy selection)
+            (om/update! data :spy-selection nil)))))
+      (command-button
+        data
+        "spy-clear-button"
+        :clear
+        false
+        #(om/update! data :spy-selection nil))))
 
 (defn apothecary-select [data]
   (let [selection-1 (:apothecary-selection-1 data)
         selection-2 (:apothecary-selection-2 data)]
     (h/div {:className "score-board"}
       (h/table
-        (name-row data)
-        (support-row data)
-        (guard-house-row data)
-        (influence-rows-template
-          data
-          (fn [lid pid]
-            (let [amount (get-in data [:influence lid pid])
-                  selected (or (= selection-1 [lid pid]) (= selection-2 [lid pid]))]
-              (if (pos? amount)
-                (h/button
-                  {:className (if selected "selected")
-                   :onClick #(if selection-1
-                                (om/update! data :apothecary-selection-2 [lid pid])
-                                (om/update! data :apothecary-selection-1 [lid pid]))}
-                  amount)))))))))
+        (h/tbody
+          (name-row data)
+          (support-row data)
+          (guard-house-row data)
+          (influence-rows-template
+            data
+            (fn [lid pid]
+              (let [amount (get-in data [:influence lid pid])
+                    selected (or (= selection-1 [lid pid]) (= selection-2 [lid pid]))]
+                (if (pos? amount)
+                  (h/button
+                    {:className (if selected "selected")
+                     :onClick #(if selection-1
+                                  (om/update! data :apothecary-selection-2 [lid pid])
+                                  (om/update! data :apothecary-selection-1 [lid pid]))}
+                    amount))))))))))
 
 (defn apothecary-buttons [data]
   (let [selection-1 (:apothecary-selection-1 data)
@@ -318,7 +329,7 @@
         any-reassignments (pos? (count reassignments))]
     nil))
 
-(defn messenger-submit [data]
+(defn messenger-buttons [data]
   (h/div
     (command-button
       data
@@ -335,6 +346,10 @@
   ;     (if (and (= pid (:player-id data)) (< (reduce + (vals (get-in data [:influence lid]))) (get-in data [:locations lid :cap])))
   ;       (h/button {:onClick #(rm/send-mayor lid)}
   ;         :select))))
+  nil
+  )
+
+(defn mayor-buttons [data]
   nil
   )
 
@@ -403,10 +418,14 @@
             :take-bids  [(score-board data)
                          (bid-board data)]
             :game-over  [(score-board data)]
-            :spy        [(spy-select data)]
-            :apothecary [(apothecary-select data)]
-            :messenger  [(messenger-select data)]
-            :mayor      [(mayor-select data)])))
+            :spy        [(spy-select data)
+                         (spy-buttons data)]
+            :apothecary [(apothecary-select data)
+                         (apothecary-buttons data)]
+            :messenger  [(messenger-select data)
+                         (messenger-buttons data)]
+            :mayor      [(mayor-select data)
+                         (mayor-buttons data)])))
       (partial translate data))))
 
 (def ws-url
