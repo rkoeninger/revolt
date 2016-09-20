@@ -334,23 +334,51 @@
       data
       "messenger-submit-button"
       :submit
-      true
+      false
       #(rm/send-messenger (:reassignments data)))))
 
 (defn mayor-select [data]
-  ; (score-board-template
-  ;   data
-  ;   []
-  ;   (fn [lid pid]
-  ;     (if (and (= pid (:player-id data)) (< (reduce + (vals (get-in data [:influence lid]))) (get-in data [:locations lid :cap])))
-  ;       (h/button {:onClick #(rm/send-mayor lid)}
-  ;         :select))))
-  nil
-  )
+  (let [selection (:mayor-selection data)]
+    (h/div {:className "score-board"}
+      (h/table
+        (h/tbody
+          (name-row data)
+          (support-row data)
+          (map
+            (fn [{lid :id cap :cap}]
+              (let [selected (= selection lid)
+                    capped (= cap (reduce + (vals (get-in data [:influence lid]))))]
+                (h/tr
+                  (h/th {:className "location-name"}
+                    (if capped
+                      lid
+                      (h/button
+                        {:className (if selected "selected")
+                         :onClick #(om/update! data :mayor-selection lid)}
+                        lid)))
+                  (h/td {:className "influence-cap"} cap)
+                  (map
+                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))
+                    (:players data)))))
+            (:locations data)))))))
 
 (defn mayor-buttons [data]
-  nil
-  )
+  (let [selection (:mayor-selection data)]
+    [(command-button
+      data
+      "mayor-submit-button"
+      :submit
+      (nil? selection)
+      #(if selection
+        (do
+          (rm/send-mayor selection)
+          (om/update! data :mayor-selection nil))))
+    (command-button
+      data
+      "mayor-clear-button"
+      :clear
+      (nil? selection)
+      #(om/update! data :mayor-selection nil))]))
 
 (defn player-list [{:keys [players]}]
   (h/ol {:className "player-list"}
