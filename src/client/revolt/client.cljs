@@ -242,6 +242,7 @@
         (guard-house-row data)
         (influence-rows data)))))
 
+; TODO: don't allow guard house occupant to be selected
 (defn spy-select [data]
   (let [selection (:spy-selection data)]
     (h/div {:className "score-board"}
@@ -279,6 +280,7 @@
       (nil? selection)
       #(om/update! data :spy-selection nil))]))
 
+; TODO: don't allow guard house occupant to be selected
 (defn apothecary-select [data]
   (let [selection-1 (:apothecary-selection-1 data)
         selection-2 (:apothecary-selection-2 data)]
@@ -322,20 +324,69 @@
         (om/update! data :apothecary-selection-1 nil)
         (om/update! data :apothecary-selection-2 nil)))]))
 
+; TODO: copied from mayor - doesn't work yet
 (defn messenger-select [data]
-  (let [selection (:messenger-selection data)
-        reassignments (:messenger-reassignments data)
+  (let [reassignments (:messenger-reassignments data)
+        selection-1 (:messenger-selection-1 data)
+        selection-2 (:messenger-selection-2 data)
         any-reassignments (pos? (count reassignments))]
-    nil))
+    (h/div {:className "score-board"}
+      (h/table
+        (h/tbody
+          (name-row data)
+          (support-row data)
+          (map
+            (fn [{lid :id cap :cap}]
+              (let [selected (or (= lid selection-1) (= lid selection-2))
+                    capped (= cap (reduce + (vals (get-in data [:influence lid]))))]
+                (h/tr
+                  (h/th {:className "location-name"}
+                    (if capped
+                      lid
+                      (h/button
+                        {:className (if selected "selected")
+                         :onClick #()}
+                        lid)))
+                  (h/td {:className "influence-cap"} cap)
+                  (map
+                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))
+                    (:players data)))))
+            (:locations data)))))))
 
 (defn messenger-buttons [data]
-  (h/div
+  (let [reassignments (:messenger-reassignments data)
+        selection-1 (:messenger-selection-1 data)
+        selection-2 (:messenger-selection-2 data)
+        any-reassignments (pos? (count reassignments))]
+    [(if any-reassignments
+      (h/ul
+        (map
+          (fn [[lid1 lid2]] (h/li [lid1 " -> " lid2]))
+          reassignments)))
     (command-button
       data
       "messenger-submit-button"
       :submit
       false
-      #(rm/send-messenger (:reassignments data)))))
+      #(rm/send-messenger reassignments data))
+    (command-button
+      data
+      "messenger-add-button"
+      :add
+      (not (and selection-1 selection-2))
+      #(do
+        (om/update! data :messenger-reassignments (conj reassignments [selection-1 selection-2]))
+        (om/update! data :messenger-selection-1 nil)
+        (om/update! data :messenger-selection-2 nil)))
+    (command-button
+      data
+      "messenger-clear-button"
+      :clear
+      (not any-reassignments)
+      #(do
+        (om/update! data :messenger-reassignments nil)
+        (om/update! data :messenger-selection-1 nil)
+        (om/update! data :messenger-selection-2 nil)))]))
 
 (defn mayor-select [data]
   (let [selection (:mayor-selection data)]
