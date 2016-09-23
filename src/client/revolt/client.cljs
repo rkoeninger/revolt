@@ -40,6 +40,9 @@
 (defn dont-show-zero [x]
   (if (zero? x) "" x))
 
+(defn sjoin [sep & xs]
+  (clojure.string/join sep xs))
+
 (defn nothing-on-figure? [data id]
   (not (r/pos-bid? (get-in data [:bids id]))))
 
@@ -48,10 +51,10 @@
 
 (defn denomination-arrow [id enabled data denomination figure-disabled offset button-id-prefix id-suffix label]
   (let [disabled (or figure-disabled (not enabled))
-        className (clojure.string/join " "
-                    ["adjust"
-                     (if disabled "disabled" "enabled")
-                     (if (my-bids-submitted? data) "invisible")])]
+        className (sjoin " "
+                    "adjust"
+                    (if disabled "disabled" "enabled")
+                    (if (my-bids-submitted? data) "invisible"))]
     (h/button
       {:disabled disabled
        :className className
@@ -63,7 +66,7 @@
   (let [immune (contains? immunities denomination)
         remaining-bank (get-in data [:remaining-bank denomination])
         amount (get-in data [:bids id denomination])
-        button-id-prefix (clojure.string/join "-" ["bid" (name id) (name denomination)])
+        button-id-prefix (sjoin "-" "bid" (name id) (name denomination))
         disabled (or immune
                      (my-bids-submitted? data)
                      (and (nothing-on-figure? data id) (figure-limit-reached? data)))
@@ -89,7 +92,7 @@
       (str dval " " (localize data d)))))
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
-  (clojure.string/join ", " (flatten (filter identity [
+  (apply sjoin ", " (flatten (filter identity [
     (if (and support (pos? support)) (str support " " (localize data :support)))
     (denom data bank :gold)
     (denom data bank :blackmail)
@@ -123,6 +126,7 @@
 (defn tokens-remaining? [data]
   (r/pos-bid? (:remaining-bank data)))
 
+; TODO: invert the `disabled` parameter
 (defn command-button [data id label disabled on-click]
   (h/button (h/div (h/span label))
     {:id id
@@ -308,10 +312,11 @@
       "apothecary-submit-button"
       :submit
       (not (and selection-1 selection-2))
-      #(do
-        (apply rm/send-apothecary (concat selection-1 selection-2))
-        (om/update! data :apothecary-selection-1 nil)
-        (om/update! data :apothecary-selection-2 nil)))
+      #(if (and selection-1 selection-2)
+        (do
+          (apply rm/send-apothecary (concat selection-1 selection-2))
+          (om/update! data :apothecary-selection-1 nil)
+          (om/update! data :apothecary-selection-2 nil))))
     (command-button
       data
       "apothecary-clear-button"
@@ -384,7 +389,11 @@
       "messenger-submit-button"
       :submit
       false
-      #(rm/send-messenger reassignments data))
+      #(do
+        (rm/send-messenger reassignments)
+        (om/update! data :messenger-reassignments nil)
+        (om/update! data :messenger-selection-1 nil)
+        (om/update! data :messenger-selection-2 nil)))
     (command-button
       data
       "messenger-add-button"

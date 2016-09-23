@@ -28,7 +28,7 @@
 
 (defn send-messenger [reassignments]
   (send-message :submit-special
-    {:args {:reassignments reassignments}}))
+    {:args {:reassignments (or reassignments [])}}))
 
 (defn send-signup [player-name]
   (send-message :signup
