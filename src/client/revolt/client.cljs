@@ -15,11 +15,12 @@
 (enable-console-print!)
 
 (defn localize [data key]
-  (or
-    (get-in dictionary [(:lang data) key])
-    (do
-      (js/console.error (str key " is not in " (:lang data) " dictionary"))
-      (str "TRANSLATION MISSING - " (str key)))))
+  (if-not key nil
+    (or
+      (get-in dictionary [(:lang data) key])
+      (do
+        (js/console.error (str key " is not in " (:lang data) " dictionary"))
+        (str "TRANSLATION MISSING - " (str key))))))
 
 (defn clear-div []
   (h/div {:className "clear"}))
@@ -41,7 +42,7 @@
   (if (zero? x) "" x))
 
 (defn sjoin [sep & xs]
-  (clojure.string/join sep (filter (complement nil?) xs)))
+  (clojure.string/join sep (filter identity xs)))
 
 (defn spjoin [& xs]
   (apply sjoin " " xs))
@@ -89,24 +90,31 @@
    #{:force}            "immunity-force"
    #{:blackmail :force} "immunity-both"})
 
+(def immunity-keys
+  {#{}                  nil
+   #{:blackmail}        :immune-to-blackmail
+   #{:force}            :immune-to-force
+   #{:blackmail :force} :immune-to-both})
+
 (defn denom [data bank d]
   (let [dval (get bank d)]
     (if (and dval (pos? dval))
       (spjoin dval (localize data d)))))
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
-  (apply sjoin ", " (flatten (filter identity [
-    (if (and support (pos? support)) (spjoin support (localize data :support)))
-    (denom data bank :gold)
-    (denom data bank :blackmail)
-    (denom data bank :force)
-    (if location-id (localize data location-id))
-    (case immunities
-      #{} nil
-      #{:blackmail}        (localize data :immune-to-blackmail)
-      #{:force}            (localize data :immune-to-force)
-      #{:blackmail :force} (localize data :immune-to-both))
-    (if special-id (localize data special-id))]))))
+  (let [segments [(if (and support (pos? support))
+                    (spjoin support (localize data :support)))
+                  (denom data bank :gold)
+                  (denom data bank :blackmail)
+                  (denom data bank :force)
+                  (localize data location-id)
+                  (localize data (get immunity-keys immunities))
+                  (localize data special-id)]]
+    (->> segments
+      (filter identity)
+      (flatten)
+      (interpose ", ")
+      (apply sjoin ""))))
 
 (defn bid-row [data {:keys [id immunities] :as figure}]
   (h/tr {:className "bid-row"}
@@ -382,7 +390,7 @@
           (fn [[lid1 lid2]]
             (h/li
               [(h/span {:className "location-name"} lid1)
-               " -> "
+               " → "
                (h/span {:className "location-name"} lid2)]))
           reassignments)))
     (command-button
