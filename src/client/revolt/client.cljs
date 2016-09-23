@@ -124,12 +124,11 @@
   (r/pos-bid? (:remaining-bank data)))
 
 (defn command-button [data id label disabled on-click]
-  (h/button {:id id
-             :className (str "command-button" (if disabled " disabled"))
-             :disabled disabled
-             :onClick on-click}
-    (h/div
-      (h/span label))))
+  (h/button (h/div (h/span label))
+    {:id id
+     :className (str "command-button" (if disabled " disabled"))
+     :disabled disabled
+     :onClick on-click}))
 
 (defn submit-button [{:keys [bids] :as data}]
   (command-button
@@ -242,9 +241,9 @@
         (guard-house-row data)
         (influence-rows data)))))
 
-; TODO: don't allow guard house occupant to be selected
 (defn spy-select [data]
-  (let [selection (:spy-selection data)]
+  (let [selection (:spy-selection data)
+        guard-house-occupant (:guard-house data)]
     (h/div {:className "score-board"}
       (h/table
         (h/tbody
@@ -256,11 +255,10 @@
             (fn [lid pid]
               (let [amount (get-in data [:influence lid pid])
                     selected (= [lid pid] selection)]
-                (if (and (pos? amount) (not= pid (get-in data [:player-id])))
-                  (h/button
+                (if (and (pos? amount) (not= pid guard-house-occupant))
+                  (h/button amount
                     {:onClick #(om/update! data :spy-selection [lid pid])
-                     :className (if selected "selected")}
-                    amount))))))))))
+                     :className (if selected "selected")}))))))))))
 
 (defn spy-buttons [data]
   (let [selection (:spy-selection data)]
@@ -280,10 +278,10 @@
       (nil? selection)
       #(om/update! data :spy-selection nil))]))
 
-; TODO: don't allow guard house occupant to be selected
 (defn apothecary-select [data]
   (let [selection-1 (:apothecary-selection-1 data)
-        selection-2 (:apothecary-selection-2 data)]
+        selection-2 (:apothecary-selection-2 data)
+        guard-house-occupant (:guard-house data)]
     (h/div {:className "score-board"}
       (h/table
         (h/tbody
@@ -295,13 +293,12 @@
             (fn [lid pid]
               (let [amount (get-in data [:influence lid pid])
                     selected (or (= selection-1 [lid pid]) (= selection-2 [lid pid]))]
-                (if (pos? amount)
-                  (h/button
+                (if (and (pos? amount) (not= pid guard-house-occupant))
+                  (h/button amount
                     {:className (if selected "selected")
                      :onClick #(if selection-1
                                   (om/update! data :apothecary-selection-2 [lid pid])
-                                  (om/update! data :apothecary-selection-1 [lid pid]))}
-                    amount))))))))))
+                                  (om/update! data :apothecary-selection-1 [lid pid]))}))))))))))
 
 (defn apothecary-buttons [data]
   (let [selection-1 (:apothecary-selection-1 data)
@@ -324,12 +321,10 @@
         (om/update! data :apothecary-selection-1 nil)
         (om/update! data :apothecary-selection-2 nil)))]))
 
-; TODO: copied from mayor - doesn't work yet
 (defn messenger-select [data]
   (let [reassignments (:messenger-reassignments data)
         selection-1 (:messenger-selection-1 data)
-        selection-2 (:messenger-selection-2 data)
-        any-reassignments (pos? (count reassignments))]
+        selection-2 (:messenger-selection-2 data)]
     (h/div {:className "score-board"}
       (h/table
         (h/tbody
@@ -338,15 +333,33 @@
           (map
             (fn [{lid :id cap :cap}]
               (let [selected (or (= lid selection-1) (= lid selection-2))
-                    capped (= cap (reduce + (vals (get-in data [:influence lid]))))]
+                    total-influence (reduce + (vals (get-in data [:influence lid])))]
                 (h/tr
                   (h/th {:className "location-name"}
-                    (if capped
-                      lid
-                      (h/button
-                        {:className (if selected "selected")
-                         :onClick #()}
-                        lid)))
+                    (cond
+                      selected (h/span {:className "selected"} lid)
+
+                      ; max reassignments made
+                      (>= (count reassignments) 2) lid
+
+                      ; selecting origin
+                      (and (not selection-1) (not selection-2))
+
+                      (if (zero? total-influence)
+                        lid
+                        (h/button lid
+                          {:onClick #(do (om/update! data :messenger-selection-1 lid))}))
+
+                      ; selecting destination
+                      (and selection-1 (not selection-2))
+
+                      (if (= cap total-influence)
+                        lid
+                        (h/button lid
+                          {:onClick #(do (om/update! data :messenger-selection-2 lid))}))
+
+                      ; pending add
+                      :else lid))
                   (h/td {:className "influence-cap"} cap)
                   (map
                     (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))
@@ -356,12 +369,15 @@
 (defn messenger-buttons [data]
   (let [reassignments (:messenger-reassignments data)
         selection-1 (:messenger-selection-1 data)
-        selection-2 (:messenger-selection-2 data)
-        any-reassignments (pos? (count reassignments))]
-    [(if any-reassignments
+        selection-2 (:messenger-selection-2 data)]
+    [(if (pos? (count reassignments))
       (h/ul
         (map
-          (fn [[lid1 lid2]] (h/li [lid1 " -> " lid2]))
+          (fn [[lid1 lid2]]
+            (h/li
+              [(h/span {:className "location-name"} lid1)
+               " -> "
+               (h/span {:className "location-name"} lid2)]))
           reassignments)))
     (command-button
       data
@@ -382,7 +398,7 @@
       data
       "messenger-clear-button"
       :clear
-      (not any-reassignments)
+      (zero? (count reassignments))
       #(do
         (om/update! data :messenger-reassignments nil)
         (om/update! data :messenger-selection-1 nil)
