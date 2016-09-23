@@ -41,7 +41,10 @@
   (if (zero? x) "" x))
 
 (defn sjoin [sep & xs]
-  (clojure.string/join sep xs))
+  (clojure.string/join sep (filter (complement nil?) xs)))
+
+(defn spjoin [& xs]
+  (apply sjoin " " xs))
 
 (defn nothing-on-figure? [data id]
   (not (r/pos-bid? (get-in data [:bids id]))))
@@ -51,14 +54,14 @@
 
 (defn denomination-arrow [id enabled data denomination figure-disabled offset button-id-prefix id-suffix label]
   (let [disabled (or figure-disabled (not enabled))
-        className (sjoin " "
+        className (spjoin
                     "adjust"
                     (if disabled "disabled" "enabled")
                     (if (my-bids-submitted? data) "invisible"))]
     (h/button
       {:disabled disabled
        :className className
-       :id (str button-id-prefix "-" id-suffix)
+       :id (sjoin "-" button-id-prefix id-suffix)
        :onClick #(adjust-bid data id denomination offset)}
       label)))
 
@@ -75,7 +78,7 @@
                         :disabled immune
                         :readOnly true
                         :value (dont-show-zero amount)})]
-    (h/td {:className (str "denomination-input " (name denomination))}
+    (h/td {:className (spjoin "denomination-input" (name denomination))}
       (arrow (pos? remaining-bank) 1 "up" "\u2191")
       label
       (arrow (pos? amount) -1 "down" "\u2193"))))
@@ -89,11 +92,11 @@
 (defn denom [data bank d]
   (let [dval (get bank d)]
     (if (and dval (pos? dval))
-      (str dval " " (localize data d)))))
+      (spjoin dval (localize data d)))))
 
 (defn figure-description [data {:keys [support bank immunities location-id special-id]}]
   (apply sjoin ", " (flatten (filter identity [
-    (if (and support (pos? support)) (str support " " (localize data :support)))
+    (if (and support (pos? support)) (spjoin support (localize data :support)))
     (denom data bank :gold)
     (denom data bank :blackmail)
     (denom data bank :force)
@@ -107,7 +110,7 @@
 
 (defn bid-row [data {:keys [id immunities] :as figure}]
   (h/tr {:className "bid-row"}
-    (h/td {:className (str "figure-name " (get immunity-class immunities))
+    (h/td {:className (spjoin "figure-name" (get immunity-class immunities))
            :data-title (figure-description data figure)
            :onClick (fn [] (js/alert (figure-description data figure)))}
       id)
@@ -118,9 +121,9 @@
       (figure-description data figure))))
 
 (defn bank-denomination [data denomination]
-  (h/div {:className (str "bank-denomination " (name denomination))
+  (h/div {:className (spjoin "bank-denomination" (name denomination))
           :title (localize data denomination)}
-    (h/span {:className (str "bank-amount " (name denomination))}
+    (h/span {:className (spjoin "bank-amount" (name denomination))}
       (get-in data [:remaining-bank denomination]))))
 
 (defn tokens-remaining? [data]
@@ -130,7 +133,7 @@
 (defn command-button [data id label disabled on-click]
   (h/button (h/div (h/span label))
     {:id id
-     :className (str "command-button" (if disabled " disabled"))
+     :className (spjoin "command-button" (if disabled "disabled"))
      :disabled disabled
      :onClick on-click}))
 
@@ -271,10 +274,9 @@
       "spy-submit-button"
       :submit
       (nil? selection)
-      #(if selection
-        (do
-          (apply rm/send-spy selection)
-          (om/update! data :spy-selection nil))))
+      #(when selection
+        (apply rm/send-spy selection)
+        (om/update! data :spy-selection nil)))
     (command-button
       data
       "spy-clear-button"
@@ -312,11 +314,10 @@
       "apothecary-submit-button"
       :submit
       (not (and selection-1 selection-2))
-      #(if (and selection-1 selection-2)
-        (do
-          (apply rm/send-apothecary (concat selection-1 selection-2))
-          (om/update! data :apothecary-selection-1 nil)
-          (om/update! data :apothecary-selection-2 nil))))
+      #(when (and selection-1 selection-2)
+        (apply rm/send-apothecary (concat selection-1 selection-2))
+        (om/update! data :apothecary-selection-1 nil)
+        (om/update! data :apothecary-selection-2 nil)))
     (command-button
       data
       "apothecary-clear-button"
@@ -445,10 +446,9 @@
       "mayor-submit-button"
       :submit
       (nil? selection)
-      #(if selection
-        (do
-          (rm/send-mayor selection)
-          (om/update! data :mayor-selection nil))))
+      #(when selection
+        (rm/send-mayor selection)
+        (om/update! data :mayor-selection nil)))
     (command-button
       data
       "mayor-clear-button"
@@ -465,7 +465,9 @@
     (h/div {:className "what-is-your-name"}
       :what-is-your-name)
     (h/div
-      (h/input {:id "signup-input" :onKeyUp #(om/update! data :player-name (.-value (.-target %)))}))
+      (h/input
+        {:id "signup-input"
+         :onKeyUp #(om/update! data :player-name (.-value (.-target %)))}))
     (h/div (signup-button data))
     (player-list data)))
 
@@ -476,7 +478,7 @@
 
 (defn turn-area [data]
   (h/div {:className "turn"}
-    (h/span {:className "turn-label"} (localize data :turn))
+    (h/span {:className "turn-label"} :turn)
     (h/span {:className "turn-value"} (:turn data))))
 
 (defn language-flag [data key]
