@@ -1,6 +1,8 @@
 notifications:
   email: false
 language: clojure
+jdk:
+  - oraclejdk8
 before_script:
   - npm install -g npm@latest
   - npm install phantomjs-prebuilt@latest
