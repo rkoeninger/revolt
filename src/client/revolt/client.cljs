@@ -15,7 +15,7 @@
 (enable-console-print!)
 
 (defn localize [data key]
-  (if-not key nil
+  (if key
     (or
       (get-in dictionary [(:lang data) key])
       (do
@@ -30,13 +30,6 @@
 
 (defn my-bids-submitted? [data]
   (true? (get-in data [:bids-submitted (:player-id data)])))
-
-(defn adjust-bid [data id denomination adj]
-  (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
-        bank-denom-adjusted (- (get-in data [:remaining-bank denomination]) adj)]
-    (when (and (>= bank-denom-adjusted 0) (>= bid-denom-adjusted 0))
-      (om/transact! data [:remaining-bank denomination] #(- % adj))
-      (om/transact! data [:bids id denomination] #(+ % adj)))))
 
 (defn dont-show-zero [x]
   (if (zero? x) "" x))
@@ -53,36 +46,39 @@
 (defn figure-limit-reached? [data]
   (>= (count (filter r/pos-bid? (vals (:bids data)))) 6))
 
-(defn denomination-arrow [id enabled data denomination figure-disabled offset button-id-prefix id-suffix label]
-  (let [disabled (or figure-disabled (not enabled))
-        className (spjoin
-                    "adjust"
-                    (if disabled "disabled" "enabled")
-                    (if (my-bids-submitted? data) "invisible"))]
-    (h/button
-      {:disabled disabled
-       :className className
-       :id (sjoin "-" button-id-prefix id-suffix)
-       :onClick #(adjust-bid data id denomination offset)}
-      label)))
+(defn tokens-remaining? [data]
+  (r/pos-bid? (:remaining-bank data)))
+
+(defn adjust-bid [data id denomination adj]
+  (let [bid-denom-adjusted (+ (get-in data [:bids id denomination]) adj)
+        bank-denom-adjusted (- (get-in data [:remaining-bank denomination]) adj)]
+    (when (and (>= bank-denom-adjusted 0) (>= bid-denom-adjusted 0))
+      (om/transact! data [:remaining-bank denomination] #(- % adj))
+      (om/transact! data [:bids id denomination] #(+ % adj)))))
 
 (defn denomination-input [data id immunities denomination]
-  (let [immune (contains? immunities denomination)
-        remaining-bank (get-in data [:remaining-bank denomination])
-        amount (get-in data [:bids id denomination])
-        button-id-prefix (sjoin "-" "bid" (name id) (name denomination))
-        disabled (or immune
-                     (my-bids-submitted? data)
-                     (and (nothing-on-figure? data id) (figure-limit-reached? data)))
-        arrow #(denomination-arrow id %1 data denomination disabled %2 button-id-prefix %3 %4)
-        label (h/input {:type "text"
-                        :disabled immune
-                        :readOnly true
-                        :value (dont-show-zero amount)})]
-    (h/td {:className (spjoin "denomination-input" (name denomination))}
-      (arrow (pos? remaining-bank) 1 "up" "\u2191")
-      label
-      (arrow (pos? amount) -1 "down" "\u2193"))))
+  (h/td {:className (spjoin "denomination-input" (name denomination))}
+    (if-not (contains? immunities denomination)
+      (let [submitted (my-bids-submitted? data)
+            remaining-bank (get-in data [:remaining-bank denomination])
+            amount (get-in data [:bids id denomination])
+            disabled (or submitted (and (nothing-on-figure? data id) (figure-limit-reached? data)))
+            up-disabled (or disabled (zero? remaining-bank))
+            down-disabled (or disabled (zero? amount))]
+        [(h/button "\u2191"
+          {:disabled up-disabled
+           :className (spjoin "adjust" (if up-disabled "disabled" "enabled") (if submitted "invisible"))
+           :id (sjoin "-" "bid" (name id) (name denomination) "up")
+           :onClick #(adjust-bid data id denomination 1)})
+        (h/input
+          {:type "text"
+           :readOnly true
+           :value (dont-show-zero amount)})
+        (h/button "\u2193"
+          {:disabled down-disabled
+           :className (spjoin "adjust" (if down-disabled "disabled" "enabled") (if submitted "invisible"))
+           :id (sjoin "-" "bid" (name id) (name denomination) "down")
+           :onClick #(adjust-bid data id denomination -1)})]))))
 
 (def immunity-class
   {#{}                  "immunity-none"
@@ -118,10 +114,10 @@
 
 (defn bid-row [data {:keys [id immunities] :as figure}]
   (h/tr {:className "bid-row"}
-    (h/td {:className (spjoin "figure-name" (get immunity-class immunities))
-           :data-title (figure-description data figure)
-           :onClick (fn [] (js/alert (figure-description data figure)))}
-      id)
+    (h/td id
+      {:className (spjoin "figure-name" (get immunity-class immunities))
+       :data-title (figure-description data figure)
+       :onClick #(js/alert (figure-description data figure))})
     (denomination-input data id immunities :gold)
     (denomination-input data id immunities :blackmail)
     (denomination-input data id immunities :force)
@@ -133,9 +129,6 @@
           :title (localize data denomination)}
     (h/span {:className (spjoin "bank-amount" (name denomination))}
       (get-in data [:remaining-bank denomination]))))
-
-(defn tokens-remaining? [data]
-  (r/pos-bid? (:remaining-bank data)))
 
 ; TODO: invert the `disabled` parameter
 (defn command-button [data id label disabled on-click]
@@ -497,7 +490,7 @@
 
 (defn languages-area [data]
   (h/div {:className "languages"}
-    (map #(language-flag data %) languages)))
+    (map (partial language-flag data) languages)))
 
 (defn play-area [& children]
   (h/div {:className "play-area"} (concat children [(clear-div)])))
