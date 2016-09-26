@@ -31,7 +31,7 @@
     :test-commands {"test" ["phantomjs" "scenarios.js"]}}
   :plugins [
     [lein-cljsbuild "1.1.4"]
-    [lein-figwheel "0.5.7"]]
+    [lein-figwheel "0.4.0"]]
   :dependencies [
     [org.clojure/clojure "1.8.0"]
     [org.clojure/clojurescript "1.9.229"]
@@ -44,7 +44,7 @@
     [ring-middleware-format "0.7.0"]
     [compojure "1.5.1"]
     [com.cemerick/url "0.1.1"]
-    [figwheel "0.5.7"]
+    [figwheel "0.4.0"]
     [org.omcljs/om "0.9.0" :exclusions [cljsjs/react]]
     [cljs-react-test "0.1.4-SNAPSHOT"]
     [cljsjs/react-with-addons "0.13.3-0"]
