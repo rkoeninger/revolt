@@ -1,6 +1,7 @@
 (ns revolt.core
   (:use [clojure.set :only [map-invert]]))
 
+(defn each [coll f] (map f coll))
 (defn inverted-get [m v] ((map-invert m) v))
 (defn order [coll & [cmp]]
   (if cmp (sort cmp coll) (sort coll)))

@@ -8,7 +8,7 @@
             [cemerick.url :refer [url]]
             [hyjinks.core :as h]
             [hyjinks.react :refer [tag->react]]
-            [revolt.core :as r]
+            [revolt.core :refer [each] :as r]
             [revolt.client.lang :refer [dictionary languages]]
             [revolt.client.messaging :as rm]))
 
@@ -183,45 +183,39 @@
 (defn ready-row [data]
   (h/tr
     (h/th {:colSpan 2} :ready)
-    (map
-      (fn [{pid :id}] (h/td (if (get-in data [:bids-submitted pid]) check-mark)))
-      (:players data))))
+    (each (:players data)
+      (fn [{pid :id}] (h/td (if (get-in data [:bids-submitted pid]) check-mark))))))
 
 (defn support-row [data]
   (h/tr
     (h/th {:colSpan 2} :support)
-    (map
-      (fn [{pid :id}] (h/td (get-in data [:support pid])))
-      (:players data))))
+    (each (:players data)
+      (fn [{pid :id}] (h/td (get-in data [:support pid]))))))
 
 (defn bank-row [data denomination]
   (h/tr
     (h/th {:colSpan 2} denomination)
-    (map
-      (fn [{pid :id}] (h/td (get-in data [:banks pid denomination])))
-      (:players data))))
+    (each (:players data)
+      (fn [{pid :id}] (h/td (get-in data [:banks pid denomination]))))))
 
 (defn guard-house-row [data]
   (let [guard-house (:guard-house data)]
     (if (= :palace (:expansion data))
       (h/tr
         (h/th {:colSpan 2} :guard-house)
-        (map
-          #(if (= guard-house (:id %)) check-mark)
-          (:players data))))))
+        (each (:players data)
+          #(if (= guard-house (:id %)) check-mark))))))
 
 (defn influence-row-template [data f {:keys [id cap]}]
   (h/tr
     (h/th {:className "location-name"} id)
     (h/td {:className "influence-cap"} cap)
-    (map
-      (fn [{pid :id}] (h/td (f id pid)))
-      (:players data))))
+    (each (:players data)
+      (fn [{pid :id}] (h/td (f id pid))))))
 
 (defn influence-rows-template [data f]
-  (map
-    (partial influence-row-template data f)
-    (:locations data)))
+  (each (:locations data)
+    (partial influence-row-template data f)))
 
 (defn influence-row [data location]
   (influence-row-template
@@ -337,7 +331,7 @@
         (h/tbody
           (name-row data)
           (support-row data)
-          (map
+          (each (:locations data)
             (fn [{lid :id cap :cap}]
               (let [selected (or (= lid selection-1) (= lid selection-2))
                     total-influence (reduce + (vals (get-in data [:influence lid])))]
@@ -368,10 +362,8 @@
                       ; pending add
                       :else lid))
                   (h/td {:className "influence-cap"} cap)
-                  (map
-                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))
-                    (:players data)))))
-            (:locations data)))))))
+                  (each (:players data)
+                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))))))))))))
 
 (defn messenger-buttons [data]
   (let [reassignments (:messenger-reassignments data)
@@ -379,13 +371,12 @@
         selection-2 (:messenger-selection-2 data)]
     [(if (pos? (count reassignments))
       (h/ul
-        (map
+        (each reassignments
           (fn [[lid1 lid2]]
             (h/li
               [(h/span {:className "location-name"} lid1)
                " → "
-               (h/span {:className "location-name"} lid2)]))
-          reassignments)))
+               (h/span {:className "location-name"} lid2)])))))
     (command-button
       data
       "messenger-submit-button"
@@ -422,7 +413,7 @@
         (h/tbody
           (name-row data)
           (support-row data)
-          (map
+          (each (:locations data)
             (fn [{lid :id cap :cap}]
               (let [selected (= selection lid)
                     capped (= cap (reduce + (vals (get-in data [:influence lid]))))]
@@ -435,10 +426,8 @@
                          :onClick #(om/update! data :mayor-selection lid)}
                         lid)))
                   (h/td {:className "influence-cap"} cap)
-                  (map
-                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))
-                    (:players data)))))
-            (:locations data)))))))
+                  (each (:players data)
+                    (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))))))))))))
 
 (defn mayor-buttons [data]
   (let [selection (:mayor-selection data)]
