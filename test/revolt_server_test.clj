@@ -132,8 +132,8 @@
 
     (is (game-over? (:board @state)))
     (let [game-over-message {:type :game-over
-                             :results {:rankings {1 1,   2 2}
-                                       :scores   {1 100, 2 75}}}]
+                             :results {:rankings {1 1,  2 2}
+                                       :scores   {1 95, 2 70}}}]
     (is= game-over-message (get-message 1)))))
 
 (deftest first-turn-special-scenario

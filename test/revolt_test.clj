@@ -189,9 +189,7 @@
       (is= 1 (get-influence board saloon moe)))))
 
 (deftest board-suspension
-  (let [board (-> (make-board [rob joe])
-                  (add-bank rob (->Bid 1 0 0))
-                  (add-bank joe (->Bid 1 0 0)))]
+  (let [board (make-board [rob joe] base-figures base-locations (->Bid 1 0 0))]
 
     (testing "if a special that requires input was won"
       (let [bids {spy        {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
@@ -210,3 +208,19 @@
         (testing "board should not get suspended"
           (is (ready? board))
           (is= 2 (:turn board)))))))
+
+(deftest last-turn
+  (let [board (make-board [rob joe] [rogue mercenary] [] (->Bid 1 0 0))]
+
+    (testing "on the last turn"
+      (let [bids {rogue     {rob (->Bid 1 0 0) joe (->Bid 0 0 0)}
+                  mercenary {rob (->Bid 0 0 0) joe (->Bid 1 0 0)}}
+            board (run-turn board bids)]
+        (is (game-over? board))
+
+        (testing "banks should not be filled"
+          (is= (->Bid 0 2 0) (get-bank board rob))
+          (is= (->Bid 0 0 1) (get-bank board joe)))
+
+        (testing "turn should not be incremented"
+          (is= 1 (:turn board)))))))

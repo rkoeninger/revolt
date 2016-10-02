@@ -215,35 +215,68 @@
        (.indexOf ordered-scores (get-score board player)))))
 (defn get-rankings [{:keys [players] :as board}]
   (zipmap players (map (partial get-rank board) players)))
-(defn get-game-winner [board]
+
+(defn get-game-winner
+  "Gets the current winner of the game."
+  [board]
   (let [scores (get-scores board)]
     (if-let [max-score (unique-max (vals scores))]
       (inverted-get scores max-score))))
-(defn inc-turn [board] (update board :turn inc))
-(defn ready-board [board]
+
+(defn inc-turn
+  "Increments the board's turn counter by 1."
+  [board]
+  (update board :turn inc))
+
+(defn ready-board
+  "Returns the board in the ready state."
+  [board]
   (-> board
       (dissoc :special-winner)
       (dissoc :special)
       (dissoc :figure-list)
       (assoc :mode :ready)))
-(defn suspended-board [board special-winner special figure-list]
+
+(defn suspended-board
+  "Returns the board in the suspended state."
+  [board special-winner special figure-list]
   (-> board
       (assoc :special-winner special-winner)
       (assoc :special special)
       (assoc :figure-list figure-list)
       (assoc :mode :suspended)))
-(defn ready? [{:keys [mode]}] (= :ready mode))
-(defn suspended? [{:keys [mode]}] (= :suspended mode))
-(defn reward-influence [board winner location]
+
+(defn ready?
+  "Returns true if the board is in ready state."
+  [{:keys [mode]}]
+  (= :ready mode))
+
+(defn suspended?
+  "Returns true if the board is in suspended state."
+  [{:keys [mode]}]
+  (= :suspended mode))
+
+(defn reward-influence
+  "Give the winner a unit of influence in the given
+   location unless the location is full."
+  [board winner location]
   (if (or (nil? location) (location-full? board location))
     board
     (add-influence board location winner)))
-(defn reward-winner [board {:keys [support bank location]} winner]
+
+(defn reward-winner
+  "Assigns the figure's award to its winner,
+   including support, bidding tokens and influence."
+  [board {:keys [support bank location]} winner]
   (-> board
       (add-support winner support)
       (add-bank winner bank)
       (reward-influence winner location)))
-(defn eval-bids [board bids figure-list]
+
+(defn eval-bids
+  "Evaluates winner of each figure and assigns rewards until
+  special input it required or all figures have been evaluated."
+  [board bids figure-list]
   (if (empty? figure-list)
     (ready-board board)
     (let [[figure & figure-list] figure-list
@@ -256,12 +289,17 @@
           (suspended-board board winner special figure-list)
           (recur (ready-board (effect board winner nil)) bids figure-list))
         (recur (ready-board board) bids figure-list)))))
-(defn finish [board]
-  (if (ready? board)
+
+(defn finish
+  "If board is in ready state, and not game-over, fill player's
+   banks up to 5 tokens and increment the turn counter."
+  [board]
+  (if (and (ready? board) (not (game-over? board)))
     (-> board
         fill-banks
         inc-turn)
     board))
+
 (defn run-turn [board bids & [args]]
   (cond
     (ready? board)
