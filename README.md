@@ -8,30 +8,32 @@ Revolt is a bidding game based around the theme of a 19th century revolution. Ea
 
 Prerequisites:
 
-  * Java
-  * Leiningen
+  * Java 1.7+
+  * [Leiningen](http://leiningen.org/)
 
 Instructions:
 
   1. `git clone git@github.com:rkoeninger/revolt.git`
   2. `lein test`
   3. `lein figwheel`
-  4. Open 1 or more tabs with the site. Default URL is [localhost:3449](http://localhost:3449/)
+  4. `npm install -g phantomjs-prebuilt`
+  5. `phantomjs scenarios.js` or open 1+ tabs with the site. Default URL is [localhost:3449](http://localhost:3449/)
 
 ## Technology
 
 The server is written in pure Clojure and is built on Ring/Compojure. It has a simple clojure.test test suite.
 
-The client is written in pure ClojureScript and is built on Om.
+The client is written in pure ClojureScript and is built on Om (ReactJS) and my own [hyjinks](http://github.com/rkoeninger/hyjinks) library.
 
 The server and client communicate via websockets and both make use of core.async to handle messaging.
 
 Figwheel is used to run the test server.
 
+Automated feature tests are run using PhantomJS.
+
 ## Future Work
 
   * Get some client-side unit tests written
-  * Get automated UI tests working with PhantomJS
   * Expansion selection (Base set, The Palace, Anarchy!)
   * Customizable/optional house rules
   * More elaborate graphics, maybe some animations
