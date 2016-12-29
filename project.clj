@@ -30,15 +30,15 @@
           :pretty-print false}}}
     :test-commands {"test" ["phantomjs" "scenarios.js"]}}
   :plugins [
-    [lein-cljsbuild "1.1.1"]
-    [lein-figwheel "0.5.8"]]
+    [lein-cljsbuild "1.1.0"]
+    [lein-figwheel "0.4.0"]]
   :dependencies [
-    [org.clojure/clojure "1.8.0"]
-    [org.clojure/clojurescript "1.8.51"]
+    [org.clojure/clojure "1.7.0"]
+    [org.clojure/clojurescript "1.7.122"]
     [org.clojure/math.combinatorics "0.1.1"]
     [org.clojure/core.async "0.1.346.0-17112a-alpha"]
     [jarohen/chord "0.6.0"]
-    [hyjinks "0.0.3"]
+    [hyjinks "0.0.2-SNAPSHOT"]
     [ring/ring-core "1.4.0"]
     [ring-middleware-format "0.6.0"]
     [compojure "1.4.0"]

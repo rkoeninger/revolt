@@ -1,7 +1,6 @@
 (ns ^:figwheel-always revolt.client
   (:require-macros [cljs.core.async.macros :refer [go]])
-  (:require [clojure.string :refer [join blank?]]
-            [om.core :as om :include-macros true]
+  (:require [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [om-tools.core :refer-macros [defcomponent]]
             [cljs.core.async :refer [put! chan <!]]
@@ -24,10 +23,10 @@
         (str "TRANSLATION MISSING - " (str key))))))
 
 (defn clear-div []
-  (h/div {:class "clear"}))
+  (h/div {:className "clear"}))
 
 (def check-mark
-  (h/img {:class "check-mark" :src "/img/check_mark.png" :alt "X"}))
+  (h/img {:className "check-mark" :src "/img/check_mark.png" :alt "X"}))
 
 (defn my-bids-submitted? [data]
   (true? (get-in data [:bids-submitted (:player-id data)])))
@@ -36,7 +35,7 @@
   (if (zero? x) "" x))
 
 (defn sjoin [sep & xs]
-  (join sep (filter identity xs)))
+  (clojure.string/join sep (filter identity xs)))
 
 (defn spjoin [& xs]
   (apply sjoin " " xs))
@@ -58,7 +57,7 @@
       (om/transact! data [:bids id denomination] #(+ % adj)))))
 
 (defn denomination-input [data id immunities denomination]
-  (h/td {:class ["denomination-input" (name denomination)]}
+  (h/td {:className (spjoin "denomination-input" (name denomination))}
     (if-not (contains? immunities denomination)
       (let [submitted (my-bids-submitted? data)
             remaining-bank (get-in data [:remaining-bank denomination])
@@ -68,7 +67,7 @@
             down-disabled (or disabled (zero? amount))]
         [(h/button "\u2191"
           {:disabled up-disabled
-           :class ["adjust" (if up-disabled "disabled" "enabled") (if submitted "invisible")]
+           :className (spjoin "adjust" (if up-disabled "disabled" "enabled") (if submitted "invisible"))
            :id (sjoin "-" "bid" (name id) (name denomination) "up")
            :onClick #(adjust-bid data id denomination 1)})
         (h/input
@@ -77,7 +76,7 @@
            :value (dont-show-zero amount)})
         (h/button "\u2193"
           {:disabled down-disabled
-           :class ["adjust" (if down-disabled "disabled" "enabled") (if submitted "invisible")]
+           :className (spjoin "adjust" (if down-disabled "disabled" "enabled") (if submitted "invisible"))
            :id (sjoin "-" "bid" (name id) (name denomination) "down")
            :onClick #(adjust-bid data id denomination -1)})]))))
 
@@ -114,28 +113,28 @@
       (apply sjoin ""))))
 
 (defn bid-row [data {:keys [id immunities] :as figure}]
-  (h/tr {:class "bid-row"}
+  (h/tr {:className "bid-row"}
     (h/td id
-      {:class ["figure-name" (get immunity-class immunities)]
+      {:className (spjoin "figure-name" (get immunity-class immunities))
        :data-title (figure-description data figure)
        :onClick #(js/alert (figure-description data figure))})
     (denomination-input data id immunities :gold)
     (denomination-input data id immunities :blackmail)
     (denomination-input data id immunities :force)
-    (h/td {:class "figure-description"}
+    (h/td {:className "figure-description"}
       (figure-description data figure))))
 
 (defn bank-denomination [data denomination]
-  (h/div {:class ["bank-denomination" (name denomination)]
+  (h/div {:className (spjoin "bank-denomination" (name denomination))
           :title (localize data denomination)}
-    (h/span {:class ["bank-amount" (name denomination)]}
+    (h/span {:className (spjoin "bank-amount" (name denomination))}
       (get-in data [:remaining-bank denomination]))))
 
 ; TODO: invert the `disabled` parameter
 (defn command-button [data id label disabled on-click]
   (h/button (h/div (h/span label))
     {:id id
-     :class ["command-button" (if disabled "disabled")]
+     :className (spjoin "command-button" (if disabled "disabled"))
      :disabled disabled
      :onClick on-click}))
 
@@ -152,7 +151,7 @@
     data
     "signup-button"
     :signup
-    (blank? (:player-name data))
+    (clojure.string/blank? (:player-name data))
     #(rm/send-signup (:player-name data))))
 
 (defn start-game-button [data]
@@ -165,7 +164,7 @@
 
 (defn bid-board [data]
   (let [{:keys [figures]} data]
-    (h/div {:class "bid-board"}
+    (h/div {:className "bid-board"}
       (h/table
         (h/tbody
           (h/tr
@@ -209,8 +208,8 @@
 
 (defn influence-row-template [data f {:keys [id cap]}]
   (h/tr
-    (h/th {:class "location-name"} id)
-    (h/td {:class "influence-cap"} cap)
+    (h/th {:className "location-name"} id)
+    (h/td {:className "influence-cap"} cap)
     (each (:players data)
       (fn [{pid :id}] (h/td (f id pid))))))
 
@@ -232,7 +231,7 @@
       (dont-show-zero (get-in data [:influence lid pid])))))
 
 (defn score-board [data]
-  (h/div {:class "score-board"}
+  (h/div {:className "score-board"}
     (h/table
       (h/tbody
         (name-row data)
@@ -247,7 +246,7 @@
 (defn spy-select [data]
   (let [selection (:spy-selection data)
         guard-house-occupant (:guard-house data)]
-    (h/div {:class "score-board"}
+    (h/div {:className "score-board"}
       (h/table
         (h/tbody
           (name-row data)
@@ -261,7 +260,7 @@
                 (if (and (pos? amount) (not= pid guard-house-occupant))
                   (h/button amount
                     {:onClick #(om/update! data :spy-selection [lid pid])
-                     :class (if selected "selected")}))))))))))
+                     :className (if selected "selected")}))))))))))
 
 (defn spy-buttons [data]
   (let [selection (:spy-selection data)]
@@ -284,7 +283,7 @@
   (let [selection-1 (:apothecary-selection-1 data)
         selection-2 (:apothecary-selection-2 data)
         guard-house-occupant (:guard-house data)]
-    (h/div {:class "score-board"}
+    (h/div {:className "score-board"}
       (h/table
         (h/tbody
           (name-row data)
@@ -297,7 +296,7 @@
                     selected (or (= selection-1 [lid pid]) (= selection-2 [lid pid]))]
                 (if (and (pos? amount) (not= pid guard-house-occupant))
                   (h/button amount
-                    {:class (if selected "selected")
+                    {:className (if selected "selected")
                      :onClick #(if selection-1
                                   (om/update! data :apothecary-selection-2 [lid pid])
                                   (om/update! data :apothecary-selection-1 [lid pid]))}))))))))))
@@ -327,7 +326,7 @@
   (let [reassignments (:messenger-reassignments data)
         selection-1 (:messenger-selection-1 data)
         selection-2 (:messenger-selection-2 data)]
-    (h/div {:class "score-board"}
+    (h/div {:className "score-board"}
       (h/table
         (h/tbody
           (name-row data)
@@ -337,9 +336,9 @@
               (let [selected (or (= lid selection-1) (= lid selection-2))
                     total-influence (reduce + (vals (get-in data [:influence lid])))]
                 (h/tr
-                  (h/th {:class "location-name"}
+                  (h/th {:className "location-name"}
                     (cond
-                      selected (h/span {:class "selected"} lid)
+                      selected (h/span {:className "selected"} lid)
 
                       ; max reassignments made
                       (>= (count reassignments) 2) lid
@@ -362,7 +361,7 @@
 
                       ; pending add
                       :else lid))
-                  (h/td {:class "influence-cap"} cap)
+                  (h/td {:className "influence-cap"} cap)
                   (each (:players data)
                     (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))))))))))))
 
@@ -375,9 +374,9 @@
         (each reassignments
           (fn [[lid1 lid2]]
             (h/li
-              [(h/span {:class "location-name"} lid1)
+              [(h/span {:className "location-name"} lid1)
                " → "
-               (h/span {:class "location-name"} lid2)])))))
+               (h/span {:className "location-name"} lid2)])))))
     (command-button
       data
       "messenger-submit-button"
@@ -409,7 +408,7 @@
 
 (defn mayor-select [data]
   (let [selection (:mayor-selection data)]
-    (h/div {:class "score-board"}
+    (h/div {:className "score-board"}
       (h/table
         (h/tbody
           (name-row data)
@@ -419,14 +418,14 @@
               (let [selected (= selection lid)
                     capped (= cap (reduce + (vals (get-in data [:influence lid]))))]
                 (h/tr
-                  (h/th {:class "location-name"}
+                  (h/th {:className "location-name"}
                     (if capped
                       lid
                       (h/button
-                        {:class (if selected "selected")
+                        {:className (if selected "selected")
                          :onClick #(om/update! data :mayor-selection lid)}
                         lid)))
-                  (h/td {:class "influence-cap"} cap)
+                  (h/td {:className "influence-cap"} cap)
                   (each (:players data)
                     (fn [{pid :id}] (h/td (dont-show-zero (get-in data [:influence lid pid]))))))))))))))
 
@@ -448,12 +447,12 @@
       #(om/update! data :mayor-selection nil))]))
 
 (defn player-list [{:keys [players]}]
-  (h/ol {:class "player-list"}
+  (h/ol {:className "player-list"}
     (map (comp h/li :name) players)))
 
 (defn signup-area [data]
-  (h/div {:class "signup"}
-    (h/div {:class "what-is-your-name"}
+  (h/div {:className "signup"}
+    (h/div {:className "what-is-your-name"}
       :what-is-your-name)
     (h/div
       (h/input
@@ -463,38 +462,38 @@
     (player-list data)))
 
 (defn lobby-area [data]
-  (h/div {:class "lobby"}
+  (h/div {:className "lobby"}
     (player-list data)
     (start-game-button data)))
 
 (defn turn-area [data]
-  (h/div {:class "turn"}
-    (h/span {:class "turn-label"} :turn)
-    (h/span {:class "turn-value"} (:turn data))))
+  (h/div {:className "turn"}
+    (h/span {:className "turn-label"} :turn)
+    (h/span {:className "turn-value"} (:turn data))))
 
 (defn language-flag [data key]
   (h/img {:src (str "img/flags/" (name key) ".png")
           :title (localize data key)
-          :class "language-flag"
+          :className "language-flag"
           :onClick #(om/update! data :lang key)}))
 
 (defn languages-area [data]
-  (h/div {:class "languages"}
+  (h/div {:className "languages"}
     (map (partial language-flag data) languages)))
 
 (defn play-area [& children]
-  (h/div {:class "play-area"} (concat children [(clear-div)])))
+  (h/div {:className "play-area"} (concat children [(clear-div)])))
 
 (defn nav-bar [data]
-  (h/nav {:class "nav-bar"}
-    (h/div {:class "nav-bar-child-left"}
+  (h/nav {:className "nav-bar"}
+    (h/div {:className "nav-bar-child-left"}
       (if-not (or (= :signup (:mode data)) (= :lobby (:mode data)))
         (turn-area data)))
-    (h/div {:class "nav-bar-child-right"}
+    (h/div {:className "nav-bar-child-right"}
       (languages-area data))))
 
 (def title-logo
-  (h/div {:class "title-logo"}
+  (h/div {:className "title-logo"}
     (h/img {:src "/img/logo.png"})))
 
 (defn translate [data value]
@@ -503,8 +502,6 @@
 (defcomponent root-view [data owner]
   (render [_]
     (tag->react
-      {:transform-content #(translate data %)
-       :transform-attr #(translate data %2)}
       (h/div
         (nav-bar data)
         title-logo
@@ -523,7 +520,8 @@
             :messenger  [(messenger-select data)
                          (messenger-buttons data)]
             :mayor      [(mayor-select data)
-                         (mayor-buttons data)]))))))
+                         (mayor-buttons data)])))
+      (partial translate data))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]
