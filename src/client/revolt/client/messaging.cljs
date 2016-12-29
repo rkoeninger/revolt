@@ -1,8 +1,6 @@
 (ns ^:figwheel-always revolt.client.messaging
   (:require-macros [cljs.core.async.macros :refer [go-loop]])
-  (:require [cljs.core.async :refer [put! chan <!]]
-            [chord.client :refer [ws-ch]]
-            [cemerick.url :refer [url]]
+  (:require [cljs.core.async :refer [put! <!]]
             [revolt.core :refer [zero-bid]]))
 
 (defonce message-channel (atom nil))
@@ -71,32 +69,40 @@
     (when-let [{:keys [message] :as raw} (<! server-ch)]
       (let [{:keys [type player-id setup status]} message]
         (case type
-          :player-id (let [{:keys [players]} message]
-            (swap! app-state assoc :player-id player-id)
-            (swap! app-state assoc :players players))
-          :signup (let [{:keys [player]} message]
-            (swap! app-state update-in [:players] #(conj % player))
-            (when (is-me? @app-state (:id player))
-              (swap! app-state assoc :mode :lobby)))
-          :start-game (let [{:keys [players figures locations]} setup]
-            (swap! app-state assoc :figures figures)
-            (swap! app-state assoc :locations locations)
-            (swap! app-state assoc :players players))
-          :game-over (do
-            (swap! app-state assoc :mode :game-over))
-          :take-bids (do
-            (receive-status app-state status)
-            (swap! app-state assoc :mode :take-bids)
-            (swap! app-state assoc :bids-submitted {})
-            (swap! app-state assoc :bids (zero-bids (:figures @app-state))))
-          :special (let [{:keys [special-id special-winner status]} message]
-            (receive-status app-state status)
-            (if (is-me? @app-state special-winner)
-              (case special-id
-                :steal-spot     (swap! app-state assoc :mode :spy)
-                :swap-spots     (swap! app-state assoc :mode :apothecary)
-                :reassign-spots (swap! app-state assoc :mode :messenger)
-                :take-open-spot (swap! app-state assoc :mode :mayor))))
+          :player-id
+            (let [{:keys [players]} message]
+              (swap! app-state assoc
+                :player-id player-id
+                :players players))
+          :signup
+            (let [{:keys [player]} message]
+              (swap! app-state update-in [:players] #(conj % player))
+              (when (is-me? @app-state (:id player))
+                (swap! app-state assoc :mode :lobby)))
+          :start-game
+            (let [{:keys [players figures locations]} setup]
+              (swap! app-state assoc
+                :figures figures
+                :locations locations
+                :players players))
+          :game-over
+            (swap! app-state assoc :mode :game-over)
+          :take-bids
+            (do
+              (receive-status app-state status)
+              (swap! app-state assoc
+                :mode :take-bids
+                :bids-submitted {}
+                :bids (zero-bids (:figures @app-state))))
+          :special
+            (let [{:keys [special-id special-winner status]} message]
+              (receive-status app-state status)
+              (if (is-me? @app-state special-winner)
+                (case special-id
+                  :steal-spot     (swap! app-state assoc :mode :spy)
+                  :swap-spots     (swap! app-state assoc :mode :apothecary)
+                  :reassign-spots (swap! app-state assoc :mode :messenger)
+                  :take-open-spot (swap! app-state assoc :mode :mayor))))
           :bids-submitted
             (swap! app-state assoc-in [:bids-submitted player-id] true)
           :invalid-bid (do nil)
