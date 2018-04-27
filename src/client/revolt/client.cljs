@@ -23,9 +23,6 @@
         (js/console.error (str key " is not in " (:lang data) " dictionary"))
         (str "TRANSLATION MISSING - " (str key))))))
 
-(defn clear-div []
-  (h/div {:class "clear"}))
-
 (def check-mark
   (h/img {:class "check-mark" :src "/img/check_mark.png" :alt "X"}))
 
@@ -482,8 +479,11 @@
   (h/div {:class "languages"}
     (map (partial language-flag data) languages)))
 
+(defn main-area [& children]
+  (h/div {:class "main-area"} children))
+
 (defn play-area [& children]
-  (h/div {:class "play-area"} (concat children [(clear-div)])))
+  (h/div {:class "play-area"} children))
 
 (defn nav-bar [data]
   (h/nav {:class "nav-bar"}
@@ -508,22 +508,23 @@
       (h/div
         (nav-bar data)
         title-logo
-        (map
-          play-area
-          (case (:mode data)
-            :signup     [(signup-area data)]
-            :lobby      [(lobby-area data)]
-            :take-bids  [(score-board data)
-                         (bid-board data)]
-            :game-over  [(score-board data)]
-            :spy        [(spy-select data)
-                         (spy-buttons data)]
-            :apothecary [(apothecary-select data)
-                         (apothecary-buttons data)]
-            :messenger  [(messenger-select data)
-                         (messenger-buttons data)]
-            :mayor      [(mayor-select data)
-                         (mayor-buttons data)]))))))
+        (main-area
+          (map
+            play-area
+            (case (:mode data)
+              :signup     [(signup-area data)]
+              :lobby      [(lobby-area data)]
+              :take-bids  [(score-board data)
+                           (bid-board data)]
+              :game-over  [(score-board data)]
+              :spy        [(spy-select data)
+                           (spy-buttons data)]
+              :apothecary [(apothecary-select data)
+                           (apothecary-buttons data)]
+              :messenger  [(messenger-select data)
+                           (messenger-buttons data)]
+              :mayor      [(mayor-select data)
+                           (mayor-buttons data)])))))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]

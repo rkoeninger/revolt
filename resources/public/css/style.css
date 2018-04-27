@@ -26,16 +26,33 @@ body {
     margin: 0 auto;
     max-width: 100%;
 }
+.main-area {
+  display: grid;
+  margin: 0 auto;
+  width: 100%;
+}
+@media (max-width: 1079px) {
+  .main-area {
+    grid-auto-rows: 1fr;
+  }
+  .play-area {
+    grid-column: 1;
+  }
+}
+@media (min-width: 1080px) {
+  .main-area {
+    grid-auto-columns: 1fr;
+  }
+  .play-area {
+    grid-row: 1;
+  }
+}
 .play-area {
     margin: 24px;
     padding: 1em;
     border: 10px solid #dddddd;
     border-image: url('/img/border.png') 15 repeat;
     background: white;
-}
-.support, .map, .bid-board, .score-board {
-    float: left;
-    margin: 0 auto;
 }
 .score-board th {
     font-weight: bold;
