@@ -164,3 +164,21 @@
         (is= 10 (get-support board joe))
         (is= 0 (get-influence board (location-by-id board :cathedral) rob))
         (is= 1 (get-influence board (location-by-id board :cathedral) joe))))))
+
+(deftest reset-test
+  (let [{:keys [state get-message connect handle]} (harness)
+        rob (->Player 1 "rob")
+        joe (->Player 2 "joe")]
+    (connect 1)
+    (connect 2)
+    (handle 1 {:type :signup :player-name "rob"})
+    (handle 2 {:type :signup :player-name "joe"})
+    (handle 1 {:type :start-game})
+    (handle 1 {:type :submit-bids :bids {:priest  (->Bid 3 1 1)}})
+    (handle 2 {:type :submit-bids :bids {:spy     (->Bid 3 0 1)
+                                         :printer (->Bid 0 1 0)}})
+    (handle 1 {:type :reset})
+    (let [{:keys [board player-names bids]} @state]
+      (is= nil board)
+      (is= {} player-names)
+      (is= {} bids))))

@@ -8,6 +8,12 @@
         revolt.setup
         revolt.server.messaging))
 
+(defn ->ServerState [] {
+  :player-names {} ; {player-id player-name}
+  :player-channels {} ; {player-id chan}
+  :board nil
+  :bids {}}) ; {player-id Bid}
+
 (defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
 
 (defn reset-in! [a ks x] (swap! a assoc-in ks x))
@@ -76,19 +82,22 @@
     (do (swap-in! state [:player-names] assoc player-id player-name)
         (broadcast-signup state player-id player-name))))
 
+(defn handle-reset [state]
+  (println "Reseting game state")
+  (let [{:keys [logging player-channels]} @state]
+    (reset! state (assoc (->ServerState)
+      :logging logging
+      :player-channels player-channels)))
+  (broadcast-reset state))
+
 (defn handle-message [state {:keys [player-id type player-name bids args]}]
   (case type
     :signup         (handle-signup state player-id player-name)
     :start-game     (handle-start-game state player-id)
     :submit-bids    (handle-submit-bids state player-id bids)
     :submit-special (handle-submit-special state player-id args)
+    :reset          (handle-reset state)
     (transmit state player-id {:type :unrecognized-message})))
-
-(defn ->ServerState [] {
-  :player-names {} ; {player-id player-name}
-  :player-channels {} ; {player-id chan}
-  :board nil
-  :bids {}}) ; {player-id Bid}
 
 ;;;; Everything after this point is impure / doesn't get unit tested ;;;;
 

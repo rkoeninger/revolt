@@ -40,6 +40,10 @@
   (send-message :submit-bids
     {:bids bids}))
 
+(defn send-reset []
+  (send-message :reset
+    {}))
+
 (defn send-msgs! [new-msg-ch server-ch]
   (go-loop []
     ; forever repeatedly pipe messages from message-channel to websocket
@@ -113,6 +117,13 @@
           :invalid-special-args (do nil)
           :game-already-started (do nil)
           :game-not-ready (do nil)
+          :reset
+            (reset! app-state
+             {:lang :english
+              :mode :signup
+              :players []
+              :bids-submitted {}
+              :bids {}})
           (js/console.warn "type not idendified"))
         (js/console.log "raw websocket message:")
         (js/console.log (str raw))

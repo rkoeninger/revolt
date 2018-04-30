@@ -135,3 +135,6 @@
 
 (defn broadcast-game-over [state board]
   (broadcast state {:type :game-over :results (game-results board)}))
+
+(defn broadcast-reset [state]
+  (broadcast state {:type :reset}))

@@ -160,6 +160,14 @@
     false
     #(rm/send-start-game)))
 
+(defn reset-button [data]
+  (command-button
+    data
+    "reset-button"
+    :reset
+    false
+    #(rm/send-reset)))
+
 (defn bid-board [data]
   (let [{:keys [figures]} data]
     (h/div {:class "bid-board"}
@@ -524,7 +532,8 @@
               :messenger  [(messenger-select data)
                            (messenger-buttons data)]
               :mayor      [(mayor-select data)
-                           (mayor-buttons data)])))))))
+                           (mayor-buttons data)])))
+        (reset-button data)))))
 
 (def ws-url
   (let [{:keys [host port]} (url js/window.location)]
