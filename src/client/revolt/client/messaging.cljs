@@ -119,7 +119,7 @@
           :game-not-ready (do nil)
           :reset
             (reset! app-state
-             {:lang :english
+             {:lang (:lang @app-state)
               :mode :signup
               :players []
               :bids-submitted {}
