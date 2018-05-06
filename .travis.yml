@@ -2,6 +2,6 @@ notifications:
   email: false
 language: clojure
 jdk:
-  - oraclejdk8
+  - oraclejdk9
 script:
   - lein test

@@ -13,10 +13,10 @@
       :dev {
         :source-paths ["src/shared" "src/client" "src/client_dev"]
         :compiler {
+          :optimizations :none
           :output-to "resources/public/js/compiled/revolt_client.js"
           :output-dir "resources/public/js/compiled/out"
           :asset-path "js/compiled/out"
-          :optimizations :none
           :main revolt.client.dev
           :source-map true
           :source-map-timestamp true
@@ -24,9 +24,9 @@
       :min {
         :source-paths ["src/shared" "src/client"]
         :compiler {
+          :optimizations :advanced
           :output-to "resources/public/js/compiled/revolt_client.js"
           :main revolt.client
-          :optimizations :advanced
           :pretty-print false}}}
     :test-commands {"test" ["phantomjs" "scenarios.js"]}}
   :plugins [
@@ -50,10 +50,11 @@
     [prismatic/om-tools "0.3.12"]]
   :exclusions
     [org.clojure/clojure]
+  :jvm-opts ["--add-modules" "java.xml.bind"]
   :figwheel {
     :http-server-root "public" ; default and assumes "resources"
     :server-port 3449
-    ; :nrepl-port 7888
+    :repl false
     :css-dirs ["resources/public/css"]
     :ring-handler revolt.server/app
     :server-logfile "logs/figwheel_server.log"})
