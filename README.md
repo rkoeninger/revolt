@@ -8,7 +8,7 @@ Revolt is a bidding game based around the theme of a 19th century revolution. Ea
 
 Prerequisites:
 
-  * Java 1.7+
+  * Java 1.9+
   * [Leiningen](http://leiningen.org/)
 
 Instructions:
