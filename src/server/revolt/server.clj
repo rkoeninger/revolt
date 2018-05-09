@@ -14,10 +14,6 @@
   :board nil
   :bids {}}) ; {player-id Bid}
 
-(defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
-
-(defn reset-in! [a ks x] (swap! a assoc-in ks x))
-
 (defn handle-turn [state & [args]]
   (let [{:keys [board bids]} @state
         bids (relevel (read-player-figure-bid-map board bids))
@@ -83,7 +79,6 @@
         (broadcast-signup state player-id player-name))))
 
 (defn handle-reset [state]
-  (println "Reseting game state")
   (let [{:keys [logging player-channels]} @state]
     (reset! state (assoc (->ServerState)
       :logging logging

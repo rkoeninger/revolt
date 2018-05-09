@@ -1,6 +1,8 @@
 (ns revolt.core
   (:use [clojure.set :only [map-invert]]))
 
+(defn swap-in! [a ks f & args] (apply swap! a update-in ks f args))
+(defn reset-in! [a ks x] (swap! a assoc-in ks x))
 (defn each [coll f] (map f coll))
 (defn inverted-get [m v] ((map-invert m) v))
 (defn order [coll & [cmp]]

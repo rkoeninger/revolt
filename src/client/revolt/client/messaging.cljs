@@ -1,4 +1,4 @@
-(ns ^:figwheel-always revolt.client.messaging
+(ns revolt.client.messaging
   (:require-macros [cljs.core.async.macros :refer [go-loop]])
   (:require [cljs.core.async :refer [put! <!]]
             [revolt.core :refer [zero-bid]]))
@@ -44,13 +44,13 @@
   (send-message :reset
     {}))
 
-(defn send-msgs! [new-msg-ch server-ch]
+(defn send-msgs! [message-channel server-channel]
   (go-loop []
     ; forever repeatedly pipe messages from message-channel to websocket
-    (when-let [msg (<! new-msg-ch)]
+    (when-let [message (<! message-channel)]
       (println "sending message...")
-      (println msg)
-      (>! server-ch msg)
+      (println message)
+      (>! server-channel message)
       (recur))))
 
 (defn is-me? [{:keys [player-id]} id] (= player-id id))
