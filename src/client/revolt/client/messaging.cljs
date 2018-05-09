@@ -53,13 +53,13 @@
       (>! server-channel message)
       (recur))))
 
-(defn is-me? [{:keys [player-id]} id] (= player-id id))
+(defn is-me? [{:keys [player-id]} {:keys [id]}] (= player-id id))
 
-(defn receive-status [app-state status]
+(defn receive-status [state status]
   (let [{:keys [turn guard-house banks support influence]} status
-        {:keys [player-id]} @app-state
+        {:keys [player-id]} @state
         my-bank (get banks player-id)]
-    (swap! app-state assoc
+    (swap! state assoc
       :remaining-bank my-bank
       :banks banks
       :support support
@@ -69,57 +69,57 @@
 
 (defn zero-bids [figures] (zipmap (map :id figures) (repeat zero-bid)))
 
-(defn receive-msgs! [app-state server-ch]
+(defn receive-msgs! [state server-channel]
   (go-loop []
-    (when-let [{:keys [message] :as raw} (<! server-ch)]
+    (when-let [{:keys [message] :as raw} (<! server-channel)]
       (let [{:keys [type]} message]
         (case type
           :player-id
             (let [{:keys [player-id players]} message]
-              (swap! app-state assoc
+              (swap! state assoc
                 :player-id player-id
                 :players players))
           :signup
             (let [{:keys [player]} message]
-              (swap! app-state update-in [:players] #(conj % player))
-              (when (is-me? @app-state (:id player))
-                (swap! app-state assoc :mode :lobby)))
+              (swap! state update-in [:players] #(conj % player))
+              (when (is-me? @state player)
+                (swap! state assoc :mode :lobby)))
           :start-game
             (let [{:keys [setup]} message
                   {:keys [players figures locations]} setup]
-              (swap! app-state assoc
+              (swap! state assoc
                 :figures figures
                 :locations locations
                 :players players))
           :game-over
-            (swap! app-state assoc :mode :game-over)
+            (swap! state assoc :mode :game-over)
           :take-bids
             (let [{:keys [status]} message]
-              (receive-status app-state status)
-              (swap! app-state assoc
+              (receive-status state status)
+              (swap! state assoc
                 :mode :take-bids
                 :bids-submitted {}
-               :bids (zero-bids (:figures @app-state))))
+                :bids (zero-bids (:figures @state))))
           :special
             (let [{:keys [status special-winner special-id]} message]
-              (receive-status app-state status)
-              (if (is-me? @app-state special-winner)
+              (receive-status state status)
+              (if (is-me? @state special-winner)
                 (case special-id
-                  :steal-spot     (swap! app-state assoc :mode :spy)
-                  :swap-spots     (swap! app-state assoc :mode :apothecary)
-                  :reassign-spots (swap! app-state assoc :mode :messenger)
-                  :take-open-spot (swap! app-state assoc :mode :mayor))))
+                  :steal-spot     (swap! state assoc :mode :spy)
+                  :swap-spots     (swap! state assoc :mode :apothecary)
+                  :reassign-spots (swap! state assoc :mode :messenger)
+                  :take-open-spot (swap! state assoc :mode :mayor))))
           :bids-submitted
             (let [{:keys [player-id]} message]
-              (swap! app-state assoc-in [:bids-submitted player-id] true))
+              (swap! state assoc-in [:bids-submitted player-id] true))
           :invalid-bid (do nil)
           :special-not-expected (do nil)
           :invalid-special-args (do nil)
           :game-already-started (do nil)
           :game-not-ready (do nil)
           :reset
-            (reset! app-state
-             {:lang (:lang @app-state)
+            (reset! state
+             {:lang (:lang @state)
               :mode :signup
               :players []
               :bids-submitted {}
