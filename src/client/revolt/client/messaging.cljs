@@ -5,7 +5,7 @@
 
 (defonce message-channel (atom nil))
 
-(defn send-message [type content]
+(defn- send-message [type content]
   (put! @message-channel (assoc content :type type)))
 
 (defn send-spy [location-id target-id]
@@ -44,7 +44,7 @@
   (send-message :reset
     {}))
 
-(defn send-msgs! [message-channel server-channel]
+(defn send-messages! [message-channel server-channel]
   (go-loop []
     ; forever repeatedly pipe messages from message-channel to websocket
     (when-let [message (<! message-channel)]
@@ -53,11 +53,32 @@
       (>! server-channel message)
       (recur))))
 
-(defn is-me? [{:keys [player-id]} {:keys [id]}] (= player-id id))
+(defn- is-me? [{:keys [player-id]} {:keys [id]}] (= player-id id))
 
-(defn receive-status [state status]
-  (let [{:keys [turn guard-house banks support influence]} status
-        {:keys [player-id]} @state
+(defn- zero-bids [figures] (zipmap (map :id figures) (repeat zero-bid)))
+
+(defn- receive-player-id [state {:keys [player-id players]}]
+  (swap! state assoc
+    :player-id player-id
+    :players players))
+
+(defn- receive-signup [state {:keys [player]}]
+  (swap! state update-in [:players] #(conj % player))
+  (when (is-me? @state player)
+    (swap! state assoc :mode :lobby)))
+
+(defn- receive-start-game [state {:keys [setup]}]
+  (let [{:keys [players figures locations]} setup]
+    (swap! state assoc
+      :figures figures
+      :locations locations
+      :players players)))
+
+(defn- receive-game-over [state]
+  (swap! state assoc :mode :game-over))
+
+(defn- receive-status [state {:keys [turn guard-house banks support influence]}]
+  (let [{:keys [player-id]} @state
         my-bank (get banks player-id)]
     (swap! state assoc
       :remaining-bank my-bank
@@ -67,64 +88,51 @@
       :turn turn
       :guard-house guard-house)))
 
-(defn zero-bids [figures] (zipmap (map :id figures) (repeat zero-bid)))
+(defn- receive-take-bids [state {:keys [status]}]
+  (receive-status state status)
+  (swap! state assoc
+    :mode :take-bids
+    :bids-submitted {}
+    :bids (zero-bids (:figures @state))))
 
-(defn receive-msgs! [state server-channel]
+(defn- receive-special [state {:keys [status special-winner special-id]}]
+  (receive-status state status)
+  (if (is-me? @state special-winner)
+    (case special-id
+      :steal-spot     (swap! state assoc :mode :spy)
+      :swap-spots     (swap! state assoc :mode :apothecary)
+      :reassign-spots (swap! state assoc :mode :messenger)
+      :take-open-spot (swap! state assoc :mode :mayor))))
+
+(defn- receive-bids-submitted [state {:keys [player-id]}]
+  (swap! state assoc-in [:bids-submitted player-id] true))
+
+(defn- receive-reset [state]
+  (reset! state
+   {:lang (:lang @state)
+    :mode :signup
+    :players []
+    :bids-submitted {}
+    :bids {}}))
+
+(defn receive-messages! [state server-channel]
   (go-loop []
     (when-let [{:keys [message] :as raw} (<! server-channel)]
-      (let [{:keys [type]} message]
-        (case type
-          :player-id
-            (let [{:keys [player-id players]} message]
-              (swap! state assoc
-                :player-id player-id
-                :players players))
-          :signup
-            (let [{:keys [player]} message]
-              (swap! state update-in [:players] #(conj % player))
-              (when (is-me? @state player)
-                (swap! state assoc :mode :lobby)))
-          :start-game
-            (let [{:keys [setup]} message
-                  {:keys [players figures locations]} setup]
-              (swap! state assoc
-                :figures figures
-                :locations locations
-                :players players))
-          :game-over
-            (swap! state assoc :mode :game-over)
-          :take-bids
-            (let [{:keys [status]} message]
-              (receive-status state status)
-              (swap! state assoc
-                :mode :take-bids
-                :bids-submitted {}
-                :bids (zero-bids (:figures @state))))
-          :special
-            (let [{:keys [status special-winner special-id]} message]
-              (receive-status state status)
-              (if (is-me? @state special-winner)
-                (case special-id
-                  :steal-spot     (swap! state assoc :mode :spy)
-                  :swap-spots     (swap! state assoc :mode :apothecary)
-                  :reassign-spots (swap! state assoc :mode :messenger)
-                  :take-open-spot (swap! state assoc :mode :mayor))))
-          :bids-submitted
-            (let [{:keys [player-id]} message]
-              (swap! state assoc-in [:bids-submitted player-id] true))
-          :invalid-bid (do nil)
-          :special-not-expected (do nil)
-          :invalid-special-args (do nil)
-          :game-already-started (do nil)
-          :game-not-ready (do nil)
-          :reset
-            (reset! state
-             {:lang (:lang @state)
-              :mode :signup
-              :players []
-              :bids-submitted {}
-              :bids {}})
-          (js/console.warn "type not idendified"))
-        (js/console.log "raw websocket message:")
-        (js/console.log (str raw))
-        (recur)))))
+      (case (:type message)
+        :player-id            (receive-player-id state message)
+        :signup               (receive-signup state message)
+        :start-game           (receive-start-game state message)
+        :game-over            (receive-game-over state message)
+        :take-bids            (receive-take-bids state message)
+        :special              (receive-special state message)
+        :bids-submitted       (receive-bids-submitted state message)
+        :invalid-bid          (js/console.error "invalid bid")
+        :special-not-expected (js/console.error "special input not expected at this time")
+        :invalid-special-args (js/console.error "invalid special args")
+        :game-already-started (js/console.error "game has already started")
+        :game-not-ready       (js/console.error "game not ready")
+        :reset                (receive-reset state message)
+        (js/console.error "message type not recognized"))
+      (js/console.log "raw websocket message:")
+      (js/console.log (str raw))
+      (recur))))

@@ -531,12 +531,12 @@
     (str "Couldn't connect to websocket: " (pr-str error) " @ " ws-url)))
 
 (defn send-receive [state ws-channel]
-  (let [message-channel (doto (chan) (rm/send-msgs! ws-channel))]
+  (let [message-channel (doto (chan) (rm/send-messages! ws-channel))]
     (reset! rm/message-channel message-channel)
     (re/render
       [root-view]
       (. js/document (getElementById "content")))
-    (rm/receive-msgs! state ws-channel)))
+    (rm/receive-messages! state ws-channel)))
 
 (set!
   (.-onload js/window)
